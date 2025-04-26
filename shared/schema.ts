@@ -37,6 +37,9 @@ export const products = pgTable("products", {
   weight: decimal("weight", { precision: 10, scale: 2 }), // in kg
   dimensions: jsonb("dimensions").default({}), // { length, width, height } in cm
   tags: text("tags").array(),
+  isFeatured: boolean("is_featured").default(false), // Featured products appear at the top of lists
+  isOnSale: boolean("is_on_sale").default(false), // Products with special offers or discounts
+  salePrice: integer("sale_price"), // Optional sale price in cents
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

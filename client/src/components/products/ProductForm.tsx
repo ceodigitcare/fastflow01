@@ -77,6 +77,9 @@ const productFormSchema = z.object({
   inStock: z.boolean().default(true),
   hasVariants: z.boolean().default(false),
   variants: z.array(productVariantSchema).optional(),
+  isFeatured: z.boolean().default(false),
+  isOnSale: z.boolean().default(false),
+  salePrice: z.coerce.number().min(0, "Sale price must be a positive number").optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -118,6 +121,9 @@ export default function ProductForm({ product, onSubmit, onCancel, isSubmitting 
       inStock: product?.inStock ?? true,
       hasVariants: product?.hasVariants || false,
       variants: product?.variants || [],
+      isFeatured: product?.isFeatured || false,
+      isOnSale: product?.isOnSale || false,
+      salePrice: product?.salePrice ? product.salePrice / 100 : undefined, // Convert cents to dollars for display
     },
   });
   
@@ -236,6 +242,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isSubmitting 
     const formattedValues = {
       ...values,
       price: Math.round(values.price * 100), // Convert dollars to cents
+      salePrice: values.salePrice ? Math.round(values.salePrice * 100) : undefined, // Convert dollars to cents
       additionalImages: additionalImages,
     };
     onSubmit(formattedValues);
@@ -359,6 +366,76 @@ export default function ProductForm({ product, onSubmit, onCancel, isSubmitting 
                 </FormItem>
               )}
             />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="isFeatured"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Featured Product</FormLabel>
+                      <FormDescription>
+                        Featured products will be displayed prominently on your website
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="isOnSale"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>On Sale</FormLabel>
+                      <FormDescription>
+                        Mark this product as being on sale with a special price
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            {form.watch("isOnSale") && (
+              <FormField
+                control={form.control}
+                name="salePrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sale Price ($)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="0.00" 
+                        step="0.01"
+                        min="0"
+                        {...field} 
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      This price will be displayed as the current price, with the original price shown as strikethrough
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <FormField
               control={form.control}
