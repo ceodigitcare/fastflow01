@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Account, AccountCategory, InsertTransaction, Transaction } from "@shared/schema";
+import { Account, AccountCategory, InsertAccount, InsertAccountCategory, InsertTransaction, Transaction } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,6 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -39,8 +40,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, ArrowUpDown } from "lucide-react";
+import { CalendarIcon, ArrowUpDown, Plus, Package, BookOpen } from "lucide-react";
 import { format } from "date-fns";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 // Form validation schema
 const transactionSchema = z.object({
@@ -72,18 +79,39 @@ interface TransactionFormProps {
   editingTransaction?: Transaction | null;
 }
 
+// Account form schema
+const accountSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  description: z.string().optional(),
+  categoryId: z.coerce.number({ required_error: "Category is required" }),
+  initialBalance: z.coerce.number().default(0),
+});
+
+type AccountFormValues = z.infer<typeof accountSchema>;
+
+// Category form schema
+const categorySchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  type: z.enum(["asset", "liability", "equity", "income", "expense"]),
+  description: z.string().optional(),
+});
+
+type CategoryFormValues = z.infer<typeof categorySchema>;
+
 export default function TransactionForm({ open, onOpenChange, editingTransaction }: TransactionFormProps) {
   const [selectedType, setSelectedType] = useState<"income" | "expense" | "transfer">("expense");
+  const [openAccountDialog, setOpenAccountDialog] = useState(false);
+  const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch accounts
-  const { data: accounts } = useQuery<Account[]>({
+  const { data: accounts, isLoading: isLoadingAccounts } = useQuery<Account[]>({
     queryKey: ["/api/accounts"],
   });
 
   // Fetch account categories
-  const { data: categories } = useQuery<AccountCategory[]>({
+  const { data: categories, isLoading: isLoadingCategories } = useQuery<AccountCategory[]>({
     queryKey: ["/api/account-categories"],
   });
 
@@ -280,58 +308,146 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[525px]">
-        <DialogHeader>
-          <DialogTitle>
-            {editingTransaction ? "Edit Transaction" : "Record New Transaction"}
-          </DialogTitle>
-          <DialogDescription>
-            {editingTransaction
-              ? "Update the details of this transaction"
-              : "Record a new financial transaction or transfer"}
-          </DialogDescription>
-        </DialogHeader>
+  // Create account mutation
+  const createAccountMutation = useMutation({
+    mutationFn: async (values: AccountFormValues & { businessId: number }) => {
+      const res = await apiRequest("POST", "/api/accounts", values);
+      return await res.json();
+    },
+    onSuccess: (newAccount) => {
+      toast({
+        title: "Account created",
+        description: "Your account has been created successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
+      setOpenAccountDialog(false);
+      
+      // Set the newly created account as the selected account
+      form.setValue("accountId", newAccount.id);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create account",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Create category mutation
+  const createCategoryMutation = useMutation({
+    mutationFn: async (values: CategoryFormValues & { businessId: number }) => {
+      const res = await apiRequest("POST", "/api/account-categories", values);
+      return await res.json();
+    },
+    onSuccess: (newCategory) => {
+      toast({
+        title: "Category created",
+        description: "Your category has been created successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/account-categories"] });
+      setOpenCategoryDialog(false);
+      
+      // If it's a relevant category for the current transaction type, select it
+      if ((selectedType === "income" && newCategory.type === "income") || 
+          (selectedType === "expense" && newCategory.type === "expense")) {
+        form.setValue("category", newCategory.name);
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create category",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Setup forms for account and category creation
+  const accountForm = useForm<AccountFormValues>({
+    resolver: zodResolver(accountSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      categoryId: 0,
+      initialBalance: 0,
+    },
+  });
+  
+  const categoryForm = useForm<CategoryFormValues>({
+    resolver: zodResolver(categorySchema),
+    defaultValues: {
+      name: "",
+      type: selectedType === "income" ? "income" : "expense",
+      description: "",
+    },
+  });
+  
+  // Handle account form submission
+  const onAccountSubmit = (values: AccountFormValues) => {
+    const businessId = 1; // This should be retrieved from context in a real app
+    createAccountMutation.mutate({ ...values, businessId });
+  };
+  
+  // Handle category form submission
+  const onCategorySubmit = (values: CategoryFormValues) => {
+    const businessId = 1; // This should be retrieved from context in a real app
+    createCategoryMutation.mutate({ ...values, businessId });
+  };
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Transaction Type</FormLabel>
-                  <Select
-                    onValueChange={(value: "income" | "expense" | "transfer") => {
-                      field.onChange(value);
-                      setSelectedType(value);
-                    }}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="income">Income</SelectItem>
-                      <SelectItem value="expense">Expense</SelectItem>
-                      <SelectItem value="transfer">Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {selectedType === "income" 
-                      ? "Money coming into your business" 
-                      : selectedType === "expense"
-                      ? "Money going out of your business"
-                      : "Move money between accounts"}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTransaction ? "Edit Transaction" : "Record New Transaction"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingTransaction
+                ? "Update the details of this transaction"
+                : "Record a new financial transaction or transfer"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Transaction Type</FormLabel>
+                    <Select
+                      onValueChange={(value: "income" | "expense" | "transfer") => {
+                        field.onChange(value);
+                        setSelectedType(value);
+                      }}
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="income">Income</SelectItem>
+                        <SelectItem value="expense">Expense</SelectItem>
+                        <SelectItem value="transfer">Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      {selectedType === "income" 
+                        ? "Money coming into your business" 
+                        : selectedType === "expense"
+                        ? "Money going out of your business"
+                        : "Move money between accounts"}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
             <div className={selectedType === "transfer" ? "grid grid-cols-2 gap-4" : ""}>
               <FormField
@@ -339,7 +455,19 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
                 name="accountId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{selectedType === "transfer" ? "From Account" : "Account"}</FormLabel>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>{selectedType === "transfer" ? "From Account" : "Account"}</FormLabel>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => setOpenAccountDialog(true)}
+                      >
+                        <Plus className="mr-1 h-3 w-3" />
+                        New Account
+                      </Button>
+                    </div>
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
                       defaultValue={field.value ? field.value.toString() : undefined}
@@ -403,7 +531,19 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Category</FormLabel>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => setOpenCategoryDialog(true)}
+                      >
+                        <Plus className="mr-1 h-3 w-3" />
+                        New Category
+                      </Button>
+                    </div>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
@@ -572,5 +712,252 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
         </Form>
       </DialogContent>
     </Dialog>
+
+    {/* Account Creation Dialog */}
+    <Dialog open={openAccountDialog} onOpenChange={setOpenAccountDialog}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create New Account</DialogTitle>
+          <DialogDescription>
+            Add a new account to track your finances. You can create different accounts
+            for cash, bank accounts, credit cards, etc.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...accountForm}>
+          <form onSubmit={accountForm.handleSubmit(onAccountSubmit)} className="space-y-4">
+            <FormField
+              control={accountForm.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Account Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Business Checking" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={accountForm.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Account Type</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    defaultValue={field.value ? field.value.toString() : undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories?.filter(c => ["asset", "liability", "equity"].includes(c.type))
+                        .map((category) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Select the type of account you are creating
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={accountForm.control}
+              name="initialBalance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Initial Balance</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-2 top-2 text-gray-500">$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="pl-7"
+                        placeholder="0.00"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    The current balance of this account
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={accountForm.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Add details about this account..."
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpenAccountDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createAccountMutation.isPending}>
+                {createAccountMutation.isPending ? "Creating..." : "Create Account"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+    
+    {/* Category Creation Dialog */}
+    <Dialog open={openCategoryDialog} onOpenChange={setOpenCategoryDialog}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create New Category</DialogTitle>
+          <DialogDescription>
+            Add a new category to organize your finances. Categories help you track where your
+            money is coming from and going to.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...categoryForm}>
+          <form onSubmit={categoryForm.handleSubmit(onCategorySubmit)} className="space-y-4">
+            <FormField
+              control={categoryForm.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Rent or Sales" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={categoryForm.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category Type</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="asset">Asset</SelectItem>
+                      <SelectItem value="liability">Liability</SelectItem>
+                      <SelectItem value="equity">Equity</SelectItem>
+                      <SelectItem value="income">Income</SelectItem>
+                      <SelectItem value="expense">Expense</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    <div className="flex items-center">
+                      {field.value === "income" && (
+                        <>
+                          <ArrowUpDown className="mr-2 h-4 w-4 text-green-500" />
+                          For money coming into your business
+                        </>
+                      )}
+                      {field.value === "expense" && (
+                        <>
+                          <ArrowUpDown className="mr-2 h-4 w-4 text-red-500" />
+                          For money going out of your business
+                        </>
+                      )}
+                      {field.value === "asset" && (
+                        <>
+                          <Package className="mr-2 h-4 w-4 text-blue-500" />
+                          Things you own that have value
+                        </>
+                      )}
+                      {field.value === "liability" && (
+                        <>
+                          <BookOpen className="mr-2 h-4 w-4 text-orange-500" />
+                          Money you owe to others
+                        </>
+                      )}
+                      {field.value === "equity" && (
+                        <>
+                          <BookOpen className="mr-2 h-4 w-4 text-purple-500" />
+                          Ownership value in your business
+                        </>
+                      )}
+                    </div>
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={categoryForm.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Add details about this category..."
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpenCategoryDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createCategoryMutation.isPending}>
+                {createCategoryMutation.isPending ? "Creating..." : "Create Category"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
