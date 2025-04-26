@@ -441,16 +441,6 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
                   <FormItem>
                     <div className="flex justify-between items-center">
                       <FormLabel>{selectedType === "transfer" ? "From Account" : "Account"}</FormLabel>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={() => setOpenAccountDialog(true)}
-                      >
-                        <Plus className="mr-1 h-3 w-3" />
-                        New Account
-                      </Button>
                     </div>
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
@@ -515,9 +505,7 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Category</FormLabel>
-                    </div>
+                    <FormLabel>Category</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
