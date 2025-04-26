@@ -308,6 +308,12 @@ export default function TransactionForm({
     const documentType = getDocumentType(selectedType);
     const documentNumber = generateDocumentNumber(selectedType);
     
+    // Make sure the amount matches the line items total if there are line items
+    if (lineItems.length > 0) {
+      const lineItemsTotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+      values.amount = lineItemsTotal;
+    }
+    
     // Create a copy of values with document fields added
     const transactionData = {
       ...values,
@@ -738,9 +744,13 @@ export default function TransactionForm({
                               value={item.quantity}
                               onChange={(e) => {
                                 const newItems = [...lineItems];
-                                newItems[index].quantity = parseFloat(e.target.value);
+                                newItems[index].quantity = parseFloat(e.target.value) || 0;
                                 newItems[index].amount = newItems[index].quantity * newItems[index].unitPrice;
                                 setLineItems(newItems);
+                                
+                                // Update the main amount field to match line items total
+                                const total = newItems.reduce((sum, item) => sum + item.amount, 0);
+                                form.setValue("amount", total);
                               }}
                               placeholder="Qty"
                               className="w-20"
@@ -750,9 +760,13 @@ export default function TransactionForm({
                               value={item.unitPrice}
                               onChange={(e) => {
                                 const newItems = [...lineItems];
-                                newItems[index].unitPrice = parseFloat(e.target.value);
+                                newItems[index].unitPrice = parseFloat(e.target.value) || 0;
                                 newItems[index].amount = newItems[index].quantity * newItems[index].unitPrice;
                                 setLineItems(newItems);
+                                
+                                // Update the main amount field to match line items total
+                                const total = newItems.reduce((sum, item) => sum + item.amount, 0);
+                                form.setValue("amount", total);
                               }}
                               placeholder="Price"
                               className="w-24"
@@ -771,6 +785,10 @@ export default function TransactionForm({
                                 const newItems = [...lineItems];
                                 newItems.splice(index, 1);
                                 setLineItems(newItems);
+                                
+                                // Update the main amount field after removing an item
+                                const total = newItems.reduce((sum, item) => sum + item.amount, 0);
+                                form.setValue("amount", total);
                               }}
                             >
                               ✕
@@ -783,7 +801,7 @@ export default function TransactionForm({
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            setLineItems([
+                            const newItems = [
                               ...lineItems,
                               {
                                 description: "",
@@ -791,21 +809,31 @@ export default function TransactionForm({
                                 unitPrice: 0,
                                 amount: 0
                               }
-                            ]);
+                            ];
+                            setLineItems(newItems);
+                            
+                            // Update amount when adding a new item (keeping the total the same)
+                            const total = newItems.reduce((sum, item) => sum + item.amount, 0);
+                            form.setValue("amount", total);
                           }}
                         >
                           Add Item
                         </Button>
                         
                         {lineItems.length > 0 && (
-                          <div className="flex justify-end pt-2 text-sm">
-                            <span className="font-medium">Total: </span>
-                            <span className="ml-2">
-                              {lineItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString('en-US', {
-                                style: 'currency',
-                                currency: 'USD'
-                              })}
+                          <div className="flex justify-between pt-2 text-sm">
+                            <span className="text-muted-foreground italic">
+                              Amount will be automatically updated in Basic Info tab
                             </span>
+                            <div>
+                              <span className="font-medium">Total: </span>
+                              <span className="ml-2">
+                                {lineItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString('en-US', {
+                                  style: 'currency',
+                                  currency: 'USD'
+                                })}
+                              </span>
+                            </div>
                           </div>
                         )}
                       </div>
