@@ -165,6 +165,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const businessId = req.session.businessId as number;
       
+      // Create a custom validation schema for the product with proper type handling
+      const productValidationSchema = z.object({
+        name: z.string().min(2),
+        description: z.string().min(10),
+        price: z.number().min(0),
+        businessId: z.number(),
+        imageUrl: z.string().url().nullish(),
+        inStock: z.boolean().optional().default(true),
+        sku: z.string().optional().nullish(),
+        category: z.string().optional().nullish(),
+        inventory: z.number().min(0).optional().default(0),
+        hasVariants: z.boolean().optional().default(false),
+        variants: z.array(z.any()).optional().default([]),
+        additionalImages: z.array(z.string()).optional().default([]),
+        weight: z.union([z.number(), z.string()]).optional().nullish(),
+        dimensions: z.record(z.string(), z.any()).optional().default({}),
+        tags: z.array(z.string()).optional().default([])
+      });
+      
       // Ensure arrays and objects are properly parsed
       const body = {
         ...req.body,
@@ -175,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tags: Array.isArray(req.body.tags) ? req.body.tags : (req.body.tags ? [req.body.tags] : [])
       };
       
-      const productData = insertProductSchema.parse(body);
+      const productData = productValidationSchema.parse(body);
       
       const product = await storage.createProduct(productData);
       res.status(201).json(product);
@@ -242,7 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasVariants: z.boolean().optional(),
         variants: z.array(z.any()).optional(),
         additionalImages: z.array(z.string()).optional(),
-        weight: z.number().optional().nullish(),
+        weight: z.union([z.number(), z.string()]).optional().nullish(),
         dimensions: z.record(z.string(), z.any()).optional(),
         tags: z.array(z.string()).optional()
       });
