@@ -3,6 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
 import TransactionsTable from "@/components/finances/TransactionsTable";
 import FinancialSummary from "@/components/finances/FinancialSummary";
+import AccountCategoriesPanel from "@/components/finances/AccountCategoriesPanel";
+import AccountsPanel from "@/components/finances/AccountsPanel";
+import TransactionForm from "@/components/finances/TransactionForm";
 import { calculateFinancialSummary } from "@/lib/finances";
 import { Transaction } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
@@ -13,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Tabs,
   TabsContent,
@@ -36,10 +40,12 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Download, FileText, DollarSign, TrendingUp, CreditCard } from "lucide-react";
+import { Download, FileText, DollarSign, TrendingUp, CreditCard, Plus, BarChart4 } from "lucide-react";
 
 export default function Finances() {
   const [period, setPeriod] = useState("month");
+  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   
   // Get transactions
   const { data: transactions, isLoading: transactionsLoading } = useQuery<Transaction[]>({
@@ -69,12 +75,23 @@ export default function Finances() {
     { name: "May", revenue: 5800, expenses: 2400 },
     { name: "Jun", revenue: 6200, expenses: 2600 },
   ];
+
+  // Handle new transaction button click
+  const handleNewTransaction = () => {
+    setEditingTransaction(null);
+    setTransactionDialogOpen(true);
+  };
   
   return (
     <MainLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Finances</h1>
-        <p className="text-sm text-gray-500">Manage your business finances and track revenue</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold">Finances</h1>
+          <p className="text-sm text-gray-500">Manage your business finances and track revenue</p>
+        </div>
+        <Button onClick={handleNewTransaction}>
+          <Plus className="mr-2 h-4 w-4" /> New Transaction
+        </Button>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -153,6 +170,8 @@ export default function Finances() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="accounts">Accounts</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
         
@@ -228,90 +247,181 @@ export default function Finances() {
             />
           </div>
           
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Monthly Revenue Goal</CardTitle>
-              <CardDescription>Track your progress towards your monthly revenue target</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <p className="font-medium">
-                    {formatCurrency(financialSummary?.monthlyRevenue || 0)} of {formatCurrency(monthlyRevenueGoal)}
-                  </p>
-                  <p className="font-medium">{revenuePercentage}%</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Monthly Revenue Goal</CardTitle>
+                <CardDescription>Track your progress towards your monthly revenue target</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <p className="font-medium">
+                      {formatCurrency(financialSummary?.monthlyRevenue || 0)} of {formatCurrency(monthlyRevenueGoal)}
+                    </p>
+                    <p className="font-medium">{revenuePercentage}%</p>
+                  </div>
+                  <Progress value={revenuePercentage} className="h-2" />
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <p>Current monthly revenue</p>
+                    <p>12 days remaining</p>
+                  </div>
                 </div>
-                <Progress value={revenuePercentage} className="h-2" />
-                <div className="flex justify-between text-sm text-gray-500">
-                  <p>Current monthly revenue</p>
-                  <p>12 days remaining</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Financial Reports</CardTitle>
+                <CardDescription>Generate reports for any time period</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Button variant="outline" className="flex flex-col items-center justify-center h-24">
+                    <BarChart4 className="h-8 w-8 mb-2" />
+                    <span>Cash Flow</span>
+                  </Button>
+                  <Button variant="outline" className="flex flex-col items-center justify-center h-24">
+                    <BarChart4 className="h-8 w-8 mb-2" />
+                    <span>Profit & Loss</span>
+                  </Button>
+                  <Button variant="outline" className="flex flex-col items-center justify-center h-24">
+                    <BarChart4 className="h-8 w-8 mb-2" />
+                    <span>Balance Sheet</span>
+                  </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         
         <TabsContent value="transactions" className="mt-6">
-          <TransactionsTable transactions={transactions} isLoading={transactionsLoading} />
+          <TransactionsTable 
+            transactions={transactions} 
+            isLoading={transactionsLoading} 
+            onNewTransaction={handleNewTransaction}
+            onEditTransaction={(transaction) => {
+              setEditingTransaction(transaction);
+              setTransactionDialogOpen(true);
+            }}
+          />
+        </TabsContent>
+        
+        <TabsContent value="accounts" className="mt-6">
+          <AccountsPanel />
+        </TabsContent>
+        
+        <TabsContent value="categories" className="mt-6">
+          <AccountCategoriesPanel />
         </TabsContent>
         
         <TabsContent value="reports" className="mt-6">
-          <Card className="text-center py-12">
-            <CardHeader>
-              <CardTitle>Financial Reports</CardTitle>
-              <CardDescription>Download detailed financial reports for your business</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Revenue Report</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Complete breakdown of your revenue sources and trends
-                    </p>
-                    <button className="flex items-center justify-center w-full py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download PDF
-                    </button>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Expense Report</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Detailed expense categorization and analysis
-                    </p>
-                    <button className="flex items-center justify-center w-full py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download PDF
-                    </button>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Tax Summary</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Tax liability overview for accounting purposes
-                    </p>
-                    <button className="flex items-center justify-center w-full py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download PDF
-                    </button>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cash Flow Report</CardTitle>
+                <CardDescription>Money flowing in and out of your business</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500 mb-4">
+                  View all incoming and outgoing funds for any time period. Understand your business's liquidity and cash position.
+                </p>
+                <Button className="w-full">
+                  <BarChart4 className="mr-2 h-4 w-4" />
+                  Generate Report
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Profit and Loss</CardTitle>
+                <CardDescription>Income, expenses, and bottom line</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500 mb-4">
+                  Comprehensive view of your business profitability with all revenue sources and expense categories.
+                </p>
+                <Button className="w-full">
+                  <BarChart4 className="mr-2 h-4 w-4" />
+                  Generate Report
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Balance Sheet</CardTitle>
+                <CardDescription>Your business's financial position</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500 mb-4">
+                  Complete snapshot of your assets, liabilities, and equity at any point in time.
+                </p>
+                <Button className="w-full">
+                  <BarChart4 className="mr-2 h-4 w-4" />
+                  Generate Report
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Tax Summary</CardTitle>
+                <CardDescription>Tax liability overview</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500 mb-4">
+                  Prepare for tax season with a detailed breakdown of taxable income and potential deductions.
+                </p>
+                <Button className="w-full">
+                  <BarChart4 className="mr-2 h-4 w-4" />
+                  Generate Report
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Expense Analysis</CardTitle>
+                <CardDescription>Where your money is going</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500 mb-4">
+                  Detailed breakdown of all expenses by category with trends and comparisons over time.
+                </p>
+                <Button className="w-full">
+                  <BarChart4 className="mr-2 h-4 w-4" />
+                  Generate Report
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Income Sources</CardTitle>
+                <CardDescription>Where your revenue comes from</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500 mb-4">
+                  Analyze revenue streams by product, service, and customer segment with historical trends.
+                </p>
+                <Button className="w-full">
+                  <BarChart4 className="mr-2 h-4 w-4" />
+                  Generate Report
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
+      
+      {/* Transaction Form Dialog */}
+      <TransactionForm 
+        open={transactionDialogOpen}
+        onOpenChange={setTransactionDialogOpen}
+        editingTransaction={editingTransaction}
+      />
     </MainLayout>
   );
 }

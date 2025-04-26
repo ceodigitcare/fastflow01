@@ -535,11 +535,226 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Account Category routes
+  app.get("/api/account-categories", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const categories = await storage.getAccountCategoriesByBusiness(businessId);
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching account categories:", error);
+      res.status(500).json({ message: "Failed to fetch account categories" });
+    }
+  });
+
+  app.post("/api/account-categories", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const categoryData = insertAccountCategorySchema.parse({
+        ...req.body,
+        businessId,
+        isSystem: false,
+      });
+      
+      const category = await storage.createAccountCategory(categoryData);
+      res.status(201).json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        console.error("Error creating account category:", error);
+        res.status(500).json({ message: "Failed to create account category" });
+      }
+    }
+  });
+
+  app.patch("/api/account-categories/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const categoryId = parseInt(req.params.id);
+      
+      if (isNaN(categoryId)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+      
+      const category = await storage.getAccountCategory(categoryId);
+      
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      if (category.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this category" });
+      }
+      
+      if (category.isSystem) {
+        return res.status(403).json({ message: "System categories cannot be modified" });
+      }
+      
+      const updatedCategory = await storage.updateAccountCategory(categoryId, req.body);
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error("Error updating account category:", error);
+      res.status(500).json({ message: "Failed to update account category" });
+    }
+  });
+
+  app.delete("/api/account-categories/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const categoryId = parseInt(req.params.id);
+      
+      if (isNaN(categoryId)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+      
+      const category = await storage.getAccountCategory(categoryId);
+      
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      if (category.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this category" });
+      }
+      
+      if (category.isSystem) {
+        return res.status(403).json({ message: "System categories cannot be deleted" });
+      }
+      
+      // Check if there are any accounts using this category
+      const accounts = await storage.getAccountsByCategory(categoryId);
+      
+      if (accounts.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete category that has accounts. Please delete or reassign accounts first."
+        });
+      }
+      
+      const result = await storage.deleteAccountCategory(categoryId);
+      
+      if (result) {
+        res.status(200).json({ success: true });
+      } else {
+        res.status(500).json({ message: "Failed to delete category" });
+      }
+    } catch (error) {
+      console.error("Error deleting account category:", error);
+      res.status(500).json({ message: "Failed to delete account category" });
+    }
+  });
+
+  // Account routes
+  app.get("/api/accounts", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const accounts = await storage.getAccountsByBusiness(businessId);
+      res.json(accounts);
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+      res.status(500).json({ message: "Failed to fetch accounts" });
+    }
+  });
+
+  app.post("/api/accounts", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const accountData = insertAccountSchema.parse({
+        ...req.body,
+        businessId,
+        currentBalance: req.body.initialBalance || 0,
+      });
+      
+      const account = await storage.createAccount(accountData);
+      res.status(201).json(account);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        console.error("Error creating account:", error);
+        res.status(500).json({ message: "Failed to create account" });
+      }
+    }
+  });
+
+  app.patch("/api/accounts/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const accountId = parseInt(req.params.id);
+      
+      if (isNaN(accountId)) {
+        return res.status(400).json({ message: "Invalid account ID" });
+      }
+      
+      const account = await storage.getAccount(accountId);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+      
+      if (account.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this account" });
+      }
+      
+      const updatedAccount = await storage.updateAccount(accountId, req.body);
+      res.json(updatedAccount);
+    } catch (error) {
+      console.error("Error updating account:", error);
+      res.status(500).json({ message: "Failed to update account" });
+    }
+  });
+
+  app.delete("/api/accounts/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const accountId = parseInt(req.params.id);
+      
+      if (isNaN(accountId)) {
+        return res.status(400).json({ message: "Invalid account ID" });
+      }
+      
+      const account = await storage.getAccount(accountId);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+      
+      if (account.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this account" });
+      }
+      
+      // Check if there are any transactions using this account
+      const transactions = await storage.getTransactionsByAccount(accountId);
+      
+      if (transactions.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete account that has transactions. Please delete transactions first or deactivate the account instead."
+        });
+      }
+      
+      const result = await storage.deleteAccount(accountId);
+      
+      if (result) {
+        res.status(200).json({ success: true });
+      } else {
+        res.status(500).json({ message: "Failed to delete account" });
+      }
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      res.status(500).json({ message: "Failed to delete account" });
+    }
+  });
+
   // Transaction routes
   app.get("/api/transactions", requireAuth, async (req, res) => {
-    const businessId = req.session.businessId as number;
-    const transactions = await storage.getTransactionsByBusiness(businessId);
-    res.json(transactions);
+    try {
+      const businessId = req.session.businessId as number;
+      const transactions = await storage.getTransactionsByBusiness(businessId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      res.status(500).json({ message: "Failed to fetch transactions" });
+    }
   });
 
   app.post("/api/transactions", requireAuth, async (req, res) => {
@@ -556,7 +771,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid data", errors: error.errors });
       } else {
+        console.error("Error creating transaction:", error);
         res.status(500).json({ message: "Failed to create transaction" });
+      }
+    }
+  });
+  
+  app.patch("/api/transactions/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const transactionId = parseInt(req.params.id);
+      
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ message: "Invalid transaction ID" });
+      }
+      
+      const transaction = await storage.getTransaction(transactionId);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      if (transaction.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this transaction" });
+      }
+      
+      const updatedTransaction = await storage.updateTransaction(transactionId, req.body);
+      res.json(updatedTransaction);
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      res.status(500).json({ message: "Failed to update transaction" });
+    }
+  });
+
+  app.delete("/api/transactions/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const transactionId = parseInt(req.params.id);
+      
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ message: "Invalid transaction ID" });
+      }
+      
+      const transaction = await storage.getTransaction(transactionId);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      if (transaction.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this transaction" });
+      }
+      
+      const result = await storage.deleteTransaction(transactionId);
+      
+      if (result) {
+        res.status(200).json({ success: true });
+      } else {
+        res.status(500).json({ message: "Failed to delete transaction" });
+      }
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      res.status(500).json({ message: "Failed to delete transaction" });
+    }
+  });
+  
+  // Transfer routes
+  app.post("/api/transfers", requireAuth, async (req, res) => {
+    try {
+      const businessId = req.session.businessId as number;
+      const transferData = insertTransferSchema.parse({
+        ...req.body,
+        businessId,
+      });
+      
+      const transfer = await storage.createTransfer(transferData);
+      res.status(201).json(transfer);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        console.error("Error creating transfer:", error);
+        res.status(500).json({ message: "Failed to create transfer" });
       }
     }
   });
