@@ -213,8 +213,8 @@ export default function AccountCategoriesPanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Account Categories</CardTitle>
-        <CardDescription>Manage financial account categories</CardDescription>
+        <CardTitle>Chart of Accounts</CardTitle>
+        <CardDescription>View and manage standard financial account categories</CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="asset" value={selectedType} onValueChange={setSelectedType}>
@@ -231,7 +231,7 @@ export default function AccountCategoriesPanel() {
               <h3 className="text-lg font-medium">{getCategoryTypeLabel(selectedType)}</h3>
               <Button size="sm" onClick={handleCreate}>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Add Category
+                Add Account Category
               </Button>
             </div>
 
@@ -286,7 +286,7 @@ export default function AccountCategoriesPanel() {
               <div className="text-center py-8 border rounded-md">
                 <p className="text-gray-500">No {selectedType} categories yet</p>
                 <Button variant="link" onClick={handleCreate}>
-                  Create your first category
+                  Create your first account category
                 </Button>
               </div>
             )}
@@ -298,12 +298,12 @@ export default function AccountCategoriesPanel() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingCategory ? "Edit Category" : "Create New Category"}
+              {editingCategory ? "Edit Account Category" : "Create New Account Category"}
             </DialogTitle>
             <DialogDescription>
               {editingCategory
-                ? "Update this account category"
-                : "Add a new account category to organize your finances"}
+                ? "Update this account category in your chart of accounts"
+                : "Add a new account category to your chart of accounts to organize your finances"}
             </DialogDescription>
           </DialogHeader>
 
@@ -389,9 +389,9 @@ export default function AccountCategoriesPanel() {
                   {createCategoryMutation.isPending || updateCategoryMutation.isPending ? (
                     "Saving..."
                   ) : editingCategory ? (
-                    "Update Category"
+                    "Update Account Category"
                   ) : (
-                    "Create Category"
+                    "Create Account Category"
                   )}
                 </Button>
               </DialogFooter>
