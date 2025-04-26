@@ -1,0 +1,317 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import MainLayout from "@/components/layout/MainLayout";
+import TransactionsTable from "@/components/finances/TransactionsTable";
+import FinancialSummary from "@/components/finances/FinancialSummary";
+import { calculateFinancialSummary } from "@/lib/finances";
+import { Transaction } from "@shared/schema";
+import { formatCurrency } from "@/lib/utils";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { Download, FileText, DollarSign, TrendingUp, CreditCard } from "lucide-react";
+
+export default function Finances() {
+  const [period, setPeriod] = useState("month");
+  
+  // Get transactions
+  const { data: transactions, isLoading: transactionsLoading } = useQuery<Transaction[]>({
+    queryKey: ["/api/transactions"],
+  });
+  
+  // Get orders
+  const { data: orders, isLoading: ordersLoading } = useQuery({
+    queryKey: ["/api/orders"],
+  });
+  
+  // Calculate financial summary
+  const financialSummary = transactions ? calculateFinancialSummary(transactions) : null;
+  
+  // Monthly revenue goal
+  const monthlyRevenueGoal = 18000;
+  const revenuePercentage = financialSummary 
+    ? Math.round((financialSummary.monthlyRevenue / monthlyRevenueGoal) * 100) 
+    : 0;
+  
+  // Sample data for revenue chart
+  const revenueData = [
+    { name: "Jan", revenue: 4200, expenses: 1800 },
+    { name: "Feb", revenue: 3800, expenses: 1600 },
+    { name: "Mar", revenue: 4800, expenses: 2000 },
+    { name: "Apr", revenue: 5200, expenses: 2200 },
+    { name: "May", revenue: 5800, expenses: 2400 },
+    { name: "Jun", revenue: 6200, expenses: 2600 },
+  ];
+  
+  return (
+    <MainLayout>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold">Finances</h1>
+        <p className="text-sm text-gray-500">Manage your business finances and track revenue</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Total Revenue</p>
+                <p className="text-2xl font-semibold mt-1">
+                  {transactionsLoading 
+                    ? "Loading..." 
+                    : formatCurrency(financialSummary?.totalRevenue || 0)}
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-primary">
+                <DollarSign size={20} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Monthly Revenue</p>
+                <p className="text-2xl font-semibold mt-1">
+                  {transactionsLoading 
+                    ? "Loading..." 
+                    : formatCurrency(financialSummary?.monthlyRevenue || 0)}
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-success">
+                <TrendingUp size={20} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Total Orders</p>
+                <p className="text-2xl font-semibold mt-1">
+                  {ordersLoading ? "Loading..." : orders?.length || 0}
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-secondary bg-opacity-10 flex items-center justify-center text-secondary">
+                <FileText size={20} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Profit Margin</p>
+                <p className="text-2xl font-semibold mt-1">
+                  {transactionsLoading 
+                    ? "Loading..." 
+                    : `${Math.round(financialSummary?.profitMargin || 0)}%`}
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                <CreditCard size={20} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Tabs defaultValue="overview" className="mb-8">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Revenue Overview</CardTitle>
+                  <Select defaultValue={period} onValueChange={setPeriod}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="week">This Week</SelectItem>
+                      <SelectItem value="month">This Month</SelectItem>
+                      <SelectItem value="quarter">This Quarter</SelectItem>
+                      <SelectItem value="year">This Year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent className="h-[300px] pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={revenueData}
+                    margin={{
+                      top: 5,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `$${value}`}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => [`$${value}`, ""]}
+                      labelStyle={{ fontWeight: "bold" }}
+                    />
+                    <Bar 
+                      dataKey="revenue" 
+                      fill="hsl(var(--primary))" 
+                      barSize={40} 
+                      radius={[4, 4, 0, 0]} 
+                      name="Revenue"
+                    />
+                    <Bar 
+                      dataKey="expenses" 
+                      fill="hsl(var(--muted))" 
+                      barSize={40} 
+                      radius={[4, 4, 0, 0]} 
+                      name="Expenses"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            
+            <FinancialSummary 
+              summary={financialSummary} 
+              isLoading={transactionsLoading} 
+            />
+          </div>
+          
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Monthly Revenue Goal</CardTitle>
+              <CardDescription>Track your progress towards your monthly revenue target</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <p className="font-medium">
+                    {formatCurrency(financialSummary?.monthlyRevenue || 0)} of {formatCurrency(monthlyRevenueGoal)}
+                  </p>
+                  <p className="font-medium">{revenuePercentage}%</p>
+                </div>
+                <Progress value={revenuePercentage} className="h-2" />
+                <div className="flex justify-between text-sm text-gray-500">
+                  <p>Current monthly revenue</p>
+                  <p>12 days remaining</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="transactions" className="mt-6">
+          <TransactionsTable transactions={transactions} isLoading={transactionsLoading} />
+        </TabsContent>
+        
+        <TabsContent value="reports" className="mt-6">
+          <Card className="text-center py-12">
+            <CardHeader>
+              <CardTitle>Financial Reports</CardTitle>
+              <CardDescription>Download detailed financial reports for your business</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Revenue Report</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Complete breakdown of your revenue sources and trends
+                    </p>
+                    <button className="flex items-center justify-center w-full py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                      <Download className="mr-2 h-4 w-4" />
+                      Download PDF
+                    </button>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Expense Report</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Detailed expense categorization and analysis
+                    </p>
+                    <button className="flex items-center justify-center w-full py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                      <Download className="mr-2 h-4 w-4" />
+                      Download PDF
+                    </button>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Tax Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Tax liability overview for accounting purposes
+                    </p>
+                    <button className="flex items-center justify-center w-full py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                      <Download className="mr-2 h-4 w-4" />
+                      Download PDF
+                    </button>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </MainLayout>
+  );
+}
