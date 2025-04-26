@@ -144,8 +144,18 @@ export default function TransactionForm({
   // Create transaction mutation
   const createTransactionMutation = useMutation({
     mutationFn: async (values: TransactionFormValues) => {
-      const res = await apiRequest("POST", "/api/transactions", values);
-      return await res.json();
+      try {
+        const res = await apiRequest("POST", "/api/transactions", values);
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error("Transaction API error:", errorData);
+          throw new Error(errorData.message || "Failed to create transaction");
+        }
+        return await res.json();
+      } catch (error) {
+        console.error("Transaction creation error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -168,8 +178,18 @@ export default function TransactionForm({
   // Update transaction mutation
   const updateTransactionMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: TransactionFormValues }) => {
-      const res = await apiRequest("PATCH", `/api/transactions/${id}`, data);
-      return await res.json();
+      try {
+        const res = await apiRequest("PATCH", `/api/transactions/${id}`, data);
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error("Transaction update API error:", errorData);
+          throw new Error(errorData.message || "Failed to update transaction");
+        }
+        return await res.json();
+      } catch (error) {
+        console.error("Transaction update error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -253,7 +273,7 @@ export default function TransactionForm({
   };
 
   // Handle form submission
-  const onSubmit = (values: TransactionFormValues) => {
+  const onSubmit = async (values: TransactionFormValues) => {
     if (selectedType === "transfer") {
       // Handle transfers differently through a dedicated API endpoint
       if (!values.toAccountId) {
@@ -283,23 +303,29 @@ export default function TransactionForm({
         status: "final"
       };
       
-      apiRequest("POST", "/api/transfers", transferData)
-        .then(() => {
-          toast({
-            title: "Transfer completed",
-            description: "Funds have been transferred successfully. A voucher has been generated.",
-          });
-          queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
-          onOpenChange(false);
-        })
-        .catch(error => {
-          toast({
-            title: "Transfer failed",
-            description: error.message,
-            variant: "destructive",
-          });
+      try {
+        const res = await apiRequest("POST", "/api/transfers", transferData);
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error("Transfer API error:", errorData);
+          throw new Error(errorData.message || "Failed to complete transfer");
+        }
+        
+        toast({
+          title: "Transfer completed",
+          description: "Funds have been transferred successfully. A voucher has been generated.",
         });
+        queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Transfer error:", error);
+        toast({
+          title: "Transfer failed",
+          description: error instanceof Error ? error.message : "Please check all fields and try again",
+          variant: "destructive",
+        });
+      }
       
       return;
     }
@@ -314,6 +340,17 @@ export default function TransactionForm({
       values.amount = lineItemsTotal;
     }
     
+    // Format line items to match the expected schema
+    // Only include valid items with all required fields
+    const formattedItems = lineItems.length > 0 
+      ? lineItems.filter(item => 
+          item.description && 
+          item.quantity > 0 && 
+          item.unitPrice >= 0 && 
+          item.amount > 0
+        )
+      : [];
+      
     // Prepare a clean copy of values with document fields added,
     // omitting any fields that don't match the server schema
     const transactionData = {
@@ -331,7 +368,8 @@ export default function TransactionForm({
       status: "final",
       contactName: values.contactName || "",
       contactEmail: values.contactEmail || "",
-      items: lineItems.length > 0 ? lineItems : undefined,
+      // Only include items if we have valid ones
+      ...(formattedItems.length > 0 ? { items: formattedItems } : {})
     };
     
     if (editingTransaction) {
