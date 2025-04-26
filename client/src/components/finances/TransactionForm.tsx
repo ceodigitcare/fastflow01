@@ -69,6 +69,18 @@ const transactionSchema = z.object({
   
   // For transfers only
   toAccountId: z.coerce.number().optional(),
+  
+  // Document generation fields
+  contactName: z.string().optional(),
+  contactEmail: z.string().email().optional().or(z.literal('')),
+  // Document type will be auto-assigned based on transaction type
+  // Income -> Invoice, Expense -> Bill, Transfer -> Voucher
+  items: z.array(z.object({
+    description: z.string(),
+    quantity: z.number().positive(),
+    unitPrice: z.number().positive(),
+    amount: z.number().positive(),
+  })).optional(),
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
@@ -114,6 +126,10 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
     queryKey: ["/api/account-categories"],
   });
 
+  // State for line items in document
+  const [lineItems, setLineItems] = useState<{ description: string; quantity: number; unitPrice: number; amount: number; }[]>([]);
+  const [showDocumentFields, setShowDocumentFields] = useState(false);
+  
   // Form setup
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -126,6 +142,9 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
       description: "",
       reference: "",
       notes: "",
+      contactName: "",
+      contactEmail: "",
+      items: [],
     },
   });
 
@@ -253,6 +272,30 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
     }
   };
 
+  // Function to get document type based on transaction type
+  const getDocumentType = (transactionType: string) => {
+    switch (transactionType) {
+      case "income":
+        return "invoice";
+      case "expense":
+        return "bill";
+      case "transfer":
+        return "voucher";
+      default:
+        return "";
+    }
+  };
+  
+  // Function to generate a unique document number
+  const generateDocumentNumber = (transactionType: string) => {
+    const prefix = transactionType === "income" ? "INV" 
+                 : transactionType === "expense" ? "BILL"
+                 : "VCH";
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(Math.random() * (999 - 100) + 100);
+    return `${prefix}-${timestamp}-${random}`;
+  };
+
   // Handle form submission
   const onSubmit = (values: TransactionFormValues) => {
     if (selectedType === "transfer") {
@@ -266,6 +309,9 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
         return;
       }
       
+      const documentType = "voucher";
+      const documentNumber = generateDocumentNumber(selectedType);
+      
       const transferData = {
         fromAccountId: values.accountId,
         toAccountId: values.toAccountId,
@@ -274,13 +320,18 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
         description: values.description || `Transfer between accounts`,
         reference: values.reference,
         notes: values.notes,
+        contactName: values.contactName,
+        contactEmail: values.contactEmail,
+        documentType: documentType,
+        documentNumber: documentNumber,
+        status: "final"
       };
       
       apiRequest("POST", "/api/transfers", transferData)
         .then(() => {
           toast({
             title: "Transfer completed",
-            description: "Funds have been transferred successfully.",
+            description: "Funds have been transferred successfully. A voucher has been generated.",
           });
           queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
           queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
@@ -297,13 +348,26 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
       return;
     }
     
+    // For income/expense transactions, add document generation
+    const documentType = getDocumentType(selectedType);
+    const documentNumber = generateDocumentNumber(selectedType);
+    
+    // Create a copy of values with document fields added
+    const transactionData = {
+      ...values,
+      items: lineItems.length > 0 ? lineItems : undefined,
+      documentType,
+      documentNumber,
+      status: "final"
+    };
+    
     if (editingTransaction) {
       updateTransactionMutation.mutate({ 
         id: editingTransaction.id, 
-        data: values 
+        data: transactionData 
       });
     } else {
-      createTransactionMutation.mutate(values);
+      createTransactionMutation.mutate(transactionData);
     }
   };
 
@@ -643,6 +707,150 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
                   </FormItem>
                 )}
               />
+            </div>
+            
+            {/* Document Information Section */}
+            <div className="border p-4 rounded-md bg-muted/30">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-medium flex items-center">
+                  <Package className="h-4 w-4 mr-2" />
+                  Document Information
+                  {selectedType === "income" && <span className="ml-2 text-xs text-muted-foreground">(Sales Invoice)</span>}
+                  {selectedType === "expense" && <span className="ml-2 text-xs text-muted-foreground">(Purchase Bill)</span>}
+                  {selectedType === "transfer" && <span className="ml-2 text-xs text-muted-foreground">(Transfer Voucher)</span>}
+                </h3>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowDocumentFields(!showDocumentFields)}
+                >
+                  {showDocumentFields ? "Hide Details" : "Show Details"}
+                </Button>
+              </div>
+              
+              {showDocumentFields && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="contactName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {selectedType === "income" ? "Customer Name" : "Vendor Name"}
+                          </FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contactEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {selectedType === "income" ? "Customer Email" : "Vendor Email"}
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  {/* Line items section */}
+                  <div className="border rounded-md p-3 bg-background">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-sm font-medium">Line Items</h4>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newItem = {
+                            description: "",
+                            quantity: 1,
+                            unitPrice: form.getValues("amount") || 0,
+                            amount: form.getValues("amount") || 0
+                          };
+                          setLineItems([...lineItems, newItem]);
+                        }}
+                      >
+                        Add Item
+                      </Button>
+                    </div>
+                    
+                    {lineItems.length === 0 ? (
+                      <div className="text-center py-2 text-sm text-muted-foreground">
+                        No items added. The total amount will be used as a single line item.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {lineItems.map((item, index) => (
+                          <div key={index} className="flex items-center gap-2 text-sm">
+                            <Input 
+                              value={item.description}
+                              onChange={(e) => {
+                                const newItems = [...lineItems];
+                                newItems[index].description = e.target.value;
+                                setLineItems(newItems);
+                              }}
+                              placeholder="Description"
+                              className="flex-1"
+                            />
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newItems = [...lineItems];
+                                newItems[index].quantity = parseFloat(e.target.value);
+                                newItems[index].amount = newItems[index].quantity * newItems[index].unitPrice;
+                                setLineItems(newItems);
+                              }}
+                              placeholder="Qty"
+                              className="w-16"
+                            />
+                            <Input
+                              type="number"
+                              value={item.unitPrice}
+                              onChange={(e) => {
+                                const newItems = [...lineItems];
+                                newItems[index].unitPrice = parseFloat(e.target.value);
+                                newItems[index].amount = newItems[index].quantity * newItems[index].unitPrice;
+                                setLineItems(newItems);
+                              }}
+                              placeholder="Price"
+                              className="w-24"
+                            />
+                            <div className="w-24 text-right font-medium">
+                              ${item.amount.toFixed(2)}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const newItems = [...lineItems];
+                                newItems.splice(index, 1);
+                                setLineItems(newItems);
+                              }}
+                            >
+                              &times;
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter>
