@@ -15,7 +15,8 @@ async function migrate() {
         type TEXT NOT NULL,
         description TEXT,
         is_system BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT NOW()
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (business_id, name, type)
       );
     `);
     
@@ -31,7 +32,8 @@ async function migrate() {
         current_balance INTEGER DEFAULT 0,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (business_id, category_id, name)
       );
     `);
     
@@ -98,7 +100,7 @@ async function migrate() {
         (1, 'Professional Services', 'expense', 'Accounting, legal, and consulting fees', FALSE),
         (1, 'Office Expenses', 'expense', 'Office supplies and maintenance', FALSE),
         (1, 'Travel & Entertainment', 'expense', 'Business travel and client entertainment', FALSE)
-      ON CONFLICT DO NOTHING;
+      ON CONFLICT (business_id, name, type) DO NOTHING;
     `);
     
     // We need to get the category IDs dynamically since they might have changed
@@ -191,7 +193,7 @@ async function migrate() {
         -- Expense accounts (Professional Services - editable category)
         (1, ${categoryMap['Professional Services']}, 'Accounting Services', 'Bookkeeping and accounting fees', 0),
         (1, ${categoryMap['Professional Services']}, 'Legal Services', 'Legal consultation and services', 0)
-      ON CONFLICT DO NOTHING;
+      ON CONFLICT (business_id, category_id, name) DO NOTHING;
     `);
     
     console.log("Migration completed successfully!");
