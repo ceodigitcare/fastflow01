@@ -12,7 +12,10 @@ import {
   insertWebsiteSchema, 
   insertOrderSchema,
   insertTransactionSchema,
-  insertConversationSchema 
+  insertConversationSchema,
+  insertAccountCategorySchema,
+  insertAccountSchema,
+  insertTransferSchema
 } from "@shared/schema";
 import { chatbotRouter } from "./chatbot";
 import { authenticateUser } from "./auth";
@@ -483,13 +486,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createTransaction({
           businessId,
           accountId: salesAccount.id,
-          category: "income",
+          category: "Sales Revenue",
           orderId: order.id,
           amount: order.total,
           type: "income",
           date: new Date(),
-          description: `Order #${order.id}`,
-          status: "completed"
+          description: `Order #${order.id}`
         });
       }
       

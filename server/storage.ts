@@ -11,7 +11,7 @@ import {
   transfers, Transfer, InsertTransfer
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, asc, desc } from "drizzle-orm";
+import { eq, asc, desc, and, or, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // Business methods
@@ -739,9 +739,19 @@ export class MemStorage implements IStorage {
   }
 }
 
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
+
 export class DatabaseStorage implements IStorage {
+  sessionStore: session.SessionStore;
+  
   constructor() {
-    // TODO: Provide sessionStore implementation for DatabaseStorage
+    const PostgresSessionStore = connectPg(session);
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
   }
   
   async getBusiness(id: number): Promise<Business | undefined> {

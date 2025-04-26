@@ -27,29 +27,35 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Download, Search, Filter } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Search, Filter, Plus } from "lucide-react";
 
 interface TransactionsTableProps {
   transactions: Transaction[] | undefined;
   isLoading: boolean;
+  onNewTransaction?: () => void;
 }
 
-export default function TransactionsTable({ transactions, isLoading }: TransactionsTableProps) {
+export default function TransactionsTable({ 
+  transactions, 
+  isLoading, 
+  onNewTransaction 
+}: TransactionsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
-  // Filter transactions based on search term and status filter
+  // Filter transactions based on search term and type filter
   const filteredTransactions = transactions?.filter(transaction => {
     const matchesSearch = 
-      transaction.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.orderId?.toString().includes(searchTerm) ||
-      transaction.id.toString().includes(searchTerm);
+      transaction.id.toString().includes(searchTerm) ||
+      transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === "all" || transaction.status === statusFilter;
+    const matchesType = typeFilter === "all" || transaction.type === typeFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesType;
   });
   
   // Pagination
@@ -68,19 +74,17 @@ export default function TransactionsTable({ transactions, isLoading }: Transacti
     }
   };
   
-  // Render status badge
-  const renderStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "completed":
-        return <Badge className="bg-success hover:bg-success">{status}</Badge>;
-      case "pending":
-        return <Badge className="bg-warning hover:bg-warning">{status}</Badge>;
-      case "failed":
-        return <Badge className="bg-destructive hover:bg-destructive">{status}</Badge>;
-      case "refunded":
-        return <Badge className="bg-secondary hover:bg-secondary">{status}</Badge>;
+  // Render type badge
+  const renderTypeBadge = (type: string) => {
+    switch (type.toLowerCase()) {
+      case "income":
+        return <Badge className="bg-success hover:bg-success">{type}</Badge>;
+      case "expense":
+        return <Badge className="bg-destructive hover:bg-destructive">{type}</Badge>;
+      case "transfer":
+        return <Badge className="bg-secondary hover:bg-secondary">{type}</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{type}</Badge>;
     }
   };
   
@@ -92,10 +96,18 @@ export default function TransactionsTable({ transactions, isLoading }: Transacti
             <CardTitle>Transactions</CardTitle>
             <CardDescription>Manage your financial transactions</CardDescription>
           </div>
-          <Button>
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
+          <div className="flex gap-2">
+            {onNewTransaction && (
+              <Button onClick={onNewTransaction}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Transaction
+              </Button>
+            )}
+            <Button variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -103,7 +115,7 @@ export default function TransactionsTable({ transactions, isLoading }: Transacti
           <div className="relative flex-grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search by customer, order ID..."
+              placeholder="Search by description, category..."
               className="pl-9"
               value={searchTerm}
               onChange={(e) => {
@@ -114,22 +126,21 @@ export default function TransactionsTable({ transactions, isLoading }: Transacti
           </div>
           <div className="flex gap-2">
             <Select 
-              value={statusFilter} 
+              value={typeFilter} 
               onValueChange={(value) => {
-                setStatusFilter(value);
+                setTypeFilter(value);
                 setCurrentPage(1); // Reset to first page on filter
               }}
             >
               <SelectTrigger className="w-[180px]">
                 <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="refunded">Refunded</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="income">Income</SelectItem>
+                <SelectItem value="expense">Expense</SelectItem>
+                <SelectItem value="transfer">Transfer</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -138,48 +149,50 @@ export default function TransactionsTable({ transactions, isLoading }: Transacti
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Transaction ID</TableHead>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Customer</TableHead>
+              <TableHead>ID</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array(5).fill(0).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><div className="h-4 bg-gray-200 rounded w-20"></div></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 rounded w-12"></div></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 rounded w-28"></div></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 rounded w-8"></div></TableCell>
                   <TableCell><div className="h-4 bg-gray-200 rounded w-24"></div></TableCell>
                   <TableCell><div className="h-4 bg-gray-200 rounded w-16"></div></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 rounded w-20"></div></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 rounded w-24"></div></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 rounded w-32"></div></TableCell>
+                  <TableCell className="text-right"><div className="h-4 bg-gray-200 rounded w-16 ml-auto"></div></TableCell>
                 </TableRow>
               ))
             ) : paginatedTransactions?.length ? (
               paginatedTransactions.map((transaction) => (
-                <TableRow key={transaction.id}>
+                <TableRow key={transaction.id} className="cursor-pointer hover:bg-gray-50">
                   <TableCell className="font-medium">{transaction.id}</TableCell>
-                  <TableCell>{transaction.orderId || "N/A"}</TableCell>
-                  <TableCell>{transaction.customerName}</TableCell>
                   <TableCell>{formatDate(transaction.date)}</TableCell>
-                  <TableCell>{formatCurrency(transaction.amount / 100)}</TableCell>
-                  <TableCell>{renderStatusBadge(transaction.status)}</TableCell>
+                  <TableCell>{renderTypeBadge(transaction.type)}</TableCell>
+                  <TableCell>{transaction.category}</TableCell>
+                  <TableCell>{transaction.description || "N/A"}</TableCell>
+                  <TableCell className={`text-right font-medium ${transaction.type === "income" ? "text-green-600" : transaction.type === "expense" ? "text-red-600" : ""}`}>
+                    {transaction.type === "expense" ? "-" : ""}{formatCurrency(transaction.amount)}
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
-                  {searchTerm || statusFilter !== "all" ? (
+                  {searchTerm || typeFilter !== "all" ? (
                     <>
                       <p className="text-gray-500">No matching transactions found</p>
                       <Button 
                         variant="link"
                         onClick={() => {
                           setSearchTerm("");
-                          setStatusFilter("all");
+                          setTypeFilter("all");
                         }}
                       >
                         Clear filters
