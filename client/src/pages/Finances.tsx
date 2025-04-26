@@ -52,6 +52,15 @@ export default function Finances() {
     queryKey: ["/api/transactions"],
   });
   
+  // Get accounts and categories for the transaction form
+  const { data: accounts, isLoading: accountsLoading } = useQuery({
+    queryKey: ["/api/accounts"],
+  });
+  
+  const { data: categories, isLoading: categoriesLoading } = useQuery({
+    queryKey: ["/api/account-categories"],
+  });
+  
   // Get orders
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ["/api/orders"],
@@ -421,6 +430,8 @@ export default function Finances() {
         open={transactionDialogOpen}
         onOpenChange={setTransactionDialogOpen}
         editingTransaction={editingTransaction}
+        accounts={accounts}
+        categories={categories}
       />
     </MainLayout>
   );
