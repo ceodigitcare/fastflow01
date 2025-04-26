@@ -161,6 +161,13 @@ export const transactions = pgTable("transactions", {
   createdAt: timestamp("created_at").defaultNow(),
   reference: text("reference"), // External reference number or invoice number
   notes: text("notes"),
+  documentType: text("document_type"), // 'invoice', 'receipt', 'bill', 'voucher'
+  documentNumber: text("document_number"), // Unique document identifier
+  documentUrl: text("document_url"), // URL to the generated document
+  contactName: text("contact_name"), // Customer or vendor name
+  contactEmail: text("contact_email"), // Customer or vendor email
+  items: jsonb("items").default([]), // Line items for invoice/bill details
+  status: text("status").default('draft'), // 'draft', 'final', 'paid', 'cancelled'
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).omit({

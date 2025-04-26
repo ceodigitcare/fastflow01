@@ -42,7 +42,14 @@ async function migrate() {
       ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'Uncategorized',
       ADD COLUMN IF NOT EXISTS date TIMESTAMP DEFAULT NOW(),
       ADD COLUMN IF NOT EXISTS reference TEXT,
-      ADD COLUMN IF NOT EXISTS notes TEXT;
+      ADD COLUMN IF NOT EXISTS notes TEXT,
+      ADD COLUMN IF NOT EXISTS document_type TEXT,
+      ADD COLUMN IF NOT EXISTS document_number TEXT,
+      ADD COLUMN IF NOT EXISTS document_url TEXT,
+      ADD COLUMN IF NOT EXISTS contact_name TEXT,
+      ADD COLUMN IF NOT EXISTS contact_email TEXT,
+      ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]',
+      ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'draft';
     `);
     
     // Create default account categories for each business
