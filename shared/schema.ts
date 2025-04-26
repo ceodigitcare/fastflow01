@@ -111,18 +111,77 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   createdAt: true,
 });
 
+// Account Categories
+export const accountCategories = pgTable("account_categories", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // 'asset', 'liability', 'equity', 'income', 'expense'
+  description: text("description"),
+  isSystem: boolean("is_system").default(false), // if true, cannot be deleted by user
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAccountCategorySchema = createInsertSchema(accountCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Accounts table
+export const accounts = pgTable("accounts", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull(),
+  categoryId: integer("category_id").notNull(), // References account_categories
+  name: text("name").notNull(),
+  description: text("description"),
+  initialBalance: integer("initial_balance").default(0), // Amount in cents
+  currentBalance: integer("current_balance").default(0), // Amount in cents
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAccountSchema = createInsertSchema(accounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Financial transactions
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   businessId: integer("business_id").notNull(),
   orderId: integer("order_id"),
+  accountId: integer("account_id").notNull(), // The account this transaction affects
   amount: integer("amount").notNull(), // Amount in cents
-  type: text("type").notNull(), // 'sale', 'refund', 'expense'
+  type: text("type").notNull(), // 'income', 'expense', 'transfer'
+  category: text("category").notNull(), // User-defined category (e.g., "Rent", "Utilities", "Sales")
   description: text("description"),
+  date: timestamp("date").defaultNow(), // Transaction date (can be different from created date)
   createdAt: timestamp("created_at").defaultNow(),
+  reference: text("reference"), // External reference number or invoice number
+  notes: text("notes"),
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// For transaction transfers between accounts
+export const transfers = pgTable("transfers", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull(),
+  fromAccountId: integer("from_account_id").notNull(),
+  toAccountId: integer("to_account_id").notNull(),
+  amount: integer("amount").notNull(), // Amount in cents
+  description: text("description"),
+  date: timestamp("date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  reference: text("reference"),
+});
+
+export const insertTransferSchema = createInsertSchema(transfers).omit({
   id: true,
   createdAt: true,
 });
@@ -160,8 +219,17 @@ export type InsertWebsite = z.infer<typeof insertWebsiteSchema>;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
+export type AccountCategory = typeof accountCategories.$inferSelect;
+export type InsertAccountCategory = z.infer<typeof insertAccountCategorySchema>;
+
+export type Account = typeof accounts.$inferSelect;
+export type InsertAccount = z.infer<typeof insertAccountSchema>;
+
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+
+export type Transfer = typeof transfers.$inferSelect;
+export type InsertTransfer = z.infer<typeof insertTransferSchema>;
 
 export type Conversation = typeof conversations.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;

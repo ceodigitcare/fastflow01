@@ -5,7 +5,10 @@ import {
   websites, Website, InsertWebsite,
   orders, Order, InsertOrder,
   transactions, Transaction, InsertTransaction,
-  conversations, Conversation, InsertConversation
+  conversations, Conversation, InsertConversation,
+  accountCategories, AccountCategory, InsertAccountCategory,
+  accounts, Account, InsertAccount,
+  transfers, Transfer, InsertTransfer
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, asc, desc } from "drizzle-orm";
@@ -41,16 +44,47 @@ export interface IStorage {
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
   
+  // Account Category methods
+  getAccountCategory(id: number): Promise<AccountCategory | undefined>;
+  getAccountCategoriesByBusiness(businessId: number): Promise<AccountCategory[]>;
+  getAccountCategoriesByType(businessId: number, type: string): Promise<AccountCategory[]>;
+  createAccountCategory(category: InsertAccountCategory): Promise<AccountCategory>;
+  updateAccountCategory(id: number, data: Partial<AccountCategory>): Promise<AccountCategory | undefined>;
+  deleteAccountCategory(id: number): Promise<boolean>;
+  
+  // Account methods
+  getAccount(id: number): Promise<Account | undefined>;
+  getAccountsByBusiness(businessId: number): Promise<Account[]>;
+  getAccountsByCategory(categoryId: number): Promise<Account[]>;
+  createAccount(account: InsertAccount): Promise<Account>;
+  updateAccount(id: number, data: Partial<Account>): Promise<Account | undefined>;
+  deleteAccount(id: number): Promise<boolean>;
+  
   // Transaction methods
   getTransaction(id: number): Promise<Transaction | undefined>;
   getTransactionsByBusiness(businessId: number): Promise<Transaction[]>;
+  getTransactionsByAccount(accountId: number): Promise<Transaction[]>;
+  getTransactionsByDateRange(businessId: number, startDate: Date, endDate: Date): Promise<Transaction[]>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction | undefined>;
+  deleteTransaction(id: number): Promise<boolean>;
+  
+  // Transfer methods
+  getTransfer(id: number): Promise<Transfer | undefined>;
+  getTransfersByBusiness(businessId: number): Promise<Transfer[]>;
+  getTransfersByAccount(accountId: number): Promise<Transfer[]>;
+  createTransfer(transfer: InsertTransfer): Promise<Transfer>;
   
   // Conversation methods
   getConversation(id: number): Promise<Conversation | undefined>;
   getConversationsByBusiness(businessId: number): Promise<Conversation[]>;
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   updateConversation(id: number, data: Partial<Conversation>): Promise<Conversation | undefined>;
+  
+  // Financial Reports methods
+  getCashFlow(businessId: number, startDate: Date, endDate: Date): Promise<any>;
+  getProfitAndLoss(businessId: number, startDate: Date, endDate: Date): Promise<any>;
+  getBalanceSheet(businessId: number, asOfDate: Date): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -61,6 +95,9 @@ export class MemStorage implements IStorage {
   private orders: Map<number, Order>;
   private transactions: Map<number, Transaction>;
   private conversations: Map<number, Conversation>;
+  private accountCategories: Map<number, AccountCategory>;
+  private accounts: Map<number, Account>;
+  private transfers: Map<number, Transfer>;
   
   private businessId: number;
   private productId: number;
@@ -69,6 +106,9 @@ export class MemStorage implements IStorage {
   private orderId: number;
   private transactionId: number;
   private conversationId: number;
+  private accountCategoryId: number;
+  private accountId: number;
+  private transferId: number;
   
   constructor() {
     this.businesses = new Map();
@@ -78,6 +118,9 @@ export class MemStorage implements IStorage {
     this.orders = new Map();
     this.transactions = new Map();
     this.conversations = new Map();
+    this.accountCategories = new Map();
+    this.accounts = new Map();
+    this.transfers = new Map();
     
     this.businessId = 1;
     this.productId = 1;
@@ -86,6 +129,9 @@ export class MemStorage implements IStorage {
     this.orderId = 1;
     this.transactionId = 1;
     this.conversationId = 1;
+    this.accountCategoryId = 1;
+    this.accountId = 1;
+    this.transferId = 1;
     
     // Initialize with some template data
     this.initializeTemplates();
@@ -133,6 +179,62 @@ export class MemStorage implements IStorage {
     initialTemplates.forEach(template => {
       this.createTemplate(template);
     });
+  }
+  
+  // Initialize default account categories for a business
+  private async initializeAccountCategories(businessId: number) {
+    const defaultCategories: InsertAccountCategory[] = [
+      // Asset categories
+      { businessId, name: "Cash & Bank", type: "asset", description: "Cash and bank accounts", isSystem: true },
+      { businessId, name: "Accounts Receivable", type: "asset", description: "Money owed to the business", isSystem: true },
+      { businessId, name: "Inventory", type: "asset", description: "Products held for sale", isSystem: true },
+      { businessId, name: "Fixed Assets", type: "asset", description: "Long-term tangible property", isSystem: true },
+      
+      // Liability categories
+      { businessId, name: "Accounts Payable", type: "liability", description: "Money owed by the business", isSystem: true },
+      { businessId, name: "Credit Cards", type: "liability", description: "Credit card balances", isSystem: true },
+      { businessId, name: "Loans", type: "liability", description: "Long-term debt", isSystem: true },
+      
+      // Equity categories
+      { businessId, name: "Owner's Equity", type: "equity", description: "Owner's investment in the business", isSystem: true },
+      { businessId, name: "Retained Earnings", type: "equity", description: "Accumulated profits", isSystem: true },
+      
+      // Income categories
+      { businessId, name: "Sales Revenue", type: "income", description: "Income from product sales", isSystem: true },
+      { businessId, name: "Service Revenue", type: "income", description: "Income from services", isSystem: true },
+      { businessId, name: "Other Income", type: "income", description: "Miscellaneous income", isSystem: true },
+      
+      // Expense categories
+      { businessId, name: "Cost of Goods Sold", type: "expense", description: "Direct costs of products sold", isSystem: true },
+      { businessId, name: "Advertising & Marketing", type: "expense", description: "Promotional expenses", isSystem: true },
+      { businessId, name: "Rent & Utilities", type: "expense", description: "Office and facility costs", isSystem: true },
+      { businessId, name: "Salaries & Wages", type: "expense", description: "Employee compensation", isSystem: true },
+      { businessId, name: "Office Supplies", type: "expense", description: "Consumable office items", isSystem: true },
+      { businessId, name: "Professional Services", type: "expense", description: "Legal, accounting, etc.", isSystem: true },
+      { businessId, name: "Travel", type: "expense", description: "Business travel expenses", isSystem: true },
+      { businessId, name: "Taxes", type: "expense", description: "Business taxes", isSystem: true },
+      { businessId, name: "Other Expenses", type: "expense", description: "Miscellaneous expenses", isSystem: true },
+    ];
+    
+    for (const category of defaultCategories) {
+      await this.createAccountCategory(category);
+    }
+    
+    // Create a default Cash account
+    const cashCategory = await this.getAccountCategoriesByType(businessId, "asset")
+      .then(categories => categories.find(c => c.name === "Cash & Bank"));
+    
+    if (cashCategory) {
+      await this.createAccount({
+        businessId,
+        categoryId: cashCategory.id,
+        name: "Primary Bank Account",
+        description: "Main operating account",
+        initialBalance: 0,
+        currentBalance: 0,
+        isActive: true
+      });
+    }
   }
 
   // Business methods
