@@ -200,6 +200,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (body.inventory <= 0) {
           body.inStock = false;
         }
+        // If inventory is positive, automatically set inStock to true
+        else if (body.inventory > 0) {
+          body.inStock = true;
+        }
       }
       
       const productData = productValidationSchema.parse(body);
@@ -289,6 +293,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // If inventory is 0, automatically set inStock to false
         if (body.inventory <= 0) {
           body.inStock = false;
+        }
+        // If inventory is positive, automatically set inStock to true
+        else if (body.inventory > 0) {
+          body.inStock = true;
         }
       }
       
