@@ -77,14 +77,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Product routes
   app.get("/api/products", requireAuth, async (req, res) => {
-    const businessId = req.user.id;
-    const products = await storage.getProductsByBusiness(businessId);
-    res.json(products);
+    try {
+      const businessId = getBusinessId(req);
+      const products = await storage.getProductsByBusiness(businessId);
+      res.json(products);
+    } catch (error) {
+      res.status(401).json({ message: "Unauthorized" });
+    }
   });
 
   app.post("/api/products", requireAuth, async (req, res) => {
     try {
-      const businessId = req.user!.id;
+      const businessId = getBusinessId(req);
       
       // Create a custom validation schema for the product with proper type handling
       const productValidationSchema = z.object({
@@ -145,29 +149,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/products/:id", requireAuth, async (req, res) => {
-    const businessId = req.session.businessId as number;
-    const productId = parseInt(req.params.id);
-    
-    if (isNaN(productId)) {
-      return res.status(400).json({ message: "Invalid product ID" });
+    try {
+      const businessId = getBusinessId(req);
+      const productId = parseInt(req.params.id);
+      
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const product = await storage.getProduct(productId);
+      
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      if (product.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this product" });
+      }
+      
+      res.json(product);
+    } catch (error) {
+      res.status(401).json({ message: "Unauthorized" });
     }
-    
-    const product = await storage.getProduct(productId);
-    
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-    
-    if (product.businessId !== businessId) {
-      return res.status(403).json({ message: "Unauthorized access to this product" });
-    }
-    
-    res.json(product);
   });
 
   app.patch("/api/products/:id", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const productId = parseInt(req.params.id);
       
       if (isNaN(productId)) {
@@ -243,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/products/:id", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const productId = parseInt(req.params.id);
       
       if (isNaN(productId)) {
@@ -291,14 +299,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Website routes
   app.get("/api/websites", requireAuth, async (req, res) => {
-    const businessId = req.session.businessId as number;
-    const websites = await storage.getWebsitesByBusiness(businessId);
-    res.json(websites);
+    try {
+      const businessId = getBusinessId(req);
+      const websites = await storage.getWebsitesByBusiness(businessId);
+      res.json(websites);
+    } catch (error) {
+      res.status(401).json({ message: "Unauthorized" });
+    }
   });
 
   app.post("/api/websites", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const websiteData = insertWebsiteSchema.parse({
         ...req.body,
         businessId,
@@ -316,29 +328,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/websites/:id", requireAuth, async (req, res) => {
-    const businessId = req.session.businessId as number;
-    const websiteId = parseInt(req.params.id);
-    
-    if (isNaN(websiteId)) {
-      return res.status(400).json({ message: "Invalid website ID" });
+    try {
+      const businessId = getBusinessId(req);
+      const websiteId = parseInt(req.params.id);
+      
+      if (isNaN(websiteId)) {
+        return res.status(400).json({ message: "Invalid website ID" });
+      }
+      
+      const website = await storage.getWebsite(websiteId);
+      
+      if (!website) {
+        return res.status(404).json({ message: "Website not found" });
+      }
+      
+      if (website.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this website" });
+      }
+      
+      res.json(website);
+    } catch (error) {
+      res.status(401).json({ message: "Unauthorized" });
     }
-    
-    const website = await storage.getWebsite(websiteId);
-    
-    if (!website) {
-      return res.status(404).json({ message: "Website not found" });
-    }
-    
-    if (website.businessId !== businessId) {
-      return res.status(403).json({ message: "Unauthorized access to this website" });
-    }
-    
-    res.json(website);
   });
 
   app.patch("/api/websites/:id", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const websiteId = parseInt(req.params.id);
       
       if (isNaN(websiteId)) {
@@ -364,14 +380,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Order routes
   app.get("/api/orders", requireAuth, async (req, res) => {
-    const businessId = req.session.businessId as number;
-    const orders = await storage.getOrdersByBusiness(businessId);
-    res.json(orders);
+    try {
+      const businessId = getBusinessId(req);
+      const orders = await storage.getOrdersByBusiness(businessId);
+      res.json(orders);
+    } catch (error) {
+      res.status(401).json({ message: "Unauthorized" });
+    }
   });
 
   app.post("/api/orders", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const orderData = insertOrderSchema.parse({
         ...req.body,
         businessId,
@@ -426,7 +446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/orders/:id/status", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const orderId = parseInt(req.params.id);
       const { status } = req.body;
       
@@ -458,18 +478,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Account Category routes
   app.get("/api/account-categories", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const categories = await storage.getAccountCategoriesByBusiness(businessId);
       res.json(categories);
     } catch (error) {
       console.error("Error fetching account categories:", error);
-      res.status(500).json({ message: "Failed to fetch account categories" });
+      res.status(401).json({ message: "Unauthorized" });
     }
   });
 
   app.post("/api/account-categories", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const categoryData = insertAccountCategorySchema.parse({
         ...req.body,
         businessId,
@@ -490,7 +510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/account-categories/:id", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const categoryId = parseInt(req.params.id);
       
       if (isNaN(categoryId)) {
@@ -521,7 +541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/account-categories/:id", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const categoryId = parseInt(req.params.id);
       
       if (isNaN(categoryId)) {
@@ -567,18 +587,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Account routes
   app.get("/api/accounts", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const accounts = await storage.getAccountsByBusiness(businessId);
       res.json(accounts);
     } catch (error) {
       console.error("Error fetching accounts:", error);
-      res.status(500).json({ message: "Failed to fetch accounts" });
+      res.status(401).json({ message: "Unauthorized" });
     }
   });
 
   app.post("/api/accounts", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const accountData = insertAccountSchema.parse({
         ...req.body,
         businessId,
@@ -599,7 +619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/accounts/:id", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const accountId = parseInt(req.params.id);
       
       if (isNaN(accountId)) {
@@ -626,7 +646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/accounts/:id", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const accountId = parseInt(req.params.id);
       
       if (isNaN(accountId)) {
@@ -668,18 +688,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transaction routes
   app.get("/api/transactions", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const transactions = await storage.getTransactionsByBusiness(businessId);
       res.json(transactions);
     } catch (error) {
       console.error("Error fetching transactions:", error);
-      res.status(500).json({ message: "Failed to fetch transactions" });
+      res.status(401).json({ message: "Unauthorized" });
     }
   });
 
   app.post("/api/transactions", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const transactionData = insertTransactionSchema.parse({
         ...req.body,
         businessId,
@@ -699,7 +719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch("/api/transactions/:id", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const transactionId = parseInt(req.params.id);
       
       if (isNaN(transactionId)) {
@@ -726,7 +746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/transactions/:id", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const transactionId = parseInt(req.params.id);
       
       if (isNaN(transactionId)) {
