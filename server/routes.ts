@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import express from "express";
@@ -18,140 +18,50 @@ import {
   insertTransferSchema
 } from "@shared/schema";
 import { chatbotRouter } from "./chatbot";
-import { authenticateUser } from "./auth";
-
-// Extend express-session to include businessId
-declare module "express-session" {
-  interface SessionData {
-    businessId?: number;
-  }
-}
+import { setupAuth } from "./auth";
 
 // Setup PostgreSQL session store
 const PgSessionStore = connectPg(session);
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup sessions with better configuration
-  app.use(
-    session({
-      cookie: { 
-        maxAge: 86400000, // 24 hours
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: 'lax'
-      },
-      store: new PgSessionStore({
-        pool,
-        createTableIfMissing: true,
-        tableName: 'session', // Explicit table name
-        ttl: 86400 // Session TTL in seconds (24 hours)
-      }),
-      resave: false,
-      saveUninitialized: false,
-      secret: process.env.SESSION_SECRET || "storefrontsecret",
-      name: 'bizapp.sid' // Custom session cookie name to avoid conflicts
-    })
-  );
+  // Setup authentication with Passport.js
+  setupAuth(app);
 
-  // Authentication middleware
-  const requireAuth = (req: Request, res: Response, next: Function) => {
-    if (!req.session.businessId) {
+  // Authentication middleware using Passport
+  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     next();
   };
-
-  // Authentication routes
-  app.post("/api/auth/register", async (req, res) => {
-    try {
-      const businessData = insertBusinessSchema.parse(req.body);
-      
-      // Check if username already exists
-      const existingBusiness = await storage.getBusinessByUsername(businessData.username);
-      if (existingBusiness) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-      
-      // Create the business account
-      const business = await storage.createBusiness(businessData);
-      
-      // Set session
-      req.session.businessId = business.id;
-      
-      // Return the user without password
-      const { password, ...businessWithoutPassword } = business;
-      res.status(201).json(businessWithoutPassword);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid data", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Failed to register" });
-      }
+  
+  // Helper to get the authenticated business ID
+  const getBusinessId = (req: Request): number => {
+    if (!req.user) {
+      throw new Error('User is not authenticated');
     }
-  });
-
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const { username, password } = authenticateUser.parse(req.body);
-      const business = await storage.getBusinessByUsername(username);
-      
-      if (!business || business.password !== password) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-      
-      // Set session
-      req.session.businessId = business.id;
-      
-      // Return the user without password
-      const { password: _, ...businessWithoutPassword } = business;
-      res.json(businessWithoutPassword);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid data", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Failed to login" });
-      }
-    }
-  });
-
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Failed to logout" });
-      }
-      res.json({ message: "Logged out successfully" });
-    });
-  });
-
-  app.get("/api/auth/me", async (req, res) => {
-    if (!req.session.businessId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    
-    const business = await storage.getBusiness(req.session.businessId);
-    if (!business) {
-      req.session.destroy(() => {});
-      return res.status(401).json({ message: "Business not found" });
-    }
-    
-    const { password, ...businessWithoutPassword } = business;
-    res.json(businessWithoutPassword);
-  });
+    return req.user.id;
+  };
 
   // Business routes
   app.get("/api/business", requireAuth, async (req, res) => {
-    const business = await storage.getBusiness(req.session.businessId as number);
-    if (!business) {
-      return res.status(404).json({ message: "Business not found" });
+    try {
+      const businessId = getBusinessId(req);
+      const business = await storage.getBusiness(businessId);
+      if (!business) {
+        return res.status(404).json({ message: "Business not found" });
+      }
+      
+      const { password, ...businessWithoutPassword } = business;
+      res.json(businessWithoutPassword);
+    } catch (error) {
+      res.status(401).json({ message: "Unauthorized" });
     }
-    
-    const { password, ...businessWithoutPassword } = business;
-    res.json(businessWithoutPassword);
   });
 
   app.patch("/api/business", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const updatedBusiness = await storage.updateBusiness(businessId, req.body);
       
       if (!updatedBusiness) {
@@ -167,14 +77,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Product routes
   app.get("/api/products", requireAuth, async (req, res) => {
-    const businessId = req.session.businessId as number;
+    const businessId = req.user.id;
     const products = await storage.getProductsByBusiness(businessId);
     res.json(products);
   });
 
   app.post("/api/products", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = req.user!.id;
       
       // Create a custom validation schema for the product with proper type handling
       const productValidationSchema = z.object({
