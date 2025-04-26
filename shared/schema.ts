@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -26,14 +26,36 @@ export const products = pgTable("products", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   price: integer("price").notNull(), // Price in cents
+  sku: text("sku"),
+  category: text("category"),
   imageUrl: text("image_url"),
+  additionalImages: jsonb("additional_images").default([]),
+  inventory: integer("inventory").default(0),
   inStock: boolean("in_stock").default(true),
+  hasVariants: boolean("has_variants").default(false),
+  variants: jsonb("variants").default([]),
+  weight: decimal("weight", { precision: 10, scale: 2 }), // in kg
+  dimensions: jsonb("dimensions").default({}), // { length, width, height } in cm
+  tags: text("tags").array(),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+});
+
+// Product variant schema for frontend validation
+export const productVariantSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  sku: z.string().optional(),
+  price: z.number().optional(), // Price adjustment in cents (can be positive or negative)
+  inventory: z.number().optional(),
+  imageUrl: z.string().optional(),
+  attributes: z.record(z.string(), z.string()), // e.g., { "Color": "Red", "Size": "Large" }
 });
 
 // Website templates

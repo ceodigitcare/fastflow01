@@ -42,6 +42,7 @@ export default function Products() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [filterValue, setFilterValue] = useState("all");
   
   // Fetch products from the API
   const { data: products, isLoading, error } = useQuery<Product[]>({
@@ -51,7 +52,18 @@ export default function Products() {
   // Add a new product
   const addProductMutation = useMutation({
     mutationFn: async (newProduct: any) => {
-      return await apiRequest("POST", "/api/products", newProduct);
+      // Remove any advanced properties that aren't in the current database schema
+      // Note: Once database is updated, these lines can be removed
+      const basicProduct = {
+        name: newProduct.name,
+        description: newProduct.description,
+        price: newProduct.price,
+        imageUrl: newProduct.imageUrl,
+        inStock: newProduct.inStock,
+        // We'll keep businessId handling on the server side
+      };
+      
+      return await apiRequest("POST", "/api/products", basicProduct);
     },
     onSuccess: () => {
       toast({
@@ -67,13 +79,24 @@ export default function Products() {
         description: "Failed to add product. Please try again.",
         variant: "destructive",
       });
+      console.error("Add product error:", error);
     }
   });
   
   // Update an existing product
   const updateProductMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return await apiRequest("PATCH", `/api/products/${id}`, data);
+      // Remove any advanced properties that aren't in the current database schema
+      // Note: Once database is updated, these lines can be removed
+      const basicProduct = {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        imageUrl: data.imageUrl,
+        inStock: data.inStock,
+      };
+      
+      return await apiRequest("PATCH", `/api/products/${id}`, basicProduct);
     },
     onSuccess: () => {
       toast({
@@ -90,6 +113,7 @@ export default function Products() {
         description: "Failed to update product. Please try again.",
         variant: "destructive",
       });
+      console.error("Update product error:", error);
     }
   });
   
@@ -111,6 +135,7 @@ export default function Products() {
         description: "Failed to delete product. Please try again.",
         variant: "destructive",
       });
+      console.error("Delete product error:", error);
     }
   });
   
@@ -138,11 +163,24 @@ export default function Products() {
     }
   };
   
-  // Filter products based on search term
-  const filteredProducts = products?.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter products based on search term and stock filter
+  const filteredProducts = products?.filter(product => {
+    // Search filter
+    const matchesSearch = (
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    // Stock filter
+    let matchesStockFilter = true;
+    if (filterValue === "in-stock") {
+      matchesStockFilter = product.inStock === true;
+    } else if (filterValue === "out-of-stock") {
+      matchesStockFilter = product.inStock === false;
+    }
+    
+    return matchesSearch && matchesStockFilter;
+  });
   
   return (
     <MainLayout>
@@ -169,7 +207,7 @@ export default function Products() {
           />
         </div>
         
-        <Select defaultValue="all">
+        <Select value={filterValue} onValueChange={setFilterValue}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by" />
           </SelectTrigger>
@@ -225,16 +263,27 @@ export default function Products() {
       ) : (
         <Card className="p-6 text-center">
           <CardContent className="pt-6">
-            {searchTerm ? (
+            {searchTerm || filterValue !== "all" ? (
               <>
                 <h3 className="text-lg font-medium mb-2">No products found</h3>
                 <p className="text-gray-500">
-                  No products match your search term "{searchTerm}".
+                  {searchTerm ? 
+                    `No products match your search term "${searchTerm}".` : 
+                    "No products match your filter criteria."} 
                   Try a different search or clear the filter.
                 </p>
-                <Button variant="outline" className="mt-4" onClick={() => setSearchTerm("")}>
-                  Clear Search
-                </Button>
+                <div className="flex gap-2 justify-center mt-4">
+                  {searchTerm && (
+                    <Button variant="outline" onClick={() => setSearchTerm("")}>
+                      Clear Search
+                    </Button>
+                  )}
+                  {filterValue !== "all" && (
+                    <Button variant="outline" onClick={() => setFilterValue("all")}>
+                      Clear Filter
+                    </Button>
+                  )}
+                </div>
               </>
             ) : (
               <>
@@ -253,7 +302,7 @@ export default function Products() {
       )}
       
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[90vw] md:max-w-[80vw] lg:max-w-[900px]">
           <DialogHeader>
             <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
             <DialogDescription>
