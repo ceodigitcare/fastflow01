@@ -60,11 +60,17 @@ export function setupAuth(app: Express) {
     new LocalStrategy(async (username, password, done) => {
       try {
         const business = await storage.getBusinessByUsername(username);
-        if (!business || business.password !== password) {
+        if (!business) {
           return done(null, false);
-        } else {
-          return done(null, business);
         }
+        
+        // Check password using secure comparison
+        const isValidPassword = await comparePasswords(password, business.password);
+        if (!isValidPassword) {
+          return done(null, false);
+        }
+        
+        return done(null, business);
       } catch (error) {
         return done(error);
       }

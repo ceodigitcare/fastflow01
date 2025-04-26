@@ -15,7 +15,8 @@ import {
   insertConversationSchema,
   insertAccountCategorySchema,
   insertAccountSchema,
-  insertTransferSchema
+  insertTransferSchema,
+  Business
 } from "@shared/schema";
 import { chatbotRouter } from "./chatbot";
 import { setupAuth } from "./auth";
@@ -40,7 +41,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.user) {
       throw new Error('User is not authenticated');
     }
-    return req.user.id;
+    // Cast user to Business type since we know it's a Business instance from Passport authentication
+    return (req.user as Business).id;
   };
 
   // Business routes
@@ -779,7 +781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transfer routes
   app.post("/api/transfers", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const transferData = insertTransferSchema.parse({
         ...req.body,
         businessId,
@@ -799,14 +801,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Conversation routes
   app.get("/api/conversations", requireAuth, async (req, res) => {
-    const businessId = req.session.businessId as number;
-    const conversations = await storage.getConversationsByBusiness(businessId);
-    res.json(conversations);
+    try {
+      const businessId = getBusinessId(req);
+      const conversations = await storage.getConversationsByBusiness(businessId);
+      res.json(conversations);
+    } catch (error) {
+      res.status(401).json({ message: "Unauthorized" });
+    }
   });
 
   app.post("/api/conversations", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const conversationData = insertConversationSchema.parse({
         ...req.body,
         businessId,
@@ -825,7 +831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/conversations/:id", requireAuth, async (req, res) => {
     try {
-      const businessId = req.session.businessId as number;
+      const businessId = getBusinessId(req);
       const conversationId = parseInt(req.params.id);
       
       if (isNaN(conversationId)) {
