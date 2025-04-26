@@ -31,17 +31,25 @@ declare module "express-session" {
 const PgSessionStore = connectPg(session);
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup sessions
+  // Setup sessions with better configuration
   app.use(
     session({
-      cookie: { maxAge: 86400000 }, // 24 hours
+      cookie: { 
+        maxAge: 86400000, // 24 hours
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'lax'
+      },
       store: new PgSessionStore({
         pool,
-        createTableIfMissing: true
+        createTableIfMissing: true,
+        tableName: 'session', // Explicit table name
+        ttl: 86400 // Session TTL in seconds (24 hours)
       }),
       resave: false,
       saveUninitialized: false,
       secret: process.env.SESSION_SECRET || "storefrontsecret",
+      name: 'bizapp.sid' // Custom session cookie name to avoid conflicts
     })
   );
 
