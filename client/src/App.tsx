@@ -14,6 +14,9 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ChatWidget from "@/pages/ChatWidget";
 import NotFound from "@/pages/not-found";
+import Analytics from "@/pages/Analytics";
+import Help from "@/pages/Help";
+import Documentation from "@/pages/Documentation";
 
 function Router() {
   return (
@@ -24,7 +27,10 @@ function Router() {
       <Route path="/ai-chatbot" component={AIChat} />
       <Route path="/products" component={Products} />
       <Route path="/finances" component={Finances} />
+      <Route path="/analytics" component={Analytics} />
       <Route path="/settings" component={Settings} />
+      <Route path="/help" component={Help} />
+      <Route path="/documentation" component={Documentation} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/chat/:businessId" component={ChatWidget} />
