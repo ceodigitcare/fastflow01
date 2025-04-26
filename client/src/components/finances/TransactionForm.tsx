@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Account, AccountCategory, InsertAccount, InsertAccountCategory, InsertTransaction, Transaction } from "@shared/schema";
+import { Account, AccountCategory, InsertAccount, InsertTransaction, Transaction } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -101,7 +101,6 @@ type CategoryFormValues = z.infer<typeof categorySchema>;
 export default function TransactionForm({ open, onOpenChange, editingTransaction }: TransactionFormProps) {
   const [selectedType, setSelectedType] = useState<"income" | "expense" | "transfer">("expense");
   const [openAccountDialog, setOpenAccountDialog] = useState(false);
-  const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -363,7 +362,7 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
     },
   });
   
-  // Setup forms for account and category creation
+  // Setup form for account creation
   const accountForm = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema),
     defaultValues: {
@@ -374,25 +373,10 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
     },
   });
   
-  const categoryForm = useForm<CategoryFormValues>({
-    resolver: zodResolver(categorySchema),
-    defaultValues: {
-      name: "",
-      type: selectedType === "income" ? "income" : "expense",
-      description: "",
-    },
-  });
-  
   // Handle account form submission
   const onAccountSubmit = (values: AccountFormValues) => {
     const businessId = 1; // This should be retrieved from context in a real app
     createAccountMutation.mutate({ ...values, businessId });
-  };
-  
-  // Handle category form submission
-  const onCategorySubmit = (values: CategoryFormValues) => {
-    const businessId = 1; // This should be retrieved from context in a real app
-    createCategoryMutation.mutate({ ...values, businessId });
   };
 
   return (
@@ -533,16 +517,6 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
                   <FormItem>
                     <div className="flex justify-between items-center">
                       <FormLabel>Category</FormLabel>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={() => setOpenCategoryDialog(true)}
-                      >
-                        <Plus className="mr-1 h-3 w-3" />
-                        New Category
-                      </Button>
                     </div>
                     <Select
                       onValueChange={field.onChange}
@@ -827,131 +801,6 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
               </Button>
               <Button type="submit" disabled={createAccountMutation.isPending}>
                 {createAccountMutation.isPending ? "Creating..." : "Create Account"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-    
-    {/* Category Creation Dialog */}
-    <Dialog open={openCategoryDialog} onOpenChange={setOpenCategoryDialog}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create New Category</DialogTitle>
-          <DialogDescription>
-            Add a new category to organize your finances. Categories help you track where your
-            money is coming from and going to.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <Form {...categoryForm}>
-          <form onSubmit={categoryForm.handleSubmit(onCategorySubmit)} className="space-y-4">
-            <FormField
-              control={categoryForm.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Rent or Sales" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={categoryForm.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="asset">Asset</SelectItem>
-                      <SelectItem value="liability">Liability</SelectItem>
-                      <SelectItem value="equity">Equity</SelectItem>
-                      <SelectItem value="income">Income</SelectItem>
-                      <SelectItem value="expense">Expense</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    <div className="flex items-center">
-                      {field.value === "income" && (
-                        <>
-                          <ArrowUpDown className="mr-2 h-4 w-4 text-green-500" />
-                          For money coming into your business
-                        </>
-                      )}
-                      {field.value === "expense" && (
-                        <>
-                          <ArrowUpDown className="mr-2 h-4 w-4 text-red-500" />
-                          For money going out of your business
-                        </>
-                      )}
-                      {field.value === "asset" && (
-                        <>
-                          <Package className="mr-2 h-4 w-4 text-blue-500" />
-                          Things you own that have value
-                        </>
-                      )}
-                      {field.value === "liability" && (
-                        <>
-                          <BookOpen className="mr-2 h-4 w-4 text-orange-500" />
-                          Money you owe to others
-                        </>
-                      )}
-                      {field.value === "equity" && (
-                        <>
-                          <BookOpen className="mr-2 h-4 w-4 text-purple-500" />
-                          Ownership value in your business
-                        </>
-                      )}
-                    </div>
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={categoryForm.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Add details about this category..."
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpenCategoryDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={createCategoryMutation.isPending}>
-                {createCategoryMutation.isPending ? "Creating..." : "Create Category"}
               </Button>
             </DialogFooter>
           </form>
