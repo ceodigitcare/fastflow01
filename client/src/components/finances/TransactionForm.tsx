@@ -314,13 +314,24 @@ export default function TransactionForm({
       values.amount = lineItemsTotal;
     }
     
-    // Create a copy of values with document fields added
+    // Prepare a clean copy of values with document fields added,
+    // omitting any fields that don't match the server schema
     const transactionData = {
-      ...values,
+      type: values.type,
+      accountId: values.accountId,
+      amount: values.amount,
+      date: values.date,
+      category: values.category || "Uncategorized",
+      description: values.description || "",
+      reference: values.reference || "",
+      notes: values.notes || "",
+      toAccountId: values.toAccountId,
+      documentType: documentType || undefined,
+      documentNumber: documentNumber || undefined,
+      status: "final",
+      contactName: contactName || undefined,
+      contactEmail: contactEmail || undefined,
       items: lineItems.length > 0 ? lineItems : undefined,
-      documentType,
-      documentNumber,
-      status: "final"
     };
     
     if (editingTransaction) {
