@@ -52,18 +52,26 @@ export default function Products() {
   // Add a new product
   const addProductMutation = useMutation({
     mutationFn: async (newProduct: any) => {
-      // Remove any advanced properties that aren't in the current database schema
-      // Note: Once database is updated, these lines can be removed
-      const basicProduct = {
+      // Include all product data fields
+      const productData = {
         name: newProduct.name,
         description: newProduct.description,
         price: newProduct.price,
         imageUrl: newProduct.imageUrl,
         inStock: newProduct.inStock,
+        sku: newProduct.sku,
+        category: newProduct.category,
+        inventory: newProduct.inventory,
+        hasVariants: newProduct.hasVariants,
+        variants: newProduct.variants,
+        additionalImages: newProduct.additionalImages,
+        weight: newProduct.weight,
+        dimensions: newProduct.dimensions,
+        tags: newProduct.tags
         // We'll keep businessId handling on the server side
       };
       
-      return await apiRequest("POST", "/api/products", basicProduct);
+      return await apiRequest("POST", "/api/products", productData);
     },
     onSuccess: () => {
       toast({
@@ -86,17 +94,25 @@ export default function Products() {
   // Update an existing product
   const updateProductMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      // Remove any advanced properties that aren't in the current database schema
-      // Note: Once database is updated, these lines can be removed
-      const basicProduct = {
+      // Include all product data fields for updating
+      const productData = {
         name: data.name,
         description: data.description,
         price: data.price,
         imageUrl: data.imageUrl,
         inStock: data.inStock,
+        sku: data.sku,
+        category: data.category,
+        inventory: data.inventory,
+        hasVariants: data.hasVariants,
+        variants: data.variants,
+        additionalImages: data.additionalImages,
+        weight: data.weight,
+        dimensions: data.dimensions,
+        tags: data.tags
       };
       
-      return await apiRequest("PATCH", `/api/products/${id}`, basicProduct);
+      return await apiRequest("PATCH", `/api/products/${id}`, productData);
     },
     onSuccess: () => {
       toast({
