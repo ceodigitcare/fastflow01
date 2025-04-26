@@ -97,10 +97,11 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
       
-      // Create the business account
+      // Create the business account with hashed password
+      const hashedPassword = await hashPassword(password);
       const business = await storage.createBusiness({
         username,
-        password, // In production, use hashPassword(password)
+        password: hashedPassword,
         ...userData
       });
 
