@@ -7,6 +7,8 @@ import {
   transactions, Transaction, InsertTransaction,
   conversations, Conversation, InsertConversation
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, asc, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Business methods
@@ -356,4 +358,255 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getBusiness(id: number): Promise<Business | undefined> {
+    const [business] = await db.select().from(businesses).where(eq(businesses.id, id));
+    return business || undefined;
+  }
+
+  async getBusinessByUsername(username: string): Promise<Business | undefined> {
+    const [business] = await db.select().from(businesses).where(eq(businesses.username, username));
+    return business || undefined;
+  }
+
+  async createBusiness(insertBusiness: InsertBusiness): Promise<Business> {
+    const [business] = await db
+      .insert(businesses)
+      .values(insertBusiness)
+      .returning();
+    return business;
+  }
+
+  async updateBusiness(id: number, data: Partial<Business>): Promise<Business | undefined> {
+    const [business] = await db
+      .update(businesses)
+      .set(data)
+      .where(eq(businesses.id, id))
+      .returning();
+    return business || undefined;
+  }
+
+  async getProduct(id: number): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product || undefined;
+  }
+
+  async getProductsByBusiness(businessId: number): Promise<Product[]> {
+    return await db
+      .select()
+      .from(products)
+      .where(eq(products.businessId, businessId));
+  }
+
+  async createProduct(insertProduct: InsertProduct): Promise<Product> {
+    const [product] = await db
+      .insert(products)
+      .values(insertProduct)
+      .returning();
+    return product;
+  }
+
+  async updateProduct(id: number, data: Partial<Product>): Promise<Product | undefined> {
+    const [product] = await db
+      .update(products)
+      .set(data)
+      .where(eq(products.id, id))
+      .returning();
+    return product || undefined;
+  }
+
+  async deleteProduct(id: number): Promise<boolean> {
+    const result = await db
+      .delete(products)
+      .where(eq(products.id, id))
+      .returning({ id: products.id });
+    return result.length > 0;
+  }
+
+  async getTemplate(id: number): Promise<Template | undefined> {
+    const [template] = await db.select().from(templates).where(eq(templates.id, id));
+    return template || undefined;
+  }
+
+  async getAllTemplates(): Promise<Template[]> {
+    return await db.select().from(templates);
+  }
+
+  async createTemplate(insertTemplate: InsertTemplate): Promise<Template> {
+    const [template] = await db
+      .insert(templates)
+      .values(insertTemplate)
+      .returning();
+    return template;
+  }
+
+  async getWebsite(id: number): Promise<Website | undefined> {
+    const [website] = await db.select().from(websites).where(eq(websites.id, id));
+    return website || undefined;
+  }
+
+  async getWebsitesByBusiness(businessId: number): Promise<Website[]> {
+    return await db
+      .select()
+      .from(websites)
+      .where(eq(websites.businessId, businessId));
+  }
+
+  async createWebsite(insertWebsite: InsertWebsite): Promise<Website> {
+    const [website] = await db
+      .insert(websites)
+      .values(insertWebsite)
+      .returning();
+    return website;
+  }
+
+  async updateWebsite(id: number, data: Partial<Website>): Promise<Website | undefined> {
+    const [website] = await db
+      .update(websites)
+      .set(data)
+      .where(eq(websites.id, id))
+      .returning();
+    return website || undefined;
+  }
+
+  async getOrder(id: number): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order || undefined;
+  }
+
+  async getOrdersByBusiness(businessId: number): Promise<Order[]> {
+    return await db
+      .select()
+      .from(orders)
+      .where(eq(orders.businessId, businessId))
+      .orderBy(desc(orders.createdAt));
+  }
+
+  async createOrder(insertOrder: InsertOrder): Promise<Order> {
+    const [order] = await db
+      .insert(orders)
+      .values(insertOrder)
+      .returning();
+    return order;
+  }
+
+  async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
+    const [order] = await db
+      .update(orders)
+      .set({ status })
+      .where(eq(orders.id, id))
+      .returning();
+    return order || undefined;
+  }
+
+  async getTransaction(id: number): Promise<Transaction | undefined> {
+    const [transaction] = await db.select().from(transactions).where(eq(transactions.id, id));
+    return transaction || undefined;
+  }
+
+  async getTransactionsByBusiness(businessId: number): Promise<Transaction[]> {
+    return await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.businessId, businessId))
+      .orderBy(desc(transactions.createdAt));
+  }
+
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+    const [transaction] = await db
+      .insert(transactions)
+      .values(insertTransaction)
+      .returning();
+    return transaction;
+  }
+
+  async getConversation(id: number): Promise<Conversation | undefined> {
+    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
+    return conversation || undefined;
+  }
+
+  async getConversationsByBusiness(businessId: number): Promise<Conversation[]> {
+    return await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.businessId, businessId))
+      .orderBy(desc(conversations.updatedAt));
+  }
+
+  async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
+    const [conversation] = await db
+      .insert(conversations)
+      .values(insertConversation)
+      .returning();
+    return conversation;
+  }
+
+  async updateConversation(id: number, data: Partial<Conversation>): Promise<Conversation | undefined> {
+    const [conversation] = await db
+      .update(conversations)
+      .set(data)
+      .where(eq(conversations.id, id))
+      .returning();
+    return conversation || undefined;
+  }
+}
+
+// Initialize templates when creating database storage for the first time
+async function initializeTemplates(storage: DatabaseStorage) {
+  const templates = await storage.getAllTemplates();
+  if (templates.length === 0) {
+    const initialTemplates: InsertTemplate[] = [
+      {
+        name: "Modern Shop",
+        description: "Clean, minimal design for fashion and accessories",
+        previewUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80",
+        category: "fashion",
+        isPopular: true,
+      },
+      {
+        name: "Food & Grocery",
+        description: "Perfect for food delivery and grocery stores",
+        previewUrl: "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80",
+        category: "food",
+        isPopular: false,
+      },
+      {
+        name: "Digital Products",
+        description: "Optimized for selling digital downloads and services",
+        previewUrl: "https://images.unsplash.com/photo-1470309864661-68328b2cd0a5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80",
+        category: "digital",
+        isPopular: false,
+      },
+      {
+        name: "Handmade Crafts",
+        description: "Showcase your handmade products with this artistic template",
+        previewUrl: "https://images.unsplash.com/photo-1560421683-6856ea585c78?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80",
+        category: "handmade",
+        isPopular: false,
+      },
+      {
+        name: "Electronics",
+        description: "Technical specifications and sleek design for electronic products",
+        previewUrl: "https://images.unsplash.com/photo-1550009158-9ebf69173e03?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80",
+        category: "electronics",
+        isPopular: true,
+      }
+    ];
+    
+    for (const template of initialTemplates) {
+      await storage.createTemplate(template);
+    }
+  }
+}
+
+export const storage = new DatabaseStorage();
+
+// Initialize the database
+(async () => {
+  try {
+    await initializeTemplates(storage);
+    console.log("Database initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize database:", error);
+  }
+})();
