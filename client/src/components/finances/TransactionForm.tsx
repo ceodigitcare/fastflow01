@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Account, AccountCategory, InsertAccount, InsertTransaction, Transaction } from "@shared/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { Plus, CalendarIcon, Package } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Account, AccountCategory, Transaction } from "@shared/schema";
+import { transactionSchema, accountSchema, categorySchema } from "@/lib/validation";
 import { z } from "zod";
+
 import {
   Dialog,
   DialogContent,
@@ -13,7 +17,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -24,6 +27,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -31,106 +38,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, ArrowUpDown, Plus, Package, BookOpen } from "lucide-react";
-import { format } from "date-fns";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-
-// Form validation schema
-const transactionSchema = z.object({
-  type: z.enum(["income", "expense", "transfer"], {
-    required_error: "Please select a transaction type",
-  }),
-  accountId: z.coerce.number({
-    required_error: "Please select an account",
-    invalid_type_error: "Account must be a number",
-  }),
-  category: z.string().min(1, { message: "Please select a category" }),
-  amount: z.coerce.number().positive("Amount must be positive"),
-  date: z.date({
-    required_error: "Please select a date",
-  }),
-  description: z.string().optional(),
-  reference: z.string().optional(),
-  notes: z.string().optional(),
-  
-  // For transfers only
-  toAccountId: z.coerce.number().optional(),
-  
-  // Document generation fields
-  contactName: z.string().optional(),
-  contactEmail: z.string().email().optional().or(z.literal('')),
-  // Document type will be auto-assigned based on transaction type
-  // Income -> Invoice, Expense -> Bill, Transfer -> Voucher
-  items: z.array(z.object({
-    description: z.string(),
-    quantity: z.number().positive(),
-    unitPrice: z.number().positive(),
-    amount: z.number().positive(),
-  })).optional(),
-});
+import { Calendar } from "@/components/ui/calendar";
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
+
+interface LineItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
 
 interface TransactionFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingTransaction?: Transaction | null;
+  accounts?: Account[];
+  categories?: AccountCategory[];
 }
 
-// Account form schema
-const accountSchema = z.object({
-  name: z.string().min(1, { message: "Name is required" }),
-  description: z.string().optional(),
-  categoryId: z.coerce.number({ required_error: "Category is required" }),
-  initialBalance: z.coerce.number().default(0),
-});
-
 type AccountFormValues = z.infer<typeof accountSchema>;
-
-// Category form schema
-const categorySchema = z.object({
-  name: z.string().min(1, { message: "Name is required" }),
-  type: z.enum(["asset", "liability", "equity", "income", "expense"]),
-  description: z.string().optional(),
-});
-
 type CategoryFormValues = z.infer<typeof categorySchema>;
 
-export default function TransactionForm({ open, onOpenChange, editingTransaction }: TransactionFormProps) {
+export default function TransactionForm({ 
+  open, 
+  onOpenChange, 
+  editingTransaction,
+  accounts,
+  categories
+}: TransactionFormProps) {
   const [selectedType, setSelectedType] = useState<"income" | "expense" | "transfer">("expense");
+  const [lineItems, setLineItems] = useState<LineItem[]>([
+    { description: "", quantity: 1, unitPrice: 0, amount: 0 }
+  ]);
   const [openAccountDialog, setOpenAccountDialog] = useState(false);
+  const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Fetch accounts
-  const { data: accounts, isLoading: isLoadingAccounts } = useQuery<Account[]>({
-    queryKey: ["/api/accounts"],
-  });
-
-  // Fetch account categories
-  const { data: categories, isLoading: isLoadingCategories } = useQuery<AccountCategory[]>({
-    queryKey: ["/api/account-categories"],
-  });
-
-  // State for line items in document
-  const [lineItems, setLineItems] = useState<{ description: string; quantity: number; unitPrice: number; amount: number; }[]>([]);
-  const [showDocumentFields, setShowDocumentFields] = useState(false);
   
-  // Form setup
+  // Initialize the form
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
@@ -160,6 +112,8 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
         description: editingTransaction.description || "",
         reference: editingTransaction.reference || "",
         notes: editingTransaction.notes || "",
+        contactName: editingTransaction.contactName || "",
+        contactEmail: editingTransaction.contactEmail || "",
       });
       setSelectedType(editingTransaction.type as "income" | "expense" | "transfer");
     } else if (open) {
@@ -172,6 +126,8 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
         description: "",
         reference: "",
         notes: "",
+        contactName: "",
+        contactEmail: "",
       });
       setSelectedType("expense");
     }
@@ -460,277 +416,273 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Transaction Type</FormLabel>
-                    <Select
-                      onValueChange={(value: "income" | "expense" | "transfer") => {
-                        field.onChange(value);
-                        setSelectedType(value);
-                      }}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="income">Income</SelectItem>
-                        <SelectItem value="expense">Expense</SelectItem>
-                        <SelectItem value="transfer">Transfer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      {selectedType === "income" 
-                        ? "Money coming into your business" 
-                        : selectedType === "expense"
-                        ? "Money going out of your business"
-                        : "Move money between accounts"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid grid-cols-2 mb-4">
+                  <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                  <TabsTrigger value="document">Document Info</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="basic" className="space-y-4 pt-2">
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Transaction Type</FormLabel>
+                        <Select
+                          onValueChange={(value: "income" | "expense" | "transfer") => {
+                            field.onChange(value);
+                            setSelectedType(value);
+                          }}
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="income">Income</SelectItem>
+                            <SelectItem value="expense">Expense</SelectItem>
+                            <SelectItem value="transfer">Transfer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          {selectedType === "income" 
+                            ? "Money coming into your business" 
+                            : selectedType === "expense"
+                            ? "Money going out of your business"
+                            : "Move money between accounts"}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            <div className={selectedType === "transfer" ? "grid grid-cols-2 gap-4" : ""}>
-              <FormField
-                control={form.control}
-                name="accountId"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>{selectedType === "transfer" ? "From Account" : "Account"}</FormLabel>
-                    </div>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value ? field.value.toString() : undefined}
-                      value={field.value ? field.value.toString() : undefined}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an account" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {getFilteredAccounts().map((account) => (
-                          <SelectItem key={account.id} value={account.id.toString()}>
-                            {account.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {selectedType === "transfer" && (
-                <FormField
-                  control={form.control}
-                  name="toAccountId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>To Account</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        defaultValue={field.value ? field.value.toString() : undefined}
-                        value={field.value ? field.value.toString() : undefined}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an account" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {getFilteredAccounts()
-                            .filter(a => a.id !== form.getValues("accountId"))
-                            .map((account) => (
-                              <SelectItem key={account.id} value={account.id.toString()}>
-                                {account.name}
-                              </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-            </div>
-
-            {selectedType !== "transfer" && (
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {getCategoryOptions().map((category) => (
-                          <SelectItem key={category.id} value={category.name}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-2 top-2 text-gray-500">$</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="pl-7"
-                          placeholder="0.00"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                  <div className={selectedType === "transfer" ? "grid grid-cols-2 gap-4" : ""}>
+                    <FormField
+                      control={form.control}
+                      name="accountId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex justify-between items-center">
+                            <FormLabel>{selectedType === "transfer" ? "From Account" : "Account"}</FormLabel>
+                          </div>
+                          <Select
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            defaultValue={field.value ? field.value.toString() : undefined}
+                            value={field.value ? field.value.toString() : undefined}
                           >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={`${selectedType === "income" ? "Payment received for..." : selectedType === "expense" ? "Payment for..." : "Transfer for..."}`}
-                      {...field}
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an account" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {getFilteredAccounts().map((account) => (
+                                <SelectItem key={account.id} value={account.id.toString()}>
+                                  {account.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="reference"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reference (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Invoice #, Receipt #, etc."
-                        {...field}
+                    {selectedType === "transfer" && (
+                      <FormField
+                        control={form.control}
+                        name="toAccountId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>To Account</FormLabel>
+                            <Select
+                              onValueChange={(value) => field.onChange(parseInt(value))}
+                              defaultValue={field.value ? field.value.toString() : undefined}
+                              value={field.value ? field.value.toString() : undefined}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select an account" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {getFilteredAccounts()
+                                  .filter(a => a.id !== form.getValues("accountId"))
+                                  .map((account) => (
+                                    <SelectItem key={account.id} value={account.id.toString()}>
+                                      {account.name}
+                                    </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    )}
+                  </div>
 
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Additional details..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            {/* Document Information Section */}
-            <div className="border p-4 rounded-md bg-muted/30">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-medium flex items-center">
-                  <Package className="h-4 w-4 mr-2" />
-                  Document Information
-                  {selectedType === "income" && <span className="ml-2 text-xs text-muted-foreground">(Sales Invoice)</span>}
-                  {selectedType === "expense" && <span className="ml-2 text-xs text-muted-foreground">(Purchase Bill)</span>}
-                  {selectedType === "transfer" && <span className="ml-2 text-xs text-muted-foreground">(Transfer Voucher)</span>}
-                </h3>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShowDocumentFields(!showDocumentFields)}
-                >
-                  {showDocumentFields ? "Hide Details" : "Show Details"}
-                </Button>
-              </div>
-              
-              {showDocumentFields && (
-                <div className="space-y-4">
+                  {selectedType !== "transfer" && (
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {getCategoryOptions().map((category) => (
+                                <SelectItem key={category.id} value={category.name}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <span className="absolute left-2 top-2 text-gray-500">$</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                className="pl-7"
+                                placeholder="0.00"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="date"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={`${selectedType === "income" ? "Payment received for..." : selectedType === "expense" ? "Payment for..." : "Transfer for..."}`}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="reference"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Reference (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Invoice #, Receipt #, etc."
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notes (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Additional details..."
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="document" className="space-y-4 pt-2">
+                  <div className="flex items-center mb-4">
+                    <Package className="h-4 w-4 mr-2" />
+                    <h3 className="text-sm font-medium">
+                      {selectedType === "income" && "Sales Invoice"}
+                      {selectedType === "expense" && "Purchase Bill"}
+                      {selectedType === "transfer" && "Transfer Voucher"}
+                    </h3>
+                  </div>
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -765,33 +717,9 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
                     />
                   </div>
                   
-                  {/* Line items section */}
-                  <div className="border rounded-md p-3 bg-background">
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-sm font-medium">Line Items</h4>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newItem = {
-                            description: "",
-                            quantity: 1,
-                            unitPrice: form.getValues("amount") || 0,
-                            amount: form.getValues("amount") || 0
-                          };
-                          setLineItems([...lineItems, newItem]);
-                        }}
-                      >
-                        Add Item
-                      </Button>
-                    </div>
-                    
-                    {lineItems.length === 0 ? (
-                      <div className="text-center py-2 text-sm text-muted-foreground">
-                        No items added. The total amount will be used as a single line item.
-                      </div>
-                    ) : (
+                  {(selectedType === "income" || selectedType === "expense") && (
+                    <div className="space-y-2">
+                      <FormLabel>Item Details</FormLabel>
                       <div className="space-y-2">
                         {lineItems.map((item, index) => (
                           <div key={index} className="flex items-center gap-2 text-sm">
@@ -815,7 +743,7 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
                                 setLineItems(newItems);
                               }}
                               placeholder="Qty"
-                              className="w-16"
+                              className="w-20"
                             />
                             <Input
                               type="number"
@@ -829,180 +757,184 @@ export default function TransactionForm({ open, onOpenChange, editingTransaction
                               placeholder="Price"
                               className="w-24"
                             />
-                            <div className="w-24 text-right font-medium">
-                              ${item.amount.toFixed(2)}
-                            </div>
+                            <span className="w-24 text-right">
+                              {(item.amount).toLocaleString('en-US', {
+                                style: 'currency',
+                                currency: 'USD'
+                              })}
+                            </span>
                             <Button
                               type="button"
                               variant="ghost"
-                              size="icon"
+                              size="sm"
                               onClick={() => {
                                 const newItems = [...lineItems];
                                 newItems.splice(index, 1);
                                 setLineItems(newItems);
                               }}
                             >
-                              &times;
+                              ✕
                             </Button>
                           </div>
                         ))}
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setLineItems([
+                              ...lineItems,
+                              {
+                                description: "",
+                                quantity: 1,
+                                unitPrice: 0,
+                                amount: 0
+                              }
+                            ]);
+                          }}
+                        >
+                          Add Item
+                        </Button>
+                        
+                        {lineItems.length > 0 && (
+                          <div className="flex justify-end pt-2 text-sm">
+                            <span className="font-medium">Total: </span>
+                            <span className="ml-2">
+                              {lineItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString('en-US', {
+                                style: 'currency',
+                                currency: 'USD'
+                              })}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+              
+              <DialogFooter>
+                <Button
+                  type="submit"
+                  disabled={createTransactionMutation.isPending || updateTransactionMutation.isPending}
+                >
+                  {editingTransaction ? (
+                    "Update Transaction"
+                  ) : selectedType === "transfer" ? (
+                    "Make Transfer"
+                  ) : (
+                    "Record Transaction"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  createTransactionMutation.isPending || updateTransactionMutation.isPending
-                }
-              >
-                {createTransactionMutation.isPending || updateTransactionMutation.isPending ? (
-                  "Saving..."
-                ) : editingTransaction ? (
-                  "Update Transaction"
-                ) : selectedType === "transfer" ? (
-                  "Make Transfer"
-                ) : (
-                  "Record Transaction"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-
-    {/* Account Creation Dialog */}
-    <Dialog open={openAccountDialog} onOpenChange={setOpenAccountDialog}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create New Account</DialogTitle>
-          <DialogDescription>
-            Add a new account to track your finances. You can create different accounts
-            for cash, bank accounts, credit cards, etc.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <Form {...accountForm}>
-          <form onSubmit={accountForm.handleSubmit(onAccountSubmit)} className="space-y-4">
-            <FormField
-              control={accountForm.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Account Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Business Checking" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={accountForm.control}
-              name="categoryId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Account Type</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    defaultValue={field.value ? field.value.toString() : undefined}
-                  >
+      {/* Account Creation Dialog */}
+      <Dialog open={openAccountDialog} onOpenChange={setOpenAccountDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Account</DialogTitle>
+            <DialogDescription>
+              Add a new account to track your finances. You can create different accounts
+              for cash, bank accounts, credit cards, etc.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...accountForm}>
+            <form onSubmit={accountForm.handleSubmit(onAccountSubmit)} className="space-y-4">
+              <FormField
+                control={accountForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Name</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select account type" />
-                      </SelectTrigger>
+                      <Input placeholder="Bank Account, Cash, Credit Card, etc." {...field} />
                     </FormControl>
-                    <SelectContent>
-                      {categories?.filter(c => ["asset", "liability", "equity"].includes(c.type))
-                        .map((category) => (
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={accountForm.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Type</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value))}
+                      defaultValue={field.value ? field.value.toString() : undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select account type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories?.filter(c => c.type === "asset").map((category) => (
                           <SelectItem key={category.id} value={category.id.toString()}>
                             {category.name}
                           </SelectItem>
                         ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Select the type of account you are creating
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={accountForm.control}
-              name="initialBalance"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Initial Balance</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-2 top-2 text-gray-500">$</span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        className="pl-7"
-                        placeholder="0.00"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormDescription>
-                    The current balance of this account
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={accountForm.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Add details about this account..."
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpenAccountDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={createAccountMutation.isPending}>
-                {createAccountMutation.isPending ? "Creating..." : "Create Account"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={accountForm.control}
+                name="initialBalance"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Initial Balance</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-2 top-2 text-gray-500">$</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="pl-7"
+                          placeholder="0.00"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={accountForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Additional information about this account" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="submit" disabled={createAccountMutation.isPending}>
+                  Create Account
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
