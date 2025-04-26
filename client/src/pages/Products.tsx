@@ -68,7 +68,10 @@ export default function Products() {
         additionalImages: newProduct.additionalImages,
         weight: newProduct.weight,
         dimensions: newProduct.dimensions,
-        tags: newProduct.tags
+        tags: newProduct.tags,
+        isFeatured: newProduct.isFeatured,
+        isOnSale: newProduct.isOnSale,
+        salePrice: newProduct.salePrice
         // We'll keep businessId handling on the server side
       };
       
@@ -315,11 +318,23 @@ export default function Products() {
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
-                    {!product.inStock && (
-                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                        Out of stock
-                      </div>
-                    )}
+                    <div className="absolute top-2 right-2 flex flex-col gap-1">
+                      {!product.inStock && (
+                        <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                          Out of stock
+                        </div>
+                      )}
+                      {product.isFeatured && (
+                        <div className="bg-amber-500 text-white text-xs px-2 py-1 rounded flex items-center">
+                          <Star className="h-3 w-3 mr-1" /> Featured
+                        </div>
+                      )}
+                      {product.isOnSale && (
+                        <div className="bg-red-500 text-white text-xs px-2 py-1 rounded flex items-center">
+                          <Tag className="h-3 w-3 mr-1" /> Sale
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex-1 p-4">
                     <div className="flex justify-between items-start">
