@@ -110,7 +110,10 @@ export default function Products() {
         additionalImages: data.additionalImages,
         weight: data.weight,
         dimensions: data.dimensions,
-        tags: data.tags
+        tags: data.tags,
+        isFeatured: data.isFeatured,
+        isOnSale: data.isOnSale,
+        salePrice: data.salePrice
       };
       
       return await apiRequest("PATCH", `/api/products/${id}`, productData);

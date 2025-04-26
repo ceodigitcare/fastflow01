@@ -2,7 +2,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { Edit, Trash } from "lucide-react";
+import { Edit, Trash, Star, Tag } from "lucide-react";
 import { Product } from "@shared/schema";
 
 interface ProductCardProps {
@@ -24,18 +24,43 @@ export default function ProductCard({ product, onEdit, onDelete }: ProductCardPr
         ) : (
           <div className="text-gray-400">No image</div>
         )}
-        {!product.inStock && (
-          <Badge variant="secondary" className="absolute top-2 right-2 bg-gray-800 text-white">
-            Out of Stock
-          </Badge>
-        )}
+        <div className="absolute top-2 right-2 flex gap-2">
+          {!product.inStock && (
+            <Badge variant="secondary" className="bg-gray-800 text-white">
+              Out of Stock
+            </Badge>
+          )}
+          {product.isFeatured && (
+            <Badge variant="secondary" className="bg-amber-500 text-white">
+              <Star className="h-3 w-3 mr-1" /> Featured
+            </Badge>
+          )}
+          {product.isOnSale && (
+            <Badge variant="secondary" className="bg-red-500 text-white">
+              <Tag className="h-3 w-3 mr-1" /> Sale
+            </Badge>
+          )}
+        </div>
       </div>
       <CardContent className="p-5">
         <div className="flex justify-between items-start mb-2">
           <h3 className="font-semibold truncate">{product.name}</h3>
-          <span className="font-medium text-primary">
-            {formatCurrency(product.price / 100)}
-          </span>
+          <div className="text-right">
+            {product.isOnSale && product.salePrice ? (
+              <>
+                <span className="font-medium text-red-500">
+                  {formatCurrency(product.salePrice / 100)}
+                </span>
+                <span className="ml-2 text-sm text-gray-500 line-through">
+                  {formatCurrency(product.price / 100)}
+                </span>
+              </>
+            ) : (
+              <span className="font-medium text-primary">
+                {formatCurrency(product.price / 100)}
+              </span>
+            )}
+          </div>
         </div>
         <p className="text-sm text-gray-500 line-clamp-2">{product.description}</p>
       </CardContent>
