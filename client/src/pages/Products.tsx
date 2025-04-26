@@ -202,9 +202,22 @@ export default function Products() {
       matchesStockFilter = product.inStock === true;
     } else if (filterValue === "out-of-stock") {
       matchesStockFilter = product.inStock === false;
+    } else if (filterValue === "featured") {
+      matchesStockFilter = product.isFeatured === true;
+    } else if (filterValue === "on-sale") {
+      matchesStockFilter = product.isOnSale === true;
     }
     
     return matchesSearch && matchesStockFilter;
+  })
+  // Sort products: featured first, then by product name
+  .sort((a, b) => {
+    // First sort by featured status
+    if (a.isFeatured && !b.isFeatured) return -1;
+    if (!a.isFeatured && b.isFeatured) return 1;
+    
+    // Then sort by name alphabetically
+    return a.name.localeCompare(b.name);
   });
   
   return (
@@ -241,6 +254,8 @@ export default function Products() {
               <SelectGroup>
                 <SelectLabel>Filter</SelectLabel>
                 <SelectItem value="all">All Products</SelectItem>
+                <SelectItem value="featured">Featured</SelectItem>
+                <SelectItem value="on-sale">On Sale</SelectItem>
                 <SelectItem value="in-stock">In Stock</SelectItem>
                 <SelectItem value="out-of-stock">Out of Stock</SelectItem>
               </SelectGroup>
@@ -354,8 +369,21 @@ export default function Products() {
                           </div>
                         )}
                       </div>
-                      <div className="text-lg font-semibold">
-                        ${((product.price || 0) / 100).toFixed(2)}
+                      <div className="text-lg font-semibold text-right">
+                        {product.isOnSale && product.salePrice ? (
+                          <>
+                            <span className="text-red-500">
+                              ${((product.salePrice) / 100).toFixed(2)}
+                            </span>
+                            <span className="text-sm text-gray-500 line-through ml-2">
+                              ${((product.price || 0) / 100).toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          <span>
+                            ${((product.price || 0) / 100).toFixed(2)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
