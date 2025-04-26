@@ -164,18 +164,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/products", requireAuth, async (req, res) => {
     try {
       const businessId = req.session.businessId as number;
-      const productData = insertProductSchema.parse({
+      
+      // Ensure arrays and objects are properly parsed
+      const body = {
         ...req.body,
         businessId,
-      });
+        variants: req.body.variants ? JSON.parse(JSON.stringify(req.body.variants)) : [],
+        additionalImages: req.body.additionalImages ? JSON.parse(JSON.stringify(req.body.additionalImages)) : [],
+        dimensions: req.body.dimensions ? JSON.parse(JSON.stringify(req.body.dimensions)) : {},
+        tags: Array.isArray(req.body.tags) ? req.body.tags : (req.body.tags ? [req.body.tags] : [])
+      };
+      
+      const productData = insertProductSchema.parse(body);
       
       const product = await storage.createProduct(productData);
       res.status(201).json(product);
     } catch (error) {
+      console.error("Create product error:", error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid data", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Failed to create product" });
+        res.status(500).json({ message: "Failed to create product", error: error instanceof Error ? error.message : String(error) });
       }
     }
   });
@@ -232,10 +241,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inventory: z.number().min(0).optional(),
         hasVariants: z.boolean().optional(),
         variants: z.array(z.any()).optional(),
-        additionalImages: z.array(z.string()).optional()
+        additionalImages: z.array(z.string()).optional(),
+        weight: z.number().optional().nullish(),
+        dimensions: z.record(z.string(), z.any()).optional(),
+        tags: z.array(z.string()).optional()
       });
       
-      const validatedData = updateSchema.parse(req.body);
+      // Ensure arrays and objects are properly parsed
+      const body = {
+        ...req.body,
+        variants: req.body.variants ? JSON.parse(JSON.stringify(req.body.variants)) : undefined,
+        additionalImages: req.body.additionalImages ? JSON.parse(JSON.stringify(req.body.additionalImages)) : undefined,
+        dimensions: req.body.dimensions ? JSON.parse(JSON.stringify(req.body.dimensions)) : undefined,
+        tags: req.body.tags ? (Array.isArray(req.body.tags) ? req.body.tags : [req.body.tags]) : undefined
+      };
+      
+      const validatedData = updateSchema.parse(body);
       
       const updatedProduct = await storage.updateProduct(productId, validatedData);
       res.json(updatedProduct);
