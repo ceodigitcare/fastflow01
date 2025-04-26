@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search } from "lucide-react";
+import { Grid3x3, List, Plus, Search } from "lucide-react";
 
 export default function Products() {
   const { toast } = useToast();
@@ -43,6 +43,7 @@ export default function Products() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [filterValue, setFilterValue] = useState("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   
   // Fetch products from the API
   const { data: products, isLoading, error } = useQuery<Product[]>({
@@ -184,7 +185,9 @@ export default function Products() {
     // Search filter
     const matchesSearch = (
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchTerm.toLowerCase())
+      product.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (product.tags && product.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
     );
     
     // Stock filter
@@ -223,19 +226,40 @@ export default function Products() {
           />
         </div>
         
-        <Select value={filterValue} onValueChange={setFilterValue}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Filter</SelectLabel>
-              <SelectItem value="all">All Products</SelectItem>
-              <SelectItem value="in-stock">In Stock</SelectItem>
-              <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select value={filterValue} onValueChange={setFilterValue}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Filter</SelectLabel>
+                <SelectItem value="all">All Products</SelectItem>
+                <SelectItem value="in-stock">In Stock</SelectItem>
+                <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          
+          <div className="flex border rounded-md">
+            <Button 
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="icon"
+              className="rounded-r-none"
+              onClick={() => setViewMode("grid")}
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="icon"
+              className="rounded-l-none"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
       
       {isLoading ? (
@@ -266,16 +290,79 @@ export default function Products() {
           </CardContent>
         </Card>
       ) : filteredProducts && filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onEdit={() => handleOpenDialog(product)}
-              onDelete={() => handleDelete(product.id)}
-            />
-          ))}
-        </div>
+        viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onEdit={() => handleOpenDialog(product)}
+                onDelete={() => handleDelete(product.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col space-y-4">
+            {filteredProducts.map((product) => (
+              <Card key={product.id} className="overflow-hidden">
+                <div className="flex flex-col sm:flex-row">
+                  <div className="w-full sm:w-48 h-48 relative">
+                    <img 
+                      src={product.imageUrl || "https://placehold.co/400x400?text=No+Image"} 
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {!product.inStock && (
+                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                        Out of stock
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-lg">{product.name}</h3>
+                        <p className="text-sm text-muted-foreground mb-2">{product.category || "Uncategorized"}</p>
+                        <p className="text-sm line-clamp-2 mb-2">{product.description}</p>
+                        <div className="flex items-center gap-1 text-sm">
+                          <span className="font-medium">SKU:</span> {product.sku || "N/A"}
+                        </div>
+                        <div className="flex items-center gap-1 text-sm">
+                          <span className="font-medium">Inventory:</span> {product.inventory || 0} units
+                        </div>
+                        {product.hasVariants && (
+                          <div className="mt-1 text-sm text-muted-foreground">
+                            {product.variants?.length || 0} variants available
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-lg font-semibold">
+                        ${((product.price || 0) / 100).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex sm:flex-col justify-end gap-2 p-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleOpenDialog(product)}
+                    >
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-red-500 hover:text-red-700"
+                      onClick={() => handleDelete(product.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
       ) : (
         <Card className="p-6 text-center">
           <CardContent className="pt-6">
