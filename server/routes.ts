@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import express from "express";
 import session from "express-session";
 import { z } from "zod";
-import MemoryStore from "memorystore";
+import { pool } from "./db";
+import connectPg from "connect-pg-simple";
 import { 
   insertBusinessSchema, 
   insertProductSchema, 
@@ -16,16 +17,24 @@ import {
 import { chatbotRouter } from "./chatbot";
 import { authenticateUser } from "./auth";
 
-// Setup session store
-const SessionStore = MemoryStore(session);
+// Extend express-session to include businessId
+declare module "express-session" {
+  interface SessionData {
+    businessId?: number;
+  }
+}
+
+// Setup PostgreSQL session store
+const PgSessionStore = connectPg(session);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup sessions
   app.use(
     session({
       cookie: { maxAge: 86400000 }, // 24 hours
-      store: new SessionStore({
-        checkPeriod: 86400000, // Clear expired entries every 24h
+      store: new PgSessionStore({
+        pool,
+        createTableIfMissing: true
       }),
       resave: false,
       saveUninitialized: false,
