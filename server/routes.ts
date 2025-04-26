@@ -181,7 +181,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         additionalImages: z.array(z.string()).optional().default([]),
         weight: z.union([z.number(), z.string()]).optional().nullish(),
         dimensions: z.record(z.string(), z.any()).optional().default({}),
-        tags: z.array(z.string()).optional().default([])
+        tags: z.array(z.string()).optional().default([]),
+        isFeatured: z.boolean().optional().default(false),
+        isOnSale: z.boolean().optional().default(false),
+        salePrice: z.number().min(0).optional().nullish()
       });
       
       // Ensure arrays and objects are properly parsed
@@ -275,7 +278,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         additionalImages: z.array(z.string()).optional(),
         weight: z.union([z.number(), z.string()]).optional().nullish(),
         dimensions: z.record(z.string(), z.any()).optional(),
-        tags: z.array(z.string()).optional()
+        tags: z.array(z.string()).optional(),
+        isFeatured: z.boolean().optional(),
+        isOnSale: z.boolean().optional(),
+        salePrice: z.number().min(0).optional().nullish()
       });
       
       // Ensure arrays and objects are properly parsed
