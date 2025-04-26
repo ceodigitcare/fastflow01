@@ -220,10 +220,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access to this product" });
       }
       
-      const updatedProduct = await storage.updateProduct(productId, req.body);
+      // Validate update data
+      const updateSchema = z.object({
+        name: z.string().min(2).optional(),
+        description: z.string().min(10).optional(),
+        price: z.number().min(0).optional(),
+        imageUrl: z.string().url().nullish(),
+        inStock: z.boolean().optional(),
+        sku: z.string().optional().nullish(),
+        category: z.string().optional().nullish(),
+        inventory: z.number().min(0).optional(),
+        hasVariants: z.boolean().optional(),
+        variants: z.array(z.any()).optional(),
+        additionalImages: z.array(z.string()).optional()
+      });
+      
+      const validatedData = updateSchema.parse(req.body);
+      
+      const updatedProduct = await storage.updateProduct(productId, validatedData);
       res.json(updatedProduct);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update product" });
+      console.error("Update product error:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update product" });
+      }
     }
   });
 
