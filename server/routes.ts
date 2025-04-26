@@ -185,7 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Ensure arrays and objects are properly parsed
-      const body = {
+      let body = {
         ...req.body,
         businessId,
         variants: req.body.variants ? JSON.parse(JSON.stringify(req.body.variants)) : [],
@@ -193,6 +193,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dimensions: req.body.dimensions ? JSON.parse(JSON.stringify(req.body.dimensions)) : {},
         tags: Array.isArray(req.body.tags) ? req.body.tags : (req.body.tags ? [req.body.tags] : [])
       };
+      
+      // Auto-update inStock status based on inventory levels
+      if (typeof body.inventory === 'number') {
+        // If inventory is 0, automatically set inStock to false
+        if (body.inventory <= 0) {
+          body.inStock = false;
+        }
+      }
       
       const productData = productValidationSchema.parse(body);
       
@@ -267,13 +275,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Ensure arrays and objects are properly parsed
-      const body = {
+      // Prepare the request body
+      let body = {
         ...req.body,
         variants: req.body.variants ? JSON.parse(JSON.stringify(req.body.variants)) : undefined,
         additionalImages: req.body.additionalImages ? JSON.parse(JSON.stringify(req.body.additionalImages)) : undefined,
         dimensions: req.body.dimensions ? JSON.parse(JSON.stringify(req.body.dimensions)) : undefined,
         tags: req.body.tags ? (Array.isArray(req.body.tags) ? req.body.tags : [req.body.tags]) : undefined
       };
+      
+      // Auto-update inStock status based on inventory levels
+      if (typeof body.inventory === 'number') {
+        // If inventory is 0, automatically set inStock to false
+        if (body.inventory <= 0) {
+          body.inStock = false;
+        }
+      }
       
       const validatedData = updateSchema.parse(body);
       
