@@ -257,6 +257,10 @@ export class MemStorage implements IStorage {
       createdAt: now,
     };
     this.businesses.set(id, newBusiness);
+    
+    // Initialize default account categories for the new business
+    await this.initializeAccountCategories(id);
+    
     return newBusiness;
   }
   
@@ -393,6 +397,81 @@ export class MemStorage implements IStorage {
     return updatedOrder;
   }
   
+  // Account Category methods
+  async getAccountCategory(id: number): Promise<AccountCategory | undefined> {
+    return this.accountCategories.get(id);
+  }
+  
+  async getAccountCategoriesByBusiness(businessId: number): Promise<AccountCategory[]> {
+    return Array.from(this.accountCategories.values())
+      .filter(category => category.businessId === businessId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  
+  async getAccountCategoriesByType(businessId: number, type: string): Promise<AccountCategory[]> {
+    return Array.from(this.accountCategories.values())
+      .filter(category => category.businessId === businessId && category.type === type)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  
+  async createAccountCategory(category: InsertAccountCategory): Promise<AccountCategory> {
+    const id = this.accountCategoryId++;
+    const newCategory: AccountCategory = { ...category, id };
+    this.accountCategories.set(id, newCategory);
+    return newCategory;
+  }
+  
+  async updateAccountCategory(id: number, data: Partial<AccountCategory>): Promise<AccountCategory | undefined> {
+    const category = await this.getAccountCategory(id);
+    if (!category) return undefined;
+    
+    const updatedCategory = { ...category, ...data };
+    this.accountCategories.set(id, updatedCategory);
+    return updatedCategory;
+  }
+  
+  async deleteAccountCategory(id: number): Promise<boolean> {
+    return this.accountCategories.delete(id);
+  }
+  
+  // Account methods
+  async getAccount(id: number): Promise<Account | undefined> {
+    return this.accounts.get(id);
+  }
+  
+  async getAccountsByBusiness(businessId: number): Promise<Account[]> {
+    return Array.from(this.accounts.values())
+      .filter(account => account.businessId === businessId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  
+  async getAccountsByCategory(categoryId: number): Promise<Account[]> {
+    return Array.from(this.accounts.values())
+      .filter(account => account.categoryId === categoryId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  
+  async createAccount(account: InsertAccount): Promise<Account> {
+    const id = this.accountId++;
+    const newAccount: Account = { ...account, id };
+    this.accounts.set(id, newAccount);
+    return newAccount;
+  }
+  
+  async updateAccount(id: number, data: Partial<Account>): Promise<Account | undefined> {
+    const account = await this.getAccount(id);
+    if (!account) return undefined;
+    
+    // If updating balance, we need to update currentBalance
+    const updatedAccount = { ...account, ...data };
+    this.accounts.set(id, updatedAccount);
+    return updatedAccount;
+  }
+  
+  async deleteAccount(id: number): Promise<boolean> {
+    return this.accounts.delete(id);
+  }
+  
   // Transaction methods
   async getTransaction(id: number): Promise<Transaction | undefined> {
     return this.transactions.get(id);
@@ -402,8 +481,30 @@ export class MemStorage implements IStorage {
     return Array.from(this.transactions.values())
       .filter((transaction) => transaction.businessId === businessId)
       .sort((a, b) => {
-        if (!a.createdAt || !b.createdAt) return 0;
-        return b.createdAt.getTime() - a.createdAt.getTime();
+        if (!a.date || !b.date) return 0;
+        return b.date.getTime() - a.date.getTime();
+      });
+  }
+  
+  async getTransactionsByAccount(accountId: number): Promise<Transaction[]> {
+    return Array.from(this.transactions.values())
+      .filter((transaction) => transaction.accountId === accountId)
+      .sort((a, b) => {
+        if (!a.date || !b.date) return 0;
+        return b.date.getTime() - a.date.getTime();
+      });
+  }
+  
+  async getTransactionsByDateRange(businessId: number, startDate: Date, endDate: Date): Promise<Transaction[]> {
+    return Array.from(this.transactions.values())
+      .filter((transaction) => {
+        if (transaction.businessId !== businessId || !transaction.date) return false;
+        const txDate = new Date(transaction.date);
+        return txDate >= startDate && txDate <= endDate;
+      })
+      .sort((a, b) => {
+        if (!a.date || !b.date) return 0;
+        return b.date.getTime() - a.date.getTime();
       });
   }
   
@@ -413,10 +514,188 @@ export class MemStorage implements IStorage {
     const newTransaction: Transaction = { 
       ...transaction, 
       id,
+      date: transaction.date || now,
       createdAt: now,
     };
     this.transactions.set(id, newTransaction);
+    
+    // Update account balance if accountId is provided
+    if (transaction.accountId) {
+      const account = await this.getAccount(transaction.accountId);
+      if (account) {
+        const amount = transaction.type === 'expense' ? -transaction.amount : transaction.amount;
+        await this.updateAccount(account.id, {
+          currentBalance: account.currentBalance + amount
+        });
+      }
+    }
+    
     return newTransaction;
+  }
+  
+  async updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction | undefined> {
+    const transaction = await this.getTransaction(id);
+    if (!transaction) return undefined;
+    
+    const updatedTransaction = { ...transaction, ...data };
+    this.transactions.set(id, updatedTransaction);
+    return updatedTransaction;
+  }
+  
+  async deleteTransaction(id: number): Promise<boolean> {
+    return this.transactions.delete(id);
+  }
+  
+  // Transfer methods
+  async getTransfer(id: number): Promise<Transfer | undefined> {
+    return this.transfers.get(id);
+  }
+  
+  async getTransfersByBusiness(businessId: number): Promise<Transfer[]> {
+    return Array.from(this.transfers.values())
+      .filter((transfer) => transfer.businessId === businessId)
+      .sort((a, b) => {
+        if (!a.date || !b.date) return 0;
+        return b.date.getTime() - a.date.getTime();
+      });
+  }
+  
+  async getTransfersByAccount(accountId: number): Promise<Transfer[]> {
+    return Array.from(this.transfers.values())
+      .filter((transfer) => 
+        transfer.fromAccountId === accountId || transfer.toAccountId === accountId
+      )
+      .sort((a, b) => {
+        if (!a.date || !b.date) return 0;
+        return b.date.getTime() - a.date.getTime();
+      });
+  }
+  
+  async createTransfer(transfer: InsertTransfer): Promise<Transfer> {
+    const id = this.transferId++;
+    const now = new Date();
+    const newTransfer: Transfer = { 
+      ...transfer, 
+      id,
+      date: transfer.date || now,
+      createdAt: now,
+    };
+    this.transfers.set(id, newTransfer);
+    
+    // Update account balances
+    const fromAccount = await this.getAccount(transfer.fromAccountId);
+    const toAccount = await this.getAccount(transfer.toAccountId);
+    
+    if (fromAccount) {
+      await this.updateAccount(fromAccount.id, {
+        currentBalance: fromAccount.currentBalance - transfer.amount
+      });
+    }
+    
+    if (toAccount) {
+      await this.updateAccount(toAccount.id, {
+        currentBalance: toAccount.currentBalance + transfer.amount
+      });
+    }
+    
+    return newTransfer;
+  }
+  
+  // Financial Reports methods
+  async getCashFlow(businessId: number, startDate: Date, endDate: Date): Promise<any> {
+    const transactions = await this.getTransactionsByDateRange(businessId, startDate, endDate);
+    
+    const inflows = transactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
+    const outflows = transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
+    
+    return {
+      startDate,
+      endDate,
+      inflows,
+      outflows,
+      netCashFlow: inflows - outflows
+    };
+  }
+  
+  async getProfitAndLoss(businessId: number, startDate: Date, endDate: Date): Promise<any> {
+    const transactions = await this.getTransactionsByDateRange(businessId, startDate, endDate);
+    
+    const income = transactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
+    const expenses = transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
+    
+    return {
+      startDate,
+      endDate,
+      income,
+      expenses,
+      netProfit: income - expenses
+    };
+  }
+  
+  async getBalanceSheet(businessId: number, asOfDate: Date): Promise<any> {
+    const categories = await this.getAccountCategoriesByBusiness(businessId);
+    const accounts = await this.getAccountsByBusiness(businessId);
+    
+    const assetCategories = categories.filter(c => c.type === 'asset');
+    const liabilityCategories = categories.filter(c => c.type === 'liability');
+    const equityCategories = categories.filter(c => c.type === 'equity');
+    
+    // Calculate totals by category
+    const assets = assetCategories.map(category => {
+      const categoryAccounts = accounts.filter(a => a.categoryId === category.id);
+      const total = categoryAccounts.reduce((sum, a) => sum + a.currentBalance, 0);
+      
+      return {
+        category: category.name,
+        accounts: categoryAccounts.map(a => ({
+          name: a.name,
+          balance: a.currentBalance
+        })),
+        total
+      };
+    });
+    
+    const liabilities = liabilityCategories.map(category => {
+      const categoryAccounts = accounts.filter(a => a.categoryId === category.id);
+      const total = categoryAccounts.reduce((sum, a) => sum + a.currentBalance, 0);
+      
+      return {
+        category: category.name,
+        accounts: categoryAccounts.map(a => ({
+          name: a.name,
+          balance: a.currentBalance
+        })),
+        total
+      };
+    });
+    
+    const equity = equityCategories.map(category => {
+      const categoryAccounts = accounts.filter(a => a.categoryId === category.id);
+      const total = categoryAccounts.reduce((sum, a) => sum + a.currentBalance, 0);
+      
+      return {
+        category: category.name,
+        accounts: categoryAccounts.map(a => ({
+          name: a.name,
+          balance: a.currentBalance
+        })),
+        total
+      };
+    });
+    
+    const totalAssets = assets.reduce((sum, a) => sum + a.total, 0);
+    const totalLiabilities = liabilities.reduce((sum, l) => sum + l.total, 0);
+    const totalEquity = equity.reduce((sum, e) => sum + e.total, 0);
+    
+    return {
+      asOfDate,
+      assets,
+      liabilities,
+      equity,
+      totalAssets,
+      totalLiabilities,
+      totalEquity
+    };
   }
   
   // Conversation methods

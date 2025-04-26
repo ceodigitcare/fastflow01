@@ -458,20 +458,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const order = await storage.createOrder(orderData);
       
-      // Create a transaction for this order
-      await storage.createTransaction({
-        businessId,
-        orderId: order.id,
-        amount: order.total,
-        type: 'sale',
-        description: `Order #${order.id}`,
-      });
+      // Find the sales revenue account category and account
+      const salesCategories = await storage.getAccountCategoriesByType(businessId, "income");
+      const salesCategory = salesCategories.find(c => c.name === "Sales Revenue");
+      
+      if (salesCategory) {
+        // Find or create a Sales account
+        let salesAccounts = await storage.getAccountsByCategory(salesCategory.id);
+        let salesAccount = salesAccounts.find(a => a.name === "Online Sales");
+        
+        if (!salesAccount) {
+          salesAccount = await storage.createAccount({
+            businessId,
+            categoryId: salesCategory.id,
+            name: "Online Sales",
+            description: "Revenue from online sales",
+            initialBalance: 0,
+            currentBalance: 0,
+            isActive: true
+          });
+        }
+        
+        // Create a transaction for this order
+        await storage.createTransaction({
+          businessId,
+          accountId: salesAccount.id,
+          category: "income",
+          orderId: order.id,
+          amount: order.total,
+          type: "income",
+          date: new Date(),
+          description: `Order #${order.id}`,
+          status: "completed"
+        });
+      }
       
       res.status(201).json(order);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid data", errors: error.errors });
       } else {
+        console.error("Order creation error:", error);
         res.status(500).json({ message: "Failed to create order" });
       }
     }
