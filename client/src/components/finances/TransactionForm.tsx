@@ -329,8 +329,8 @@ export default function TransactionForm({
       documentType: documentType || undefined,
       documentNumber: documentNumber || undefined,
       status: "final",
-      contactName: contactName || undefined,
-      contactEmail: contactEmail || undefined,
+      contactName: values.contactName || "",
+      contactEmail: values.contactEmail || "",
       items: lineItems.length > 0 ? lineItems : undefined,
     };
     
