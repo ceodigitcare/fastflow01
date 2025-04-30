@@ -108,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: error as Error | null,
         loginMutation,
         logoutMutation,
+        registerMutation,
       }}
     >
       {children}

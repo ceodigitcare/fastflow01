@@ -90,7 +90,7 @@ export default function AuthPage() {
         // Automatically login after successful registration
         setLocation("/dashboard");
       },
-      onError: (error) => {
+      onError: (error: Error) => {
         toast({
           title: "Registration failed",
           description: error.message || "Something went wrong",
@@ -268,9 +268,9 @@ export default function AuthPage() {
                       <Button 
                         type="submit" 
                         className="w-full" 
-                        disabled={registerForm.formState.isSubmitting}
+                        disabled={registerMutation.isPending}
                       >
-                        {registerForm.formState.isSubmitting ? "Registering..." : "Register"}
+                        {registerMutation.isPending ? "Registering..." : "Register"}
                       </Button>
                     </form>
                   </Form>
