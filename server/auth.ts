@@ -24,13 +24,14 @@ export const authenticateUser = z.object({
 
 export type AuthCredentials = z.infer<typeof authenticateUser>;
 
-async function hashPassword(password: string) {
+// Export hashPassword to use in seed.ts
+export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
 }
 
-async function comparePasswords(supplied: string, stored: string) {
+export async function comparePasswords(supplied: string, stored: string) {
   const [hashed, salt] = stored.split(".");
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
@@ -119,13 +120,13 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/auth/login", (req, res, next) => {
-    passport.authenticate("local", (err, business, info) => {
+    passport.authenticate("local", (err: Error | null, business: SelectBusiness | false, info: { message: string } | undefined) => {
       if (err) return next(err);
       if (!business) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       
-      req.login(business, (err) => {
+      req.login(business, (err: Error | null) => {
         if (err) return next(err);
         
         // Return the user without password
@@ -136,7 +137,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/auth/logout", (req, res, next) => {
-    req.logout((err) => {
+    req.logout((err: Error | null) => {
       if (err) return next(err);
       res.json({ message: "Logged out successfully" });
     });
