@@ -24,12 +24,11 @@ interface HeaderProps {
 
 export default function Header({ onSidebarToggle, user }: HeaderProps) {
   const [, setLocation] = useLocation();
-  const { logoutMutation } = useAuth();
+  const { logout } = useAuth();
   
   const handleLogout = () => {
-    // Use the logout helper from auth context
-    // This handles the mutation and redirection in one step
-    useAuth().logout();
+    // Use the logout function from the auth context
+    logout();
   };
   
   return (

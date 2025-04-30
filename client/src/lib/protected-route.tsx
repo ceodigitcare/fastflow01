@@ -1,8 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
-import { getQueryFn } from "./queryClient";
-import { Business } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 export function ProtectedRoute({
   path,
@@ -11,14 +9,8 @@ export function ProtectedRoute({
   path: string;
   component: () => React.JSX.Element;
 }) {
-  const {
-    data: user,
-    isLoading,
-    error,
-  } = useQuery<Business | null>({
-    queryKey: ["/api/auth/me"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
+  // Use the centralized auth hook for consistent state management
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -31,17 +23,20 @@ export function ProtectedRoute({
   }
 
   if (!user) {
-    // Only redirect if we're not already on the auth page to prevent loops
-    if (window.location.pathname !== '/auth') {
+    // Don't redirect if we're already on the auth page to prevent loops
+    const currentPath = window.location.pathname;
+    if (currentPath !== '/auth') {
       return (
         <Route path={path}>
           <Redirect to="/auth" />
         </Route>
       );
     }
-    return null; // Don't render anything
+    // Return null rather than rendering the component when not authenticated
+    return null;
   }
 
+  // User is authenticated, render the protected component
   return (
     <Route path={path}>
       <Component />

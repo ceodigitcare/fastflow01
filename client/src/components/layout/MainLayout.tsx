@@ -2,7 +2,8 @@ import { ReactNode, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -12,27 +13,24 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [, setLocation] = useLocation();
   
-  // Check if user is authenticated
-  const { data: user, isLoading, error } = useQuery({
-    queryKey: ["/api/auth/me"],
-    retry: false,
-  });
+  // Get authentication state from our useAuth hook
+  const { user, isLoading, error } = useAuth();
   
   // Redirect to auth page if not authenticated
   useEffect(() => {
-    if (!isLoading && error) {
-      // Only redirect if we got a 401 error and we're not already on the auth page
+    if (!isLoading && !user) {
+      // Only redirect if we're not already on the auth page
       const currentPath = window.location.pathname;
       if (currentPath !== '/auth') {
         setLocation("/auth");
       }
     }
-  }, [isLoading, error, setLocation]);
+  }, [user, isLoading, setLocation]);
   
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
