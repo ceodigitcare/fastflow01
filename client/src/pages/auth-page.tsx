@@ -75,7 +75,7 @@ export default function AuthPage() {
   const onLoginSubmit = async (data: LoginFormValues) => {
     loginMutation.mutate(data, {
       onSuccess: () => {
-        setLocation("/");
+        setLocation("/dashboard");
       }
     });
   };
@@ -100,8 +100,7 @@ export default function AuthPage() {
   
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Left side - Form */}
-      <div className="flex items-center justify-center w-full lg:w-1/2 p-10">
+      <div className="flex items-center justify-center w-full p-10">
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
             <div className="flex items-center justify-center mb-2">
@@ -288,37 +287,6 @@ export default function AuthPage() {
               Privacy Policy
             </a>
           </div>
-        </div>
-      </div>
-      
-      {/* Right side - Hero section */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary items-center justify-center">
-        <div className="max-w-lg text-white p-10">
-          <h2 className="text-4xl font-bold mb-4">Grow Your E-Commerce Business</h2>
-          <p className="text-lg mb-6">
-            StoreFront is the complete platform for modern businesses. Manage products, 
-            track finances, and create beautiful websites—all from one dashboard.
-          </p>
-          <ul className="space-y-3">
-            <li className="flex items-center">
-              <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Powerful website builder with customizable templates
-            </li>
-            <li className="flex items-center">
-              <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              AI-powered chatbot for intelligent customer support
-            </li>
-            <li className="flex items-center">
-              <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Complete financial management with real-time reports
-            </li>
-          </ul>
         </div>
       </div>
     </div>

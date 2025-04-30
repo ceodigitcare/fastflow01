@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Grid3x3, List, Plus, Search } from "lucide-react";
+import { Grid3x3, List, Plus, Search, Star, Tag } from "lucide-react";
 
 export default function Products() {
   const { toast } = useToast();

@@ -22,6 +22,8 @@ import Documentation from "@/pages/Documentation";
 function Router() {
   return (
     <Switch>
+      <Route path="/auth" component={AuthPage} />
+      <Route path="/chat/:businessId" component={ChatWidget} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/website-builder" component={WebsiteBuilder} />
@@ -32,8 +34,6 @@ function Router() {
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/help" component={Help} />
       <ProtectedRoute path="/documentation" component={Documentation} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/chat/:businessId" component={ChatWidget} />
       <Route component={NotFound} />
     </Switch>
   );
