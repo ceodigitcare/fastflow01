@@ -31,11 +31,15 @@ export function ProtectedRoute({
   }
 
   if (!user) {
-    return (
-      <Route path={path}>
-        <Redirect to="/auth" />
-      </Route>
-    );
+    // Only redirect if we're not already on the auth page to prevent loops
+    if (window.location.pathname !== '/auth') {
+      return (
+        <Route path={path}>
+          <Redirect to="/auth" />
+        </Route>
+      );
+    }
+    return null; // Don't render anything
   }
 
   return (

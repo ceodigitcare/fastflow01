@@ -20,10 +20,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
   
   // Redirect to auth page if not authenticated
   useEffect(() => {
-    if (!isLoading && !user && error) {
-      setLocation("/auth");
+    if (!isLoading && error) {
+      // Only redirect if we got a 401 error and we're not already on the auth page
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/auth') {
+        setLocation("/auth");
+      }
     }
-  }, [user, isLoading, error, setLocation]);
+  }, [isLoading, error, setLocation]);
   
   if (isLoading) {
     return (

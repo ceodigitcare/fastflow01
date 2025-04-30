@@ -64,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await logoutUserApi();
     },
     onSuccess: () => {
+      // Set all queries to their initial state
+      queryClient.resetQueries();
+      // Ensure we clear the auth/me data specifically
       queryClient.setQueryData(["/api/auth/me"], null);
       toast({
         title: "Logged out",

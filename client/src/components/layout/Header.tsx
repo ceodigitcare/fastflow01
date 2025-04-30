@@ -14,9 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
-import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 
 interface HeaderProps {
   onSidebarToggle: () => void;
@@ -25,16 +24,14 @@ interface HeaderProps {
 
 export default function Header({ onSidebarToggle, user }: HeaderProps) {
   const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
+  const { logoutMutation } = useAuth();
   
-  const handleLogout = async () => {
-    try {
-      await apiRequest("POST", "/api/auth/logout", {});
-      queryClient.setQueryData(["/api/auth/me"], null); // Immediately clear user data
-      setLocation("/auth");
-    } catch (error) {
-      console.error("Logout failed", error);
-    }
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        setLocation("/auth");
+      }
+    });
   };
   
   return (
