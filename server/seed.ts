@@ -7,6 +7,9 @@ import { sql } from "drizzle-orm";
 async function seedDatabase() {
   console.log("Starting database seeding...");
   
+  // Force database initialization to make sure all tables exist
+  await db.execute('SELECT 1');
+  
   // 1. Create demo business account
   const hashedPassword = await hashPassword("password123");
   
@@ -24,7 +27,11 @@ async function seedDatabase() {
     });
     console.log(`Created demo business: ${demoBusiness.name} (ID: ${demoBusiness.id})`);
   } else {
-    demoBusiness = existingBusiness;
+    // Update existing business to make sure password is hashed
+    const updatedBusiness = await storage.updateBusiness(existingBusiness.id, {
+      password: hashedPassword
+    });
+    demoBusiness = updatedBusiness || existingBusiness;
     console.log(`Using existing demo business: ${demoBusiness.name} (ID: ${demoBusiness.id})`);
   }
   
