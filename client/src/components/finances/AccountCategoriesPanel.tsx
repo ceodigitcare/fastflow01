@@ -229,10 +229,6 @@ export default function AccountCategoriesPanel() {
           <TabsContent value={selectedType} className="pt-4">
             <div className="flex justify-between mb-4">
               <h3 className="text-lg font-medium">{getCategoryTypeLabel(selectedType)}</h3>
-              <Button size="sm" onClick={handleCreate}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Account Category
-              </Button>
             </div>
 
             {categoriesLoading ? (
@@ -284,10 +280,7 @@ export default function AccountCategoriesPanel() {
               </div>
             ) : (
               <div className="text-center py-8 border rounded-md">
-                <p className="text-gray-500">No {selectedType} categories yet</p>
-                <Button variant="link" onClick={handleCreate}>
-                  Create your first account category
-                </Button>
+                <p className="text-gray-500">No {selectedType} categories available</p>
               </div>
             )}
           </TabsContent>
