@@ -7,7 +7,14 @@ import {
 import { Business } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { loginUser as loginUserApi, logoutUser as logoutUserApi } from "@/lib/auth";
+import { loginUser as loginUserApi, logoutUser as logoutUserApi, registerUser as registerUserApi } from "@/lib/auth";
+
+type RegisterData = {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+};
 
 type AuthContextType = {
   user: Business | null;
@@ -15,6 +22,7 @@ type AuthContextType = {
   error: Error | null;
   loginMutation: UseMutationResult<Business, Error, { username: string; password: string }>;
   logoutMutation: UseMutationResult<void, Error, void>;
+  registerMutation: UseMutationResult<Business, Error, RegisterData>;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -66,6 +74,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast({
         title: "Logout failed",
         description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const registerMutation = useMutation({
+    mutationFn: async (credentials: RegisterData) => {
+      const res = await registerUserApi(credentials);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: "Registration successful",
+        description: "Your account has been created successfully!",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Registration failed",
+        description: error.message || "Username may already be taken",
         variant: "destructive",
       });
     },

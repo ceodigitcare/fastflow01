@@ -30,8 +30,8 @@ export default function Header({ onSidebarToggle, user }: HeaderProps) {
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout", {});
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      setLocation("/login");
+      queryClient.setQueryData(["/api/auth/me"], null); // Immediately clear user data
+      setLocation("/auth");
     } catch (error) {
       console.error("Logout failed", error);
     }

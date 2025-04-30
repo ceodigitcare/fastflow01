@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { registerUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -45,7 +44,7 @@ type RegisterFormValues = z.infer<typeof registerFormSchema>;
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, loginMutation } = useAuth();
+  const { user, loginMutation, registerMutation } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
   
   // Redirect if user is already logged in
@@ -82,21 +81,23 @@ export default function AuthPage() {
   };
   
   const onRegisterSubmit = async (data: RegisterFormValues) => {
-    try {
-      await registerUser(data);
-      toast({
-        title: "Registration successful",
-        description: "Your account has been created. Please log in.",
-      });
-      setActiveTab("login");
-      loginForm.setValue("username", data.username);
-    } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
-        variant: "destructive",
-      });
-    }
+    registerMutation.mutate(data, {
+      onSuccess: () => {
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created. You'll be redirected to the dashboard.",
+        });
+        // Automatically login after successful registration
+        setLocation("/dashboard");
+      },
+      onError: (error) => {
+        toast({
+          title: "Registration failed",
+          description: error.message || "Something went wrong",
+          variant: "destructive",
+        });
+      }
+    });
   };
   
   return (
