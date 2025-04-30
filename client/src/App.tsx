@@ -25,7 +25,6 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/chat/:businessId" component={ChatWidget} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
-      <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/website-builder" component={WebsiteBuilder} />
       <ProtectedRoute path="/ai-chatbot" component={AIChat} />
       <ProtectedRoute path="/products" component={Products} />
@@ -34,6 +33,7 @@ function Router() {
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/help" component={Help} />
       <ProtectedRoute path="/documentation" component={Documentation} />
+      <ProtectedRoute path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
   );

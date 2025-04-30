@@ -18,10 +18,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
     retry: false,
   });
   
-  // Redirect to login if not authenticated
+  // Redirect to auth page if not authenticated
   useEffect(() => {
     if (!isLoading && !user && error) {
-      setLocation("/login");
+      setLocation("/auth");
     }
   }, [user, isLoading, error, setLocation]);
   
