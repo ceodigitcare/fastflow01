@@ -27,11 +27,9 @@ export default function Header({ onSidebarToggle, user }: HeaderProps) {
   const { logoutMutation } = useAuth();
   
   const handleLogout = () => {
-    logoutMutation.mutate(undefined, {
-      onSuccess: () => {
-        setLocation("/auth");
-      }
-    });
+    // Use the logout helper from auth context
+    // This handles the mutation and redirection in one step
+    useAuth().logout();
   };
   
   return (

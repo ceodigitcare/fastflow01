@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -7,7 +7,17 @@ import {
 import { Business } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { loginUser as loginUserApi, logoutUser as logoutUserApi, registerUser as registerUserApi } from "@/lib/auth";
+import { 
+  loginUser as loginUserApi, 
+  logoutUser as logoutUserApi, 
+  registerUser as registerUserApi 
+} from "@/lib/auth";
+import { useLocation } from "wouter";
+
+type LoginData = {
+  username: string;
+  password: string;
+};
 
 type RegisterData = {
   name: string;
@@ -16,19 +26,24 @@ type RegisterData = {
   password: string;
 };
 
-type AuthContextType = {
+// Create a fresh context with complete type definitions
+interface AuthContextType {
   user: Business | null;
   isLoading: boolean;
   error: Error | null;
-  loginMutation: UseMutationResult<Business, Error, { username: string; password: string }>;
-  logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<Business, Error, RegisterData>;
-};
+  loginMutation: UseMutationResult<any, Error, LoginData>;
+  logoutMutation: UseMutationResult<any, Error, void>;
+  registerMutation: UseMutationResult<any, Error, RegisterData>;
+  logout: () => void;
+}
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  
+  // Store the User query result
   const {
     data: user,
     error,
@@ -38,8 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
+  // Login mutation
   const loginMutation = useMutation({
-    mutationFn: async (credentials: { username: string; password: string }) => {
+    mutationFn: async (credentials: LoginData) => {
       const res = await loginUserApi(credentials);
       return await res.json();
     },
@@ -59,19 +75,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await logoutUserApi();
+      return await logoutUserApi();
     },
     onSuccess: () => {
-      // Set all queries to their initial state
-      queryClient.resetQueries();
-      // Ensure we clear the auth/me data specifically
+      // Mark user as logged out immediately
       queryClient.setQueryData(["/api/auth/me"], null);
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
-      });
+      
+      // Clear cache in the next tick to avoid React render issues
+      setTimeout(() => {
+        // This clears ALL query data
+        queryClient.clear();
+        
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out",
+        });
+      }, 0);
     },
     onError: (error: Error) => {
       toast({
@@ -82,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
   
+  // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (credentials: RegisterData) => {
       const res = await registerUserApi(credentials);
@@ -103,6 +126,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Helper function to handle logout and redirect
+  const logout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        // Redirect to auth page
+        setLocation('/auth');
+      }
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -112,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        logout
       }}
     >
       {children}
@@ -119,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
