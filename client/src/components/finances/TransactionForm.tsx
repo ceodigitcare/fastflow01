@@ -1132,70 +1132,69 @@ export default function TransactionForm({
                     </div>
                   )}
                 </TabsContent>
+                {/* Footer buttons for each tab */}
+                <TabsContent value="basic" className="pt-2">
+                  <div className="flex justify-between mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => onOpenChange(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={goToNextTab}
+                    >
+                      <span>Next</span>
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="document" className="pt-2">
+                  <div className="flex justify-between mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setActiveTab("basic")}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={goToNextTab}
+                    >
+                      <span>Next</span>
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="items" className="pt-2">
+                  <div className="flex justify-between mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setActiveTab("document")}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createTransactionMutation.isPending || updateTransactionMutation.isPending}
+                    >
+                      {editingTransaction ? (
+                        "Update Transaction"
+                      ) : selectedType === "transfer" ? (
+                        "Make Transfer"
+                      ) : (
+                        "Record Transaction"
+                      )}
+                    </Button>
+                  </div>
+                </TabsContent>
               </Tabs>
-              
-              {/* Each tab has its own buttons */}
-              <TabsContent value="basic" className="pt-2">
-                <div className="flex justify-between mt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => onOpenChange(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={goToNextTab}
-                  >
-                    <span>Next</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="document" className="pt-2">
-                <div className="flex justify-between mt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveTab("basic")}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={goToNextTab}
-                  >
-                    <span>Next</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="items" className="pt-2">
-                <div className="flex justify-between mt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveTab("document")}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createTransactionMutation.isPending || updateTransactionMutation.isPending}
-                  >
-                    {editingTransaction ? (
-                      "Update Transaction"
-                    ) : selectedType === "transfer" ? (
-                      "Make Transfer"
-                    ) : (
-                      "Record Transaction"
-                    )}
-                  </Button>
-                </div>
-              </TabsContent>
             </form>
           </Form>
         </DialogContent>
