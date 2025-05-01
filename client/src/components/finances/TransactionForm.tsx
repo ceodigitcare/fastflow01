@@ -874,7 +874,7 @@ export default function TransactionForm({
                     </h3>
                   </div>
                   
-                  {/* File attachment removed as requested */}
+                  {/* Document section */}
                   
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <FormField
