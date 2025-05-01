@@ -19,6 +19,8 @@ export const transactionSchema = z.object({
   notes: z.string().optional(),
   contactName: z.string().optional(),
   contactEmail: z.string().email().optional(),
+  contactPhone: z.string().optional(),
+  contactAddress: z.string().optional(),
   items: z.array(
     z.object({
       description: z.string(),

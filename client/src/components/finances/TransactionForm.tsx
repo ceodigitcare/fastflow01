@@ -94,8 +94,10 @@ export default function TransactionForm({
       description: "",
       reference: "",
       notes: "",
-      contactName: "",
-      contactEmail: "",
+      contactName: "Default Vendor",
+      contactEmail: "vendor@example.com",
+      contactPhone: "555-123-4567",
+      contactAddress: "123 Business Street, City",
       items: [],
     },
   });
@@ -112,8 +114,10 @@ export default function TransactionForm({
         description: editingTransaction.description || "",
         reference: editingTransaction.reference || "",
         notes: editingTransaction.notes || "",
-        contactName: editingTransaction.contactName || "",
-        contactEmail: editingTransaction.contactEmail || "",
+        contactName: editingTransaction.contactName || "Default Vendor",
+        contactEmail: editingTransaction.contactEmail || "vendor@example.com",
+        contactPhone: editingTransaction.contactPhone || "555-123-4567",
+        contactAddress: editingTransaction.contactAddress || "123 Business Street, City",
       });
       setSelectedType(editingTransaction.type as "income" | "expense" | "transfer");
     } else if (open) {
@@ -126,8 +130,10 @@ export default function TransactionForm({
         description: "",
         reference: "",
         notes: "",
-        contactName: "",
-        contactEmail: "",
+        contactName: "Default Vendor",
+        contactEmail: "vendor@example.com",
+        contactPhone: "555-123-4567",
+        contactAddress: "123 Business Street, City",
       });
       setSelectedType("expense");
     }
