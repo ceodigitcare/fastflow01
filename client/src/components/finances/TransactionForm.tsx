@@ -146,6 +146,15 @@ export default function TransactionForm({
       setSelectedType(watchType as "income" | "expense" | "transfer");
     }
   }, [watchType, selectedType]);
+  
+  // Watch for account changes and update toAccountId if needed
+  const watchAccountId = form.watch("accountId");
+  useEffect(() => {
+    if (selectedType === "transfer" && form.getValues("toAccountId") === watchAccountId) {
+      // Clear the toAccountId if it's the same as accountId
+      form.setValue("toAccountId", undefined);
+    }
+  }, [watchAccountId, selectedType, form]);
 
   // Create transaction mutation
   const createTransactionMutation = useMutation({
@@ -581,6 +590,9 @@ export default function TransactionForm({
                                 ))}
                               </SelectContent>
                             </Select>
+                            <FormDescription>
+                              Select a different account to transfer funds to
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}

@@ -166,6 +166,8 @@ export const transactions = pgTable("transactions", {
   documentUrl: text("document_url"), // URL to the generated document
   contactName: text("contact_name"), // Customer or vendor name
   contactEmail: text("contact_email"), // Customer or vendor email
+  contactPhone: text("contact_phone"), // Customer or vendor phone
+  contactAddress: text("contact_address"), // Customer or vendor address
   items: jsonb("items").default([]), // Line items for invoice/bill details
   status: text("status").default('draft'), // 'draft', 'final', 'paid', 'cancelled'
 });
