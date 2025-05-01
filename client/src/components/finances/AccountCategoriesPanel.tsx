@@ -65,9 +65,11 @@ export default function AccountCategoriesPanel() {
   const [editingCategory, setEditingCategory] = useState<AccountCategory | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
   const [expandAll, setExpandAll] = useState(false);
+  const [showTransactionInfo, setShowTransactionInfo] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Fetch account categories
   const { data: categories, isLoading: categoriesLoading } = useQuery<AccountCategory[]>({
@@ -77,6 +79,12 @@ export default function AccountCategoriesPanel() {
   // Fetch accounts to display under categories
   const { data: accounts, isLoading: accountsLoading } = useQuery<Account[]>({
     queryKey: ["/api/accounts"],
+  });
+  
+  // Fetch transactions for transaction info
+  const { data: transactions, isLoading: transactionsLoading } = useQuery<Transaction[]>({
+    queryKey: ["/api/transactions"],
+    enabled: showTransactionInfo, // Only fetch when transaction info is visible
   });
 
   // Form setup
@@ -166,6 +174,31 @@ export default function AccountCategoriesPanel() {
   // Helper function to get accounts for a specific category
   const getAccountsForCategory = (categoryId: number) => {
     return accounts?.filter(account => account.categoryId === categoryId) || [];
+  };
+  
+  // Helper function to get transactions for a specific account
+  const getTransactionsForAccount = (accountId: number) => {
+    if (!showTransactionInfo || !transactions) return [];
+    return transactions.filter(transaction => transaction.accountId === accountId);
+  };
+  
+  // Get the most recent transaction for an account
+  const getLastTransactionForAccount = (accountId: number) => {
+    const accountTransactions = getTransactionsForAccount(accountId);
+    if (accountTransactions.length === 0) return null;
+    
+    // Sort by date descending and return the first one
+    return accountTransactions.sort((a, b) => {
+      // Safely handle dates with fallbacks to avoid null issues
+      const dateAValue = a.date || a.createdAt || new Date();
+      const dateBValue = b.date || b.createdAt || new Date();
+      
+      // Convert to timestamp for comparison
+      const dateATime = typeof dateAValue === 'string' ? new Date(dateAValue).getTime() : dateAValue.getTime();
+      const dateBTime = typeof dateBValue === 'string' ? new Date(dateBValue).getTime() : dateBValue.getTime();
+      
+      return dateBTime - dateATime;
+    })[0];
   };
 
   // Handle form submission
@@ -333,10 +366,32 @@ export default function AccountCategoriesPanel() {
           if (categoryAccounts.length > 0) {
             categoryAccounts.forEach(account => {
               const accountCode = generateAccountCode(category.type, account.id);
+              const formattedBalance = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2
+              }).format((account.currentBalance || 0) / 100); // Convert from cents to dollars
+              
+              // Only include transaction info when showTransactionInfo is enabled
+              const lastTransaction = showTransactionInfo ? getLastTransactionForAccount(account.id) : null;
+              
               html += `
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px;">
-                  <span style="font-weight: 500;">${accountCode} - ${account.name}</span>
-                  ${!account.isActive ? '<span style="background-color: #f0f0f0; padding: 1px 6px; border-radius: 10px; font-size: 11px;">Inactive</span>' : ''}
+                <div style="margin-bottom: 10px; font-size: 14px;">
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="font-weight: 500;">${accountCode} - ${account.name}</span>
+                    <div>
+                      ${showTransactionInfo ? `<span style="font-weight: 500; color: #0052CC; margin-right: 8px;">${formattedBalance}</span>` : ''}
+                      ${!account.isActive ? '<span style="background-color: #f0f0f0; padding: 1px 6px; border-radius: 10px; font-size: 11px;">Inactive</span>' : ''}
+                    </div>
+                  </div>
+                  ${showTransactionInfo && lastTransaction ? `
+                    <div style="margin-top: 4px; margin-left: 20px; font-size: 12px; color: #666;">
+                      <div style="display: flex; justify-content: space-between;">
+                        <span>Last transaction: ${new Date(lastTransaction.date || lastTransaction.createdAt || new Date()).toLocaleDateString()}</span>
+                        <span>${lastTransaction.description || lastTransaction.reference || 'No description'}</span>
+                      </div>
+                    </div>
+                  ` : ''}
                 </div>
               `;
             });
@@ -374,7 +429,8 @@ export default function AccountCategoriesPanel() {
       return;
     }
     
-    const businessName = 'Demo Business'; // Ideally, this would come from context or props
+    // Get business name from the authenticated user
+    const businessName = user?.name || 'My Business';
     const printDate = new Date().toLocaleDateString();
     
     // Generate the complete chart of accounts content
@@ -496,11 +552,11 @@ export default function AccountCategoriesPanel() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handlePrintChartOfAccounts}
-                    className="text-xs flex items-center gap-1"
+                    onClick={() => setShowTransactionInfo(!showTransactionInfo)}
+                    className={`text-xs flex items-center gap-1 ${showTransactionInfo ? 'bg-blue-50' : ''}`}
                   >
-                    <Printer className="h-3.5 w-3.5" />
-                    Print Chart
+                    <Info className="h-3.5 w-3.5" />
+                    {showTransactionInfo ? "Hide Transaction Info" : "Show Transaction Info"}
                   </Button>
                   <Button
                     variant="outline"
@@ -577,16 +633,39 @@ export default function AccountCategoriesPanel() {
                             <div className="space-y-1 border-l-2 border-gray-200 pl-4">
                               {getAccountsForCategory(category.id).map(account => {
                                 const accountCode = generateAccountCode(category.type, account.id);
+                                const lastTransaction = showTransactionInfo ? getLastTransactionForAccount(account.id) : null;
+                                const formattedBalance = new Intl.NumberFormat('en-US', {
+                                  style: 'currency',
+                                  currency: 'USD',
+                                  minimumFractionDigits: 2
+                                }).format((account.currentBalance || 0) / 100); // Convert from cents to dollars
+                                
                                 return (
-                                  <div key={account.id} className="flex justify-between items-center py-1">
-                                    <span className="text-sm font-medium">
-                                      <span className="text-xs text-gray-500 font-mono mr-2">{accountCode}</span>
-                                      {account.name}
-                                    </span>
-                                    {!account.isActive && (
-                                      <Badge variant="outline" className="text-xs bg-gray-100">
-                                        Inactive
-                                      </Badge>
+                                  <div key={account.id} className="py-1">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-sm font-medium">
+                                        <span className="text-xs text-gray-500 font-mono mr-2">{accountCode}</span>
+                                        {account.name}
+                                      </span>
+                                      <div className="flex gap-2 items-center">
+                                        {showTransactionInfo && (
+                                          <span className="text-sm font-medium text-blue-600">{formattedBalance}</span>
+                                        )}
+                                        {!account.isActive && (
+                                          <Badge variant="outline" className="text-xs bg-gray-100">
+                                            Inactive
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    {showTransactionInfo && lastTransaction && (
+                                      <div className="mt-1 ml-8 text-xs text-gray-500">
+                                        <div className="flex justify-between">
+                                          <span>Last transaction: {new Date(lastTransaction.date || lastTransaction.createdAt).toLocaleDateString()}</span>
+                                          <span>{lastTransaction.description || lastTransaction.reference || 'No description'}</span>
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
                                 );
