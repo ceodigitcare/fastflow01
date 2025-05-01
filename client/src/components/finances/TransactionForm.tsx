@@ -79,10 +79,7 @@ export default function TransactionForm({
   const [openAccountDialog, setOpenAccountDialog] = useState(false);
   const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
-  const [formFile, setFormFile] = useState<File | null>(null);
-  
-  // Reference to file input element
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // File handling removed as requested
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -345,10 +342,7 @@ export default function TransactionForm({
       // Add JSON data
       formData.append('data', JSON.stringify(transferData));
       
-      // Add file if present
-      if (formFile) {
-        formData.append('file', formFile);
-      }
+      // File functionality removed as requested
       
       try {
         // Use fetch directly to handle multipart/form-data
@@ -432,10 +426,7 @@ export default function TransactionForm({
     // Add JSON data
     formData.append('data', JSON.stringify(transactionData));
     
-    // Add file if present
-    if (formFile) {
-      formData.append('file', formFile);
-    }
+    // File functionality removed as requested
     
     try {
       if (editingTransaction) {
@@ -491,12 +482,7 @@ export default function TransactionForm({
     }
   };
 
-  // Handle file upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFormFile(e.target.files[0]);
-    }
-  };
+  // File upload handling removed as requested
   
   // Handle tab navigation
   const goToNextTab = () => {
@@ -752,11 +738,15 @@ export default function TransactionForm({
                               <SelectContent>
                                 {getFilteredAccounts()
                                   .filter(a => a.id !== form.getValues("accountId"))
-                                  .map((account) => (
-                                    <SelectItem key={account.id} value={account.id.toString()}>
-                                      {account.name}
-                                    </SelectItem>
-                                ))}
+                                  .map((account) => {
+                                    // Get account category name for display
+                                    const category = categories?.find(c => c.id === account.categoryId);
+                                    return (
+                                      <SelectItem key={account.id} value={account.id.toString()}>
+                                        {account.name} {category ? `[${category.name}]` : ""}
+                                      </SelectItem>
+                                    );
+                                  })}
                               </SelectContent>
                             </Select>
                             <FormDescription>
@@ -839,40 +829,7 @@ export default function TransactionForm({
                     </h3>
                   </div>
                   
-                  {/* File attachment input */}
-                  <div className="mb-4">
-                    <FormLabel>Attachment</FormLabel>
-                    <div className="mt-1 flex items-center space-x-2">
-                      <input 
-                        ref={fileInputRef}
-                        type="file" 
-                        id="file-upload" 
-                        className="hidden" 
-                        onChange={handleFileChange}
-                      />
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        {formFile ? formFile.name : "Select a file"}
-                      </Button>
-                      {formFile && (
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => setFormFile(null)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Attach a file such as an invoice, receipt, or other supporting document
-                    </p>
-                  </div>
+                  {/* File attachment removed as requested */}
                   
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <FormField
