@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, CalendarIcon, Package } from "lucide-react";
+import { Plus, CalendarIcon, Package, ShoppingCart, ArrowRightLeft, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Account, AccountCategory, Transaction } from "@shared/schema";
@@ -478,9 +478,10 @@ export default function TransactionForm({
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid grid-cols-2 mb-4">
+                <TabsList className="grid grid-cols-3 mb-4">
                   <TabsTrigger value="basic">Basic Info</TabsTrigger>
                   <TabsTrigger value="document">Document Info</TabsTrigger>
+                  <TabsTrigger value="items">Item Details</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="basic" className="space-y-4 pt-2">
@@ -618,31 +619,7 @@ export default function TransactionForm({
                     />
                   )}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="amount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Amount</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute left-2 top-2 text-gray-500">$</span>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                className="pl-7"
-                                placeholder="0.00"
-                                {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
+                  <div className="grid grid-cols-1 gap-4">
                     <FormField
                       control={form.control}
                       name="date"
@@ -697,7 +674,88 @@ export default function TransactionForm({
                     )}
                   />
 
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Reference and Notes fields moved to Document Info tab */}
+                </TabsContent>
+                
+                <TabsContent value="document" className="space-y-4 pt-2">
+                  <div className="flex items-center mb-4">
+                    <Package className="h-4 w-4 mr-2" />
+                    <h3 className="text-sm font-medium">
+                      {selectedType === "income" && "Sales Invoice"}
+                      {selectedType === "expense" && "Purchase Bill"}
+                      {selectedType === "transfer" && "Transfer Voucher"}
+                    </h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <FormField
+                      control={form.control}
+                      name="contactName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {selectedType === "income" ? "Customer Name" : "Vendor Name"}
+                          </FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contactEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {selectedType === "income" ? "Customer Email" : "Vendor Email"}
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <FormField
+                      control={form.control}
+                      name="contactPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {selectedType === "income" ? "Customer Phone" : "Vendor Phone"}
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="tel" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contactAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {selectedType === "income" ? "Customer Address" : "Vendor Address"}
+                          </FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <FormField
                       control={form.control}
                       name="reference"
@@ -732,56 +790,29 @@ export default function TransactionForm({
                       )}
                     />
                   </div>
+                  
+                  {/* Item details moved to Items tab */}
                 </TabsContent>
                 
-                <TabsContent value="document" className="space-y-4 pt-2">
-                  <div className="flex items-center mb-4">
-                    <Package className="h-4 w-4 mr-2" />
-                    <h3 className="text-sm font-medium">
-                      {selectedType === "income" && "Sales Invoice"}
-                      {selectedType === "expense" && "Purchase Bill"}
-                      {selectedType === "transfer" && "Transfer Voucher"}
-                    </h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="contactName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            {selectedType === "income" ? "Customer Name" : "Vendor Name"}
-                          </FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="contactEmail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            {selectedType === "income" ? "Customer Email" : "Vendor Email"}
-                          </FormLabel>
-                          <FormControl>
-                            <Input type="email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  {(selectedType === "income" || selectedType === "expense") && (
-                    <div className="space-y-2">
-                      <FormLabel>Item Details</FormLabel>
+                <TabsContent value="items" className="space-y-4 pt-2">
+                  {(selectedType === "income" || selectedType === "expense") ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center mb-4">
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        <h3 className="text-sm font-medium">
+                          {selectedType === "income" ? "Products or Services" : "Purchased Items"}
+                        </h3>
+                      </div>
+                      
                       <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                          <div className="flex-1">Description</div>
+                          <div className="w-20 text-center">Quantity</div>
+                          <div className="w-24 text-center">Unit Price</div>
+                          <div className="w-24 text-right">Amount</div>
+                          <div className="w-8"></div>
+                        </div>
+                        
                         {lineItems.map((item, index) => (
                           <div key={index} className="flex items-center gap-2 text-sm">
                             <Input 
@@ -871,33 +902,46 @@ export default function TransactionForm({
                             const total = newItems.reduce((sum, item) => sum + item.amount, 0);
                             form.setValue("amount", total);
                           }}
+                          className="mb-2"
                         >
-                          Add Item
+                          <Plus className="h-4 w-4 mr-2" /> Add Item
                         </Button>
                         
                         {lineItems.length > 0 && (
-                          <div className="flex justify-between pt-2 text-sm">
-                            <span className="text-muted-foreground italic">
-                              Amount will be automatically updated in Basic Info tab
-                            </span>
-                            <div>
-                              <span className="font-medium">Total: </span>
-                              <span className="ml-2">
-                                {lineItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString('en-US', {
+                          <div className="flex justify-between pt-4 border-t text-sm">
+                            <div className="font-medium">Summary</div>
+                            <div className="text-right">
+                              <div className="font-medium">
+                                Total: {lineItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString('en-US', {
                                   style: 'currency',
                                   currency: 'USD'
                                 })}
-                              </span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Amount will be automatically calculated
+                              </div>
                             </div>
                           </div>
                         )}
                       </div>
                     </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                      <ArrowRightLeft className="h-8 w-8 mb-2 opacity-30" />
+                      <p>Item details are not applicable for transfers.</p>
+                    </div>
                   )}
                 </TabsContent>
               </Tabs>
               
-              <DialogFooter>
+              <DialogFooter className="flex justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
                 <Button
                   type="submit"
                   disabled={createTransactionMutation.isPending || updateTransactionMutation.isPending}
