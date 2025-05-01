@@ -161,6 +161,11 @@ export default function AccountCategoriesPanel() {
 
   // Filter categories by type
   const filteredCategories = categories?.filter((category) => category.type === selectedType);
+  
+  // Helper function to get accounts for a specific category
+  const getAccountsForCategory = (categoryId: number) => {
+    return accounts?.filter(account => account.categoryId === categoryId) || [];
+  };
 
   // Handle form submission
   const onSubmit = (values: AccountCategoryFormValues) => {
@@ -452,10 +457,7 @@ export default function AccountCategoriesPanel() {
     }, 500);
   };
 
-  // Get accounts for a specific category
-  const getAccountsForCategory = (categoryId: number) => {
-    return accounts?.filter(account => account.categoryId === categoryId) || [];
-  };
+
 
   return (
     <Card>
@@ -489,15 +491,26 @@ export default function AccountCategoriesPanel() {
             <TabsContent value={selectedType} className="pt-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium">{getCategoryTypeLabel(selectedType)}</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleExpandAll}
-                  className="text-xs flex items-center gap-1"
-                >
-                  <ChevronsUpDown className="h-3.5 w-3.5" />
-                  {expandAll ? "Collapse All" : "Expand All"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrintChartOfAccounts}
+                    className="text-xs flex items-center gap-1"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    Print Chart
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleExpandAll}
+                    className="text-xs flex items-center gap-1"
+                  >
+                    <ChevronsUpDown className="h-3.5 w-3.5" />
+                    {expandAll ? "Collapse All" : "Expand All"}
+                  </Button>
+                </div>
               </div>
 
               {categoriesLoading || accountsLoading ? (
@@ -521,10 +534,13 @@ export default function AccountCategoriesPanel() {
                             </Button>
                           </CollapsibleTrigger>
                           <div className="ml-2">
-                            <h4 className="font-medium text-sm">
+                            <h4 className="font-medium text-sm flex flex-wrap items-center gap-x-2">
+                              <span className="text-xs text-gray-500 font-mono">
+                                {generateAccountCode(category.type, category.id)}
+                              </span>
                               {category.name}
                               {category.isSystem && (
-                                <Badge variant="outline" className="ml-2 text-xs bg-gray-100 px-2 py-1">
+                                <Badge variant="outline" className="text-xs bg-gray-100 px-2 py-1">
                                   System
                                 </Badge>
                               )}
@@ -558,16 +574,22 @@ export default function AccountCategoriesPanel() {
                         <div className="pl-10 pr-4 pb-2 pt-1">
                           {getAccountsForCategory(category.id).length > 0 ? (
                             <div className="space-y-1 border-l-2 border-gray-200 pl-4">
-                              {getAccountsForCategory(category.id).map(account => (
-                                <div key={account.id} className="flex justify-between items-center py-1">
-                                  <span className="text-sm font-medium">{account.name}</span>
-                                  {!account.isActive && (
-                                    <Badge variant="outline" className="text-xs bg-gray-100">
-                                      Inactive
-                                    </Badge>
-                                  )}
-                                </div>
-                              ))}
+                              {getAccountsForCategory(category.id).map(account => {
+                                const accountCode = generateAccountCode(category.type, account.id);
+                                return (
+                                  <div key={account.id} className="flex justify-between items-center py-1">
+                                    <span className="text-sm font-medium">
+                                      <span className="text-xs text-gray-500 font-mono mr-2">{accountCode}</span>
+                                      {account.name}
+                                    </span>
+                                    {!account.isActive && (
+                                      <Badge variant="outline" className="text-xs bg-gray-100">
+                                        Inactive
+                                      </Badge>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           ) : (
                             <p className="text-sm text-gray-500 italic">No accounts in this category</p>
