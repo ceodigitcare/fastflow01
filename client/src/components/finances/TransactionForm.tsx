@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -79,7 +79,7 @@ export default function TransactionForm({
   const [openAccountDialog, setOpenAccountDialog] = useState(false);
   const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
-  // File handling removed as requested
+  // No file handling as requested
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -298,6 +298,11 @@ export default function TransactionForm({
 
   // Handle form submission
   const onSubmit = async (values: TransactionFormValues) => {
+    // If there are validation errors, focus the tab with errors
+    if (checkFormErrorsAndFocusTab()) {
+      return;
+    }
+    
     // Check if we're in the final tab
     if (activeTab !== "items") {
       goToNextTab();
@@ -321,7 +326,7 @@ export default function TransactionForm({
       // Create FormData for transfer with attachment
       const formData = new FormData();
       
-      // Add all transfer data fields
+      // Create transfer data
       const transferData = {
         fromAccountId: values.accountId,
         toAccountId: values.toAccountId,
@@ -339,17 +344,14 @@ export default function TransactionForm({
         status: "final"
       };
       
-      // Add JSON data
-      formData.append('data', JSON.stringify(transferData));
-      
-      // File functionality removed as requested
-      
       try {
-        // Use fetch directly to handle multipart/form-data
+        // Use fetch directly with JSON data
         const res = await fetch('/api/transfers', {
           method: 'POST',
-          body: formData,
-          // No Content-Type header - browser will set it automatically with boundary
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(transferData)
         });
         
         if (!res.ok) {
@@ -420,21 +422,17 @@ export default function TransactionForm({
       ...(formattedItems.length > 0 ? { items: formattedItems } : {})
     };
     
-    // Create FormData for multipart form submission with attachment
-    const formData = new FormData();
-    
-    // Add JSON data
-    formData.append('data', JSON.stringify(transactionData));
-    
-    // File functionality removed as requested
+    // Transaction data is ready to be sent directly as JSON
     
     try {
       if (editingTransaction) {
-        // Use fetch directly for multipart/form-data
+        // Use fetch with JSON data
         const res = await fetch(`/api/transactions/${editingTransaction.id}`, {
           method: 'PATCH',
-          body: formData,
-          // No Content-Type header - browser will set it automatically with boundary
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(transactionData)
         });
         
         if (!res.ok) {
@@ -451,11 +449,13 @@ export default function TransactionForm({
         queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
         onOpenChange(false);
       } else {
-        // Use fetch directly for multipart/form-data
+        // Use fetch with JSON data
         const res = await fetch('/api/transactions', {
           method: 'POST',
-          body: formData,
-          // No Content-Type header - browser will set it automatically with boundary
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(transactionData)
         });
         
         if (!res.ok) {
@@ -482,7 +482,28 @@ export default function TransactionForm({
     }
   };
 
-  // File upload handling removed as requested
+  // Check which tab has validation errors and focus it
+  const checkFormErrorsAndFocusTab = () => {
+    const formState = form.getState();
+    const { errors } = formState;
+    
+    // Basic Info tab errors
+    const basicTabErrors = ['type', 'accountId', 'amount', 'date', 'description'].some(field => !!errors[field]);
+    
+    // Document Info tab errors
+    const documentTabErrors = ['reference', 'notes', 'contactName', 'contactEmail', 'contactPhone', 'contactAddress'].some(field => !!errors[field]);
+    
+    // If there are errors, focus the tab with errors
+    if (basicTabErrors) {
+      setActiveTab('basic');
+      return true;
+    } else if (documentTabErrors) {
+      setActiveTab('document');
+      return true;
+    }
+    
+    return false; // No validation errors
+  };
   
   // Handle tab navigation
   const goToNextTab = () => {
