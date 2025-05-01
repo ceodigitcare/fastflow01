@@ -488,9 +488,22 @@ export default function TransactionForm({
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="grid grid-cols-3 mb-4">
-                  <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                  <TabsTrigger value="document">Document Info</TabsTrigger>
-                  <TabsTrigger value="items">Item Details</TabsTrigger>
+                  <TabsTrigger value="basic" className="flex items-center gap-1">
+                    <CreditCard className="h-4 w-4" />
+                    <span>Basic Info</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="document" className="flex items-center gap-1">
+                    <Package className="h-4 w-4" />
+                    <span>Document Info</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="items" className="flex items-center gap-1">
+                    {selectedType === "transfer" ? (
+                      <ArrowRightLeft className="h-4 w-4" />
+                    ) : (
+                      <ShoppingCart className="h-4 w-4" />
+                    )}
+                    <span>Item Details</span>
+                  </TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="basic" className="space-y-4 pt-2">
