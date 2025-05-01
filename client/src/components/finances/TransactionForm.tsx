@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, CalendarIcon, Package, ShoppingCart, ArrowRightLeft, X } from "lucide-react";
+import { Plus, CalendarIcon, Package, ShoppingCart, ArrowRightLeft, X, CreditCard } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Account, AccountCategory, Transaction } from "@shared/schema";
@@ -313,6 +313,8 @@ export default function TransactionForm({
         notes: values.notes,
         contactName: values.contactName,
         contactEmail: values.contactEmail,
+        contactPhone: values.contactPhone,
+        contactAddress: values.contactAddress,
         documentType: documentType,
         documentNumber: documentNumber,
         status: "final"
@@ -383,6 +385,8 @@ export default function TransactionForm({
       status: "final",
       contactName: values.contactName || "",
       contactEmail: values.contactEmail || "",
+      contactPhone: values.contactPhone || "",
+      contactAddress: values.contactAddress || "",
       // Only include items if we have valid ones
       ...(formattedItems.length > 0 ? { items: formattedItems } : {})
     };

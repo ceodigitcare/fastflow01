@@ -188,6 +188,13 @@ export const transfers = pgTable("transfers", {
   date: timestamp("date").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   reference: text("reference"),
+  notes: text("notes"),
+  contactName: text("contact_name"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  contactAddress: text("contact_address"),
+  documentType: text("document_type"),
+  documentNumber: text("document_number"),
 });
 
 export const insertTransferSchema = createInsertSchema(transfers).omit({
