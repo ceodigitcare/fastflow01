@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccountCategory, InsertAccountCategory, Account } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -45,7 +45,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown } from "lucide-react";
 
 // Form validation schema
 const accountCategorySchema = z.object({
@@ -63,6 +63,7 @@ export default function AccountCategoriesPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<AccountCategory | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
+  const [expandAll, setExpandAll] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -244,27 +245,211 @@ export default function AccountCategoriesPanel() {
       [categoryId]: !prev[categoryId]
     }));
   };
+  
+  // Toggle expand all categories
+  const toggleExpandAll = () => {
+    if (!categories) return;
+    
+    const newExpandState = !expandAll;
+    setExpandAll(newExpandState);
+    
+    // Create a new object with all categories expanded or collapsed
+    const expandStates: Record<number, boolean> = {};
+    categories.forEach(category => {
+      expandStates[category.id] = newExpandState;
+    });
+    
+    setExpandedCategories(expandStates);
+  };
+  
+  // Effect to apply expand all changes when categories data loads
+  useEffect(() => {
+    if (expandAll && categories?.length) {
+      const expandStates: Record<number, boolean> = {};
+      categories.forEach(category => {
+        expandStates[category.id] = true;
+      });
+      setExpandedCategories(expandStates);
+    }
+  }, [categories, expandAll]);
+
+  // Generate a unique account code based on type and id
+  const generateAccountCode = (type: string, id: number) => {
+    const prefixes: Record<string, string> = {
+      asset: 'A',
+      liability: 'L',
+      equity: 'E',
+      income: 'I',
+      expense: 'X'
+    };
+    
+    const prefix = prefixes[type] || 'O';  // Default to 'O' for Other
+    // Pad IDs with leading zeros to ensure consistent formatting (e.g., A0001)
+    return `${prefix}${id.toString().padStart(4, '0')}`;
+  };
+
+  // Generate HTML for the complete chart of accounts (all categories and accounts)
+  const generatePrintableChartOfAccounts = () => {
+    if (!categories || !accounts) return '';
+    
+    // Group categories by type
+    const accountTypes = ['asset', 'liability', 'equity', 'income', 'expense'];
+    let html = '';
+    
+    accountTypes.forEach(type => {
+      const typeCategories = categories.filter(category => category.type === type);
+      
+      if (typeCategories.length > 0) {
+        html += `
+          <div style="margin-bottom: 30px;">
+            <h2 style="margin-bottom: 10px; color: #0052CC; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+              ${getCategoryTypeLabel(type)}
+            </h2>
+            <div style="margin-left: 15px;">
+        `;
+        
+        typeCategories.forEach(category => {
+          const categoryAccounts = accounts.filter(account => account.categoryId === category.id);
+          const categoryCode = generateAccountCode(category.type, category.id);
+          
+          html += `
+            <div style="margin-bottom: 15px;">
+              <h3 style="margin-bottom: 5px; font-size: 16px; display: flex; justify-content: space-between;">
+                <span>
+                  <span style="font-weight: 600; color: #444;">${categoryCode} - ${category.name}</span>
+                  ${category.isSystem ? '<span style="margin-left: 8px; background-color: #f0f0f0; padding: 2px 6px; border-radius: 10px; font-size: 12px; font-weight: normal;">System</span>' : ''}
+                </span>
+              </h3>
+              ${category.description ? `<p style="margin-top: 0; margin-bottom: 5px; font-size: 14px; color: #666;">${category.description}</p>` : ''}
+              <div style="margin-left: 20px; border-left: 1px solid #eee; padding-left: 15px;">
+          `;
+          
+          if (categoryAccounts.length > 0) {
+            categoryAccounts.forEach(account => {
+              const accountCode = generateAccountCode(category.type, account.id);
+              html += `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px;">
+                  <span style="font-weight: 500;">${accountCode} - ${account.name}</span>
+                  ${!account.isActive ? '<span style="background-color: #f0f0f0; padding: 1px 6px; border-radius: 10px; font-size: 11px;">Inactive</span>' : ''}
+                </div>
+              `;
+            });
+          } else {
+            html += '<p style="font-size: 14px; color: #888; font-style: italic;">No accounts in this category</p>';
+          }
+          
+          html += `
+              </div>
+            </div>
+          `;
+        });
+        
+        html += `
+            </div>
+          </div>
+        `;
+      }
+    });
+    
+    return html;
+  };
 
   // Handle printing chart of accounts
   const handlePrintChartOfAccounts = () => {
-    if (printRef.current) {
-      const originalContents = document.body.innerHTML;
-      const printContents = printRef.current.innerHTML;
-      document.body.innerHTML = `
-        <div style="padding: 20px;">
-          <h1 style="text-align: center; margin-bottom: 20px;">Chart of Accounts</h1>
-          ${printContents}
-        </div>
-      `;
-      window.print();
-      document.body.innerHTML = originalContents;
-    } else {
+    // Create a new window for printing to avoid interfering with the main UI
+    const printWindow = window.open('', '_blank');
+    
+    if (!printWindow) {
       toast({
         title: "Print failed",
-        description: "Unable to prepare chart of accounts for printing.",
+        description: "Unable to open print window. Please check if pop-ups are blocked.",
         variant: "destructive"
       });
+      return;
     }
+    
+    const businessName = 'Demo Business'; // Ideally, this would come from context or props
+    const printDate = new Date().toLocaleDateString();
+    
+    // Generate the complete chart of accounts content
+    const chartContent = generatePrintableChartOfAccounts();
+    
+    // Write the HTML content to the new window
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Chart of Accounts</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.5;
+            color: #333;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+          }
+          .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .report-title {
+            font-size: 18px;
+            margin-bottom: 5px;
+          }
+          .print-date {
+            font-size: 14px;
+            color: #666;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          @media print {
+            body {
+              padding: 0;
+              font-size: 12px;
+            }
+            h2 {
+              font-size: 18px;
+              margin-top: 20px;
+              page-break-after: avoid;
+            }
+            h3 {
+              font-size: 14px;
+              page-break-after: avoid;
+            }
+            .page-break {
+              page-break-before: always;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="company-name">${businessName}</div>
+          <div class="report-title">Chart of Accounts</div>
+          <div class="print-date">As of ${printDate}</div>
+        </div>
+        ${chartContent}
+      </body>
+      </html>
+    `);
+    
+    // Give time for resources to load, then print
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+      // Don't immediately close the window to allow the user to use browser's print dialog
+      // The user can close it manually after printing or canceling
+    }, 500);
   };
 
   // Get accounts for a specific category
@@ -302,8 +487,17 @@ export default function AccountCategoriesPanel() {
             </TabsList>
 
             <TabsContent value={selectedType} className="pt-4">
-              <div className="flex justify-between mb-4">
+              <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium">{getCategoryTypeLabel(selectedType)}</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleExpandAll}
+                  className="text-xs flex items-center gap-1"
+                >
+                  <ChevronsUpDown className="h-3.5 w-3.5" />
+                  {expandAll ? "Collapse All" : "Expand All"}
+                </Button>
               </div>
 
               {categoriesLoading || accountsLoading ? (
