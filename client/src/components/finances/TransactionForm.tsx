@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, CalendarIcon, Package, ShoppingCart, ArrowRightLeft, X, CreditCard } from "lucide-react";
+import { Plus, CalendarIcon, Package, ShoppingCart, ArrowRightLeft, X, CreditCard, ArrowRight } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Account, AccountCategory, Transaction } from "@shared/schema";
@@ -78,6 +78,11 @@ export default function TransactionForm({
   ]);
   const [openAccountDialog, setOpenAccountDialog] = useState(false);
   const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState("basic");
+  const [formFile, setFormFile] = useState<File | null>(null);
+  
+  // Reference to file input element
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -401,6 +406,59 @@ export default function TransactionForm({
     }
   };
 
+  // Handle file upload
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFormFile(e.target.files[0]);
+    }
+  };
+  
+  // Handle tab navigation
+  const goToNextTab = () => {
+    // Validate the current tab's fields before proceeding
+    if (activeTab === "basic") {
+      const hasAccountId = form.getValues("accountId") > 0;
+      const hasAmount = form.getValues("amount") > 0;
+      const hasDate = form.getValues("date");
+      
+      // Only proceed if required fields are filled
+      if (!hasAccountId || !hasAmount || !hasDate) {
+        toast({
+          title: "Required fields missing",
+          description: "Please fill in all required fields before continuing.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Auto-assign appropriate account category based on transaction type
+      const selectedAccount = accounts?.find(a => a.id === form.getValues("accountId"));
+      if (selectedAccount) {
+        const accountCategory = categories?.find(c => c.id === selectedAccount.categoryId);
+        if (accountCategory) {
+          // Set an appropriate category based on transaction type and account type
+          if (selectedType === "income" && !form.getValues("category")) {
+            // For income transactions, select an income category
+            const defaultIncomeCategory = categories?.find(c => c.type === "income");
+            if (defaultIncomeCategory) {
+              form.setValue("category", defaultIncomeCategory.name);
+            }
+          } else if (selectedType === "expense" && !form.getValues("category")) {
+            // For expense transactions, select an expense category
+            const defaultExpenseCategory = categories?.find(c => c.type === "expense");
+            if (defaultExpenseCategory) {
+              form.setValue("category", defaultExpenseCategory.name);
+            }
+          }
+        }
+      }
+      
+      setActiveTab("document");
+    } else if (activeTab === "document") {
+      setActiveTab("items");
+    }
+  };
+  
   // Create account mutation
   const createAccountMutation = useMutation({
     mutationFn: async (values: AccountFormValues & { businessId: number }) => {
@@ -490,7 +548,7 @@ export default function TransactionForm({
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <Tabs defaultValue="basic" className="w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid grid-cols-3 mb-4">
                   <TabsTrigger value="basic" className="flex items-center gap-1">
                     <CreditCard className="h-4 w-4" />
