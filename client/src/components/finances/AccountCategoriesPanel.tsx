@@ -210,8 +210,9 @@ export default function AccountCategoriesPanel() {
   };
 
   // Handle delete
-  const handleDelete = (id: number, isSystem: boolean) => {
-    if (isSystem) {
+  const handleDelete = (id: number, isSystem: boolean | undefined | null) => {
+    // Check if isSystem is true, handling all possible types
+    if (isSystem === true) {
       toast({
         title: "Cannot delete system category",
         description: "System categories cannot be deleted.",
@@ -236,81 +237,160 @@ export default function AccountCategoriesPanel() {
     return labels[type] || type.charAt(0).toUpperCase() + type.slice(1);
   };
 
+  // Toggle expanded state for a category
+  const toggleCategoryExpanded = (categoryId: number) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
+  // Handle printing chart of accounts
+  const handlePrintChartOfAccounts = () => {
+    if (printRef.current) {
+      const originalContents = document.body.innerHTML;
+      const printContents = printRef.current.innerHTML;
+      document.body.innerHTML = `
+        <div style="padding: 20px;">
+          <h1 style="text-align: center; margin-bottom: 20px;">Chart of Accounts</h1>
+          ${printContents}
+        </div>
+      `;
+      window.print();
+      document.body.innerHTML = originalContents;
+    } else {
+      toast({
+        title: "Print failed",
+        description: "Unable to prepare chart of accounts for printing.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Get accounts for a specific category
+  const getAccountsForCategory = (categoryId: number) => {
+    return accounts?.filter(account => account.categoryId === categoryId) || [];
+  };
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Chart of Accounts</CardTitle>
-        <CardDescription>View and manage standard financial account categories</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <CardTitle>Chart of Accounts</CardTitle>
+          <CardDescription>View and manage standard financial account categories</CardDescription>
+        </div>
+        <div className="flex space-x-2">
+          <Button variant="outline" size="sm" onClick={handlePrintChartOfAccounts}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print Chart
+          </Button>
+          <Button onClick={handleCreate}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add Category
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="asset" value={selectedType} onValueChange={setSelectedType}>
-          <TabsList className="grid grid-cols-5 mb-6">
-            <TabsTrigger value="asset">Assets</TabsTrigger>
-            <TabsTrigger value="liability">Liabilities</TabsTrigger>
-            <TabsTrigger value="equity">Equity</TabsTrigger>
-            <TabsTrigger value="income">Income</TabsTrigger>
-            <TabsTrigger value="expense">Expenses</TabsTrigger>
-          </TabsList>
+        <div ref={printRef}>
+          <Tabs defaultValue="asset" value={selectedType} onValueChange={setSelectedType}>
+            <TabsList className="grid grid-cols-5 mb-6">
+              <TabsTrigger value="asset">Assets</TabsTrigger>
+              <TabsTrigger value="liability">Liabilities</TabsTrigger>
+              <TabsTrigger value="equity">Equity</TabsTrigger>
+              <TabsTrigger value="income">Income</TabsTrigger>
+              <TabsTrigger value="expense">Expenses</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value={selectedType} className="pt-4">
-            <div className="flex justify-between mb-4">
-              <h3 className="text-lg font-medium">{getCategoryTypeLabel(selectedType)}</h3>
-            </div>
+            <TabsContent value={selectedType} className="pt-4">
+              <div className="flex justify-between mb-4">
+                <h3 className="text-lg font-medium">{getCategoryTypeLabel(selectedType)}</h3>
+              </div>
 
-            {categoriesLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 bg-gray-100 rounded-md animate-pulse"></div>
-                ))}
-              </div>
-            ) : filteredCategories?.length ? (
-              <div className="space-y-3">
-                {filteredCategories.map((category) => (
-                  <div
-                    key={category.id}
-                    className="flex items-center justify-between p-4 rounded-md border"
-                  >
-                    <div>
-                      <h4 className="font-medium text-sm">
-                        {category.name}
-                        {category.isSystem && (
-                          <span className="ml-2 text-xs bg-gray-100 px-2 py-1 rounded-full">
-                            System
-                          </span>
-                        )}
-                      </h4>
-                      {category.description && (
-                        <p className="text-sm text-gray-500">{category.description}</p>
-                      )}
-                    </div>
-                    <div className="flex space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(category)}
-                        disabled={category.isSystem}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(category.id, category.isSystem || false)}
-                        disabled={category.isSystem}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 border rounded-md">
-                <p className="text-gray-500">No {selectedType} categories available</p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+              {categoriesLoading || accountsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 bg-gray-100 rounded-md animate-pulse"></div>
+                  ))}
+                </div>
+              ) : filteredCategories?.length ? (
+                <div className="space-y-3">
+                  {filteredCategories.map((category) => (
+                    <Collapsible key={category.id} open={!!expandedCategories[category.id]} onOpenChange={() => {}}>
+                      <div className="flex items-center justify-between p-4 rounded-md border">
+                        <div className="flex items-center">
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="p-0 h-6 w-6" 
+                              onClick={() => toggleCategoryExpanded(category.id)}>
+                              {expandedCategories[category.id] ? 
+                                <ChevronDown className="h-4 w-4" /> : 
+                                <ChevronRight className="h-4 w-4" />}
+                            </Button>
+                          </CollapsibleTrigger>
+                          <div className="ml-2">
+                            <h4 className="font-medium text-sm">
+                              {category.name}
+                              {category.isSystem && (
+                                <Badge variant="outline" className="ml-2 text-xs bg-gray-100 px-2 py-1">
+                                  System
+                                </Badge>
+                              )}
+                            </h4>
+                            {category.description && (
+                              <p className="text-sm text-gray-500">{category.description}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(category)}
+                            disabled={category.isSystem === true}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(category.id, category.isSystem)}
+                            disabled={category.isSystem === true}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <CollapsibleContent>
+                        <div className="pl-10 pr-4 pb-2 pt-1">
+                          {getAccountsForCategory(category.id).length > 0 ? (
+                            <div className="space-y-1 border-l-2 border-gray-200 pl-4">
+                              {getAccountsForCategory(category.id).map(account => (
+                                <div key={account.id} className="flex justify-between items-center py-1">
+                                  <span className="text-sm font-medium">{account.name}</span>
+                                  {!account.isActive && (
+                                    <Badge variant="outline" className="text-xs bg-gray-100">
+                                      Inactive
+                                    </Badge>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500 italic">No accounts in this category</p>
+                          )}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 border rounded-md">
+                  <p className="text-gray-500">No {selectedType} categories available</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
