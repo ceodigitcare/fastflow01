@@ -294,6 +294,12 @@ export default function TransactionForm({
 
   // Handle form submission
   const onSubmit = async (values: TransactionFormValues) => {
+    // Check if we're in the final tab
+    if (activeTab !== "items") {
+      goToNextTab();
+      return;
+    }
+    
     if (selectedType === "transfer") {
       // Handle transfers differently through a dedicated API endpoint
       if (!values.toAccountId) {
@@ -308,6 +314,10 @@ export default function TransactionForm({
       const documentType = "voucher";
       const documentNumber = generateDocumentNumber(selectedType);
       
+      // Create FormData for transfer with attachment
+      const formData = new FormData();
+      
+      // Add all transfer data fields
       const transferData = {
         fromAccountId: values.accountId,
         toAccountId: values.toAccountId,
@@ -325,8 +335,22 @@ export default function TransactionForm({
         status: "final"
       };
       
+      // Add JSON data
+      formData.append('data', JSON.stringify(transferData));
+      
+      // Add file if present
+      if (formFile) {
+        formData.append('file', formFile);
+      }
+      
       try {
-        const res = await apiRequest("POST", "/api/transfers", transferData);
+        // Use fetch directly to handle multipart/form-data
+        const res = await fetch('/api/transfers', {
+          method: 'POST',
+          body: formData,
+          // No Content-Type header - browser will set it automatically with boundary
+        });
+        
         if (!res.ok) {
           const errorData = await res.json();
           console.error("Transfer API error:", errorData);
@@ -373,8 +397,7 @@ export default function TransactionForm({
         )
       : [];
       
-    // Prepare a clean copy of values with document fields added,
-    // omitting any fields that don't match the server schema
+    // Prepare a clean copy of values with document fields added
     const transactionData = {
       type: values.type,
       accountId: values.accountId,
@@ -396,13 +419,68 @@ export default function TransactionForm({
       ...(formattedItems.length > 0 ? { items: formattedItems } : {})
     };
     
-    if (editingTransaction) {
-      updateTransactionMutation.mutate({ 
-        id: editingTransaction.id, 
-        data: transactionData 
+    // Create FormData for multipart form submission with attachment
+    const formData = new FormData();
+    
+    // Add JSON data
+    formData.append('data', JSON.stringify(transactionData));
+    
+    // Add file if present
+    if (formFile) {
+      formData.append('file', formFile);
+    }
+    
+    try {
+      if (editingTransaction) {
+        // Use fetch directly for multipart/form-data
+        const res = await fetch(`/api/transactions/${editingTransaction.id}`, {
+          method: 'PATCH',
+          body: formData,
+          // No Content-Type header - browser will set it automatically with boundary
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error("Transaction update API error:", errorData);
+          throw new Error(errorData.message || "Failed to update transaction");
+        }
+        
+        toast({
+          title: "Transaction updated",
+          description: "Your transaction has been updated successfully.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
+        onOpenChange(false);
+      } else {
+        // Use fetch directly for multipart/form-data
+        const res = await fetch('/api/transactions', {
+          method: 'POST',
+          body: formData,
+          // No Content-Type header - browser will set it automatically with boundary
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error("Transaction API error:", errorData);
+          throw new Error(errorData.message || "Failed to create transaction");
+        }
+        
+        toast({
+          title: "Transaction created",
+          description: "Your transaction has been recorded successfully.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
+        onOpenChange(false);
+      }
+    } catch (error) {
+      console.error("Transaction processing error:", error);
+      toast({
+        title: "Transaction failed",
+        description: error instanceof Error ? error.message : "Please check all fields and try again",
+        variant: "destructive",
       });
-    } else {
-      createTransactionMutation.mutate(transactionData);
     }
   };
 
@@ -774,6 +852,41 @@ export default function TransactionForm({
                     </h3>
                   </div>
                   
+                  {/* File attachment input */}
+                  <div className="mb-4">
+                    <FormLabel>Attachment</FormLabel>
+                    <div className="mt-1 flex items-center space-x-2">
+                      <input 
+                        ref={fileInputRef}
+                        type="file" 
+                        id="file-upload" 
+                        className="hidden" 
+                        onChange={handleFileChange}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        {formFile ? formFile.name : "Select a file"}
+                      </Button>
+                      {formFile && (
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => setFormFile(null)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Attach a file such as an invoice, receipt, or other supporting document
+                    </p>
+                  </div>
+                  
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <FormField
                       control={form.control}
@@ -1021,27 +1134,68 @@ export default function TransactionForm({
                 </TabsContent>
               </Tabs>
               
-              <DialogFooter className="flex justify-between">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createTransactionMutation.isPending || updateTransactionMutation.isPending}
-                >
-                  {editingTransaction ? (
-                    "Update Transaction"
-                  ) : selectedType === "transfer" ? (
-                    "Make Transfer"
-                  ) : (
-                    "Record Transaction"
-                  )}
-                </Button>
-              </DialogFooter>
+              {/* Each tab has its own buttons */}
+              <TabsContent value="basic" className="pt-2">
+                <div className="flex justify-between mt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={goToNextTab}
+                  >
+                    <span>Next</span>
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="document" className="pt-2">
+                <div className="flex justify-between mt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab("basic")}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={goToNextTab}
+                  >
+                    <span>Next</span>
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="items" className="pt-2">
+                <div className="flex justify-between mt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab("document")}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createTransactionMutation.isPending || updateTransactionMutation.isPending}
+                  >
+                    {editingTransaction ? (
+                      "Update Transaction"
+                    ) : selectedType === "transfer" ? (
+                      "Make Transfer"
+                    ) : (
+                      "Record Transaction"
+                    )}
+                  </Button>
+                </div>
+              </TabsContent>
             </form>
           </Form>
         </DialogContent>
