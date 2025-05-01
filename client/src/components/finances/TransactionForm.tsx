@@ -233,25 +233,32 @@ export default function TransactionForm({
   const getFilteredAccounts = () => {
     if (!accounts) return [];
     
+    let filteredAccounts;
+    
     if (selectedType === "transfer") {
-      return accounts.filter(a => a.isActive);
+      filteredAccounts = accounts.filter(a => a.isActive);
+    } else {
+      // For income and expense, filter accounts that are appropriate for each type
+      const appropriateCategories = categories?.filter(c => {
+        if (selectedType === "income") {
+          return ["asset", "income"].includes(c.type);
+        } else {
+          return ["asset", "expense"].includes(c.type);
+        }
+      }) || [];
+      
+      const categoryIds = new Set(appropriateCategories.map(c => c.id));
+      
+      filteredAccounts = accounts.filter(a => 
+        a.isActive && 
+        (categoryIds.has(a.categoryId) || 
+         (selectedType === "expense" && categories?.find(c => c.id === a.categoryId)?.type === "liability"))
+      );
     }
     
-    // For income and expense, filter accounts that are appropriate for each type
-    const appropriateCategories = categories?.filter(c => {
-      if (selectedType === "income") {
-        return ["asset", "income"].includes(c.type);
-      } else {
-        return ["asset", "expense"].includes(c.type);
-      }
-    }) || [];
-    
-    const categoryIds = new Set(appropriateCategories.map(c => c.id));
-    
-    return accounts.filter(a => 
-      a.isActive && 
-      (categoryIds.has(a.categoryId) || 
-       (selectedType === "expense" && categories?.find(c => c.id === a.categoryId)?.type === "liability"))
+    // Remove duplicates by keeping only first occurrence of each account ID
+    return filteredAccounts.filter((account, index, self) => 
+      index === self.findIndex(a => a.id === account.id)
     );
   };
 
@@ -704,11 +711,20 @@ export default function TransactionForm({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {getFilteredAccounts().map((account) => (
-                                <SelectItem key={account.id} value={account.id.toString()}>
-                                  {account.name}
-                                </SelectItem>
-                              ))}
+                              {getFilteredAccounts()
+                                .filter((account, index, self) => 
+                                  // Remove duplicates by keeping only first occurrence of each account ID
+                                  index === self.findIndex(a => a.id === account.id)
+                                )
+                                .map((account) => {
+                                  // Get account category name for display
+                                  const category = categories?.find(c => c.id === account.categoryId);
+                                  return (
+                                    <SelectItem key={account.id} value={account.id.toString()}>
+                                      {account.name} {category ? `[${category.name}]` : ""}
+                                    </SelectItem>
+                                  );
+                                })}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -753,36 +769,7 @@ export default function TransactionForm({
                     )}
                   </div>
 
-                  {selectedType !== "transfer" && (
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Category</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {getCategoryOptions().map((category) => (
-                                <SelectItem key={category.id} value={category.name}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                  {/* Category is now determined automatically based on transaction type and account */}
 
                   <div className="grid grid-cols-1 gap-4">
                     <FormField
