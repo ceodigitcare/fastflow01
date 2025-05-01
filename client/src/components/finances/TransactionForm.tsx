@@ -298,6 +298,26 @@ export default function TransactionForm({
 
   // Handle form submission
   const onSubmit = async (values: TransactionFormValues) => {
+    // Check if basic required fields are filled
+    if (!values.accountId || values.accountId <= 0) {
+      form.setError("accountId", { message: "Please select an account" });
+      setActiveTab("basic");
+      return;
+    }
+    
+    if (!values.amount || values.amount <= 0) {
+      form.setError("amount", { message: "Amount must be greater than zero" });
+      setActiveTab("basic");
+      return;
+    }
+    
+    // If transfer, check destination account
+    if (values.type === "transfer" && (!values.toAccountId || values.toAccountId <= 0)) {
+      form.setError("toAccountId", { message: "Please select a destination account" });
+      setActiveTab("basic");
+      return;
+    }
+    
     // If there are validation errors, focus the tab with errors
     if (checkFormErrorsAndFocusTab()) {
       return;
@@ -323,8 +343,7 @@ export default function TransactionForm({
       const documentType = "voucher";
       const documentNumber = generateDocumentNumber(selectedType);
       
-      // Create FormData for transfer with attachment
-      const formData = new FormData();
+      // No FormData needed as we're using direct JSON
       
       // Create transfer data
       const transferData = {
@@ -484,14 +503,19 @@ export default function TransactionForm({
 
   // Check which tab has validation errors and focus it
   const checkFormErrorsAndFocusTab = () => {
-    const formState = form.getState();
-    const { errors } = formState;
+    const errors = form.formState.errors;
     
     // Basic Info tab errors
-    const basicTabErrors = ['type', 'accountId', 'amount', 'date', 'description'].some(field => !!errors[field]);
+    const basicTabFields = ['type', 'accountId', 'amount', 'date', 'description'];
+    const basicTabErrors = basicTabFields.some(field => 
+      Object.prototype.hasOwnProperty.call(errors, field)
+    );
     
     // Document Info tab errors
-    const documentTabErrors = ['reference', 'notes', 'contactName', 'contactEmail', 'contactPhone', 'contactAddress'].some(field => !!errors[field]);
+    const documentTabFields = ['reference', 'notes', 'contactName', 'contactEmail', 'contactPhone', 'contactAddress'];
+    const documentTabErrors = documentTabFields.some(field => 
+      Object.prototype.hasOwnProperty.call(errors, field)
+    );
     
     // If there are errors, focus the tab with errors
     if (basicTabErrors) {
