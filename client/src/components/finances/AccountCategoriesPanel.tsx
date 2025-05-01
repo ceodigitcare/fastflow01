@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AccountCategory, InsertAccountCategory } from "@shared/schema";
+import { AccountCategory, InsertAccountCategory, Account } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,7 +43,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight } from "lucide-react";
 
 // Form validation schema
 const accountCategorySchema = z.object({
@@ -60,12 +62,19 @@ export default function AccountCategoriesPanel() {
   const [selectedType, setSelectedType] = useState("asset");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<AccountCategory | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
+  const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch account categories
   const { data: categories, isLoading: categoriesLoading } = useQuery<AccountCategory[]>({
     queryKey: ["/api/account-categories"],
+  });
+  
+  // Fetch accounts to display under categories
+  const { data: accounts, isLoading: accountsLoading } = useQuery<Account[]>({
+    queryKey: ["/api/accounts"],
   });
 
   // Form setup
@@ -161,12 +170,25 @@ export default function AccountCategoriesPanel() {
     }
   };
 
+  // Define type-safe account types
+  const accountTypes = ["asset", "liability", "equity", "income", "expense"] as const;
+  type AccountType = typeof accountTypes[number];
+  
+  // Check if a string is a valid account type
+  const isValidAccountType = (type: string): type is AccountType => {
+    return accountTypes.includes(type as AccountType);
+  };
+
   // Open dialog for editing
   const handleEdit = (category: AccountCategory) => {
     setEditingCategory(category);
+    
+    // Ensure type safety
+    const categoryType = isValidAccountType(category.type) ? category.type : "asset";
+    
     form.reset({
       name: category.name,
-      type: category.type,
+      type: categoryType,
       description: category.description || "",
     });
     setDialogOpen(true);
@@ -175,9 +197,13 @@ export default function AccountCategoriesPanel() {
   // Open dialog for creating
   const handleCreate = () => {
     setEditingCategory(null);
+    
+    // Ensure type safety
+    const categoryType = isValidAccountType(selectedType) ? selectedType : "asset";
+    
     form.reset({
       name: "",
-      type: selectedType,
+      type: categoryType,
       description: "",
     });
     setDialogOpen(true);
