@@ -4,6 +4,16 @@ import { useAuth } from "@/hooks/use-auth";
 import { AccountCategory, InsertAccountCategory, Account, Transaction } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+// Helper function to safely format transaction dates
+function formatTransactionDate(transaction: any): string {
+  if (!transaction) return '';
+  
+  const dateValue = transaction.date || transaction.createdAt;
+  if (!dateValue) return 'Unknown date';
+  
+  return new Date(dateValue).toLocaleDateString();
+}
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -387,7 +397,7 @@ export default function AccountCategoriesPanel() {
                   ${showTransactionInfo && lastTransaction ? `
                     <div style="margin-top: 4px; margin-left: 20px; font-size: 12px; color: #666;">
                       <div style="display: flex; justify-content: space-between;">
-                        <span>Last transaction: ${new Date(lastTransaction.date || lastTransaction.createdAt || new Date()).toLocaleDateString()}</span>
+                        <span>Last transaction: ${formatTransactionDate(lastTransaction)}</span>
                         <span>${lastTransaction.description || lastTransaction.reference || 'No description'}</span>
                       </div>
                     </div>
@@ -662,7 +672,7 @@ export default function AccountCategoriesPanel() {
                                     {showTransactionInfo && lastTransaction && (
                                       <div className="mt-1 ml-8 text-xs text-gray-500">
                                         <div className="flex justify-between">
-                                          <span>Last transaction: {new Date(lastTransaction.date || lastTransaction.createdAt).toLocaleDateString()}</span>
+                                          <span>Last transaction: {formatTransactionDate(lastTransaction)}</span>
                                           <span>{lastTransaction.description || lastTransaction.reference || 'No description'}</span>
                                         </div>
                                       </div>
