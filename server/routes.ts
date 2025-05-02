@@ -704,20 +704,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/transactions", requireAuth, async (req, res) => {
     try {
       const businessId = getBusinessId(req);
-      const transactionData = insertTransactionSchema.parse({
-        ...req.body,
-        businessId,
-      });
+      console.log("Transaction data received:", JSON.stringify(req.body, null, 2));
       
-      const transaction = await storage.createTransaction(transactionData);
-      res.status(201).json(transaction);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid data", errors: error.errors });
-      } else {
-        console.error("Error creating transaction:", error);
-        res.status(500).json({ message: "Failed to create transaction" });
+      try {
+        const transactionData = insertTransactionSchema.parse({
+          ...req.body,
+          businessId,
+        });
+        console.log("Parsed transaction data:", JSON.stringify(transactionData, null, 2));
+        
+        const transaction = await storage.createTransaction(transactionData);
+        res.status(201).json(transaction);
+      } catch (parseError) {
+        console.error("Schema validation error:", parseError);
+        if (parseError instanceof z.ZodError) {
+          res.status(400).json({ message: "Invalid data", errors: parseError.errors });
+        } else {
+          throw parseError;
+        }
       }
+    } catch (error) {
+      console.error("Error creating transaction:", error);
+      res.status(500).json({ message: "Failed to create transaction" });
     }
   });
   
