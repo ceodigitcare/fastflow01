@@ -202,8 +202,13 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
       });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
+      // Update the editing user directly in the UI without waiting for a refetch
+      setEditingUser(updatedUser);
+      
+      // Also invalidate the query to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      
       setBalanceAmount("");
       setBalanceNote("");
       toast({

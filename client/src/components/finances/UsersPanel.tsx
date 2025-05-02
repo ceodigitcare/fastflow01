@@ -66,12 +66,13 @@ export default function UsersPanel({ users, isLoading }: UsersPanelProps) {
     
     // Create table with user data
     let table = '<table><thead><tr>';
-    table += '<th>User Name</th><th>User Type</th><th>Email</th><th>Phone</th><th>Status</th>';
+    table += '<th>User Name</th><th>Business Name</th><th>User Type</th><th>Email</th><th>Phone</th><th>Status</th>';
     table += '</tr></thead><tbody>';
     
     users?.forEach(user => {
       table += '<tr>';
       table += `<td>${user.name}</td>`;
+      table += `<td>${user.businessName || '-'}</td>`;
       table += `<td class="user-type">${user.type}</td>`;
       table += `<td>${user.email}</td>`;
       table += `<td>${user.phone || '-'}</td>`;
@@ -195,6 +196,7 @@ export default function UsersPanel({ users, isLoading }: UsersPanelProps) {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-left py-3 px-4 font-medium">User Name</th>
+                  <th className="text-left py-3 px-4 font-medium">Business Name</th>
                   <th className="text-left py-3 px-4 font-medium">User Type</th>
                   <th className="text-left py-3 px-4 font-medium">Email</th>
                   <th className="text-left py-3 px-4 font-medium">Phone</th>
@@ -205,12 +207,13 @@ export default function UsersPanel({ users, isLoading }: UsersPanelProps) {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-4">Loading users...</td>
+                    <td colSpan={7} className="text-center py-4">Loading users...</td>
                   </tr>
                 ) : users && users.length > 0 ? (
                   users.map((user) => (
                     <tr key={user.id} className="border-b hover:bg-muted/50">
                       <td className="py-3 px-4">{user.name}</td>
+                      <td className="py-3 px-4">{user.businessName || '-'}</td>
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize" 
                           style={{
@@ -260,7 +263,7 @@ export default function UsersPanel({ users, isLoading }: UsersPanelProps) {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="text-center py-4">No users found. Click "Add User" to create one.</td>
+                    <td colSpan={7} className="text-center py-4">No users found. Click "Add User" to create one.</td>
                   </tr>
                 )}
               </tbody>
