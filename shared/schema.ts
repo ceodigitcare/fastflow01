@@ -170,6 +170,7 @@ export const transactions = pgTable("transactions", {
   contactAddress: text("contact_address"), // Customer or vendor address
   items: jsonb("items").default([]), // Line items for invoice/bill details
   status: text("status").default('draft'), // 'draft', 'final', 'paid', 'cancelled'
+  paymentReceived: integer("payment_received").default(0), // Amount paid so far in cents
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).omit({

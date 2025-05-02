@@ -672,13 +672,13 @@ export default function SalesInvoiceFormSplit({
         
         <div className="flex justify-between items-end">
           <div className="text-sm text-gray-500">
-            {form.watch('paymentReceived') > 0 && form.watch('paymentReceived') < form.watch('totalAmount') && (
-              <div>Remaining: {formatCurrency(form.watch('totalAmount') - form.watch('paymentReceived'))}</div>
+            {(form.watch('paymentReceived') || 0) > 0 && (form.watch('paymentReceived') || 0) < (form.watch('totalAmount') || 0) && (
+              <div>Remaining: {formatCurrency((form.watch('totalAmount') || 0) - (form.watch('paymentReceived') || 0))}</div>
             )}
           </div>
           
           <div className="text-right">
-            <div className="font-medium mb-1">Total: {formatCurrency(form.watch('totalAmount'))}</div>
+            <div className="font-medium mb-1">Total: {formatCurrency(form.watch('totalAmount') || 0)}</div>
             <div className="flex space-x-2">
               <Button type="button" variant="outline" onClick={onCancel}>
                 Cancel
