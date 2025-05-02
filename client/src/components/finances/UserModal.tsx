@@ -401,10 +401,11 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <Tabs defaultValue="main">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="main">Main Information</TabsTrigger>
               <TabsTrigger value="login">Login History</TabsTrigger>
               <TabsTrigger value="invitation">Invitation</TabsTrigger>
+              <TabsTrigger value="balance">Balance</TabsTrigger>
             </TabsList>
 
             <TabsContent value="main" className="mt-4">
@@ -435,9 +436,10 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
                       <Label className="mb-2 block" htmlFor="profileImage">Profile Image</Label>
                       <div>
                         <div className="flex items-center justify-center mb-4">
-                          {/* Image preview area with drop zone */}
+                          {/* Image preview area with drop zone - clickable */}
                           <div 
-                            className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center overflow-hidden"
+                            className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center overflow-hidden cursor-pointer"
+                            onClick={handleImageButtonClick}
                             onDragOver={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -579,18 +581,46 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
                       />
                     </div>
                     
+                    {/* Business Address */}
+                    <div>
+                      <Label className="mb-2 block" htmlFor="address">Business Address</Label>
+                      <Input
+                        id="address"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        placeholder="Enter business address"
+                        readOnly={formData.type === 'employee'} // Read-only for employee type
+                      />
+                    </div>
+                    
                     {/* Password */}
                     <div>
                       <Label className="mb-2 block" htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        placeholder={editingUser ? "Leave blank to keep current password" : "Create a password"}
-                        required={!editingUser}
-                      />
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          value={formData.password}
+                          onChange={handleInputChange}
+                          placeholder={editingUser ? "Leave blank to keep current password" : "Create a password"}
+                          required={!editingUser}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={togglePasswordVisibility}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                          tabIndex={-1}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -671,6 +701,143 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
                   </div>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="balance" className="mt-4">
+              {editingUser ? (
+                <div className="space-y-6">
+                  {/* Balance card with user-type specific content */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>
+                        {formData.type === 'customer' ? 'Customer Balance' : 
+                         formData.type === 'vendor' ? 'Vendor Balance' : 'Employee Balance'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {/* Current balance display with styling based on type */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-medium">
+                            {formData.type === 'customer' ? 'Amount Owed:' : 
+                             formData.type === 'vendor' ? 'Amount Payable:' : 'Current Salary:'}
+                          </span>
+                          <span className={`text-xl font-bold ${formData.type === 'customer' ? 'text-blue-600' : formData.type === 'vendor' ? 'text-orange-600' : 'text-green-600'}`}>
+                            ${editingUser.balance || '0.00'}
+                          </span>
+                        </div>
+
+                        {/* Balance history table */}
+                        <div className="mt-4">
+                          <h3 className="text-lg font-medium mb-2">Balance History</h3>
+                          <div className="rounded-md border">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Date</TableHead>
+                                  <TableHead>Type</TableHead>
+                                  <TableHead>Amount</TableHead>
+                                  <TableHead>Note</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {editingUser.balanceHistory && Array.isArray(editingUser.balanceHistory) && editingUser.balanceHistory.length > 0 ? (
+                                  editingUser.balanceHistory.map((entry: BalanceHistoryEntry, index: number) => (
+                                    <TableRow key={index}>
+                                      <TableCell>{new Date(entry.date).toLocaleString()}</TableCell>
+                                      <TableCell>
+                                        <span className={`px-2 py-1 rounded-full text-xs ${entry.type === 'add' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                          {entry.type === 'add' ? 'Increase' : 'Decrease'}
+                                        </span>
+                                      </TableCell>
+                                      <TableCell>${entry.amount.toFixed(2)}</TableCell>
+                                      <TableCell>{entry.note || '-'}</TableCell>
+                                    </TableRow>
+                                  ))
+                                ) : (
+                                  <TableRow>
+                                    <TableCell colSpan={4} className="text-center">
+                                      No balance history available
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+
+                        {/* Balance adjustment form */}
+                        <div className="mt-6 p-4 border rounded-lg">
+                          <h3 className="text-lg font-medium mb-4">Adjust Balance</h3>
+                          <div className="grid grid-cols-12 gap-4">
+                            <div className="col-span-4">
+                              <Label htmlFor="balanceType">Operation</Label>
+                              <div className="flex mt-2 space-x-2">
+                                <Button 
+                                  type="button" 
+                                  size="sm"
+                                  variant={balanceType === 'add' ? 'default' : 'outline'}
+                                  onClick={() => handleBalanceTypeChange('add')}
+                                  className="flex-1"
+                                >
+                                  <PlusCircle className="h-4 w-4 mr-1" />
+                                  Add
+                                </Button>
+                                <Button 
+                                  type="button" 
+                                  size="sm"
+                                  variant={balanceType === 'deduct' ? 'default' : 'outline'}
+                                  onClick={() => handleBalanceTypeChange('deduct')}
+                                  className="flex-1"
+                                >
+                                  <MinusCircle className="h-4 w-4 mr-1" />
+                                  Deduct
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="col-span-3">
+                              <Label htmlFor="balanceAmount">Amount</Label>
+                              <Input
+                                id="balanceAmount"
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={balanceAmount}
+                                onChange={(e) => setBalanceAmount(e.target.value)}
+                                className="mt-2"
+                              />
+                            </div>
+                            <div className="col-span-5">
+                              <Label htmlFor="balanceNote">Note (Optional)</Label>
+                              <Input
+                                id="balanceNote"
+                                placeholder="Reason for adjustment"
+                                value={balanceNote}
+                                onChange={(e) => setBalanceNote(e.target.value)}
+                                className="mt-2"
+                              />
+                            </div>
+                            <div className="col-span-12 flex justify-end">
+                              <Button 
+                                type="button" 
+                                onClick={handleUpdateBalance}
+                                disabled={!balanceAmount || parseFloat(balanceAmount) <= 0 || updateBalanceMutation.isPending}
+                              >
+                                {updateBalanceMutation.isPending ? 'Updating...' : 'Update Balance'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="text-center p-8 text-muted-foreground">
+                  <p>Save the user first to manage balance</p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
 
