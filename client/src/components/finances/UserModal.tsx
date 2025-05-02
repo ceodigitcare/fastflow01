@@ -49,10 +49,13 @@ interface UserModalProps {
   editingUser: User | null;
 }
 
-export default function UserModal({ open, onOpenChange, editingUser }: UserModalProps) {
+export default function UserModal({ open, onOpenChange, editingUser: initialUser }: UserModalProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // User state (maintain local copy that can be updated without waiting for refetch)
+  const [editingUser, setEditingUser] = useState<User | null>(initialUser);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -81,7 +84,12 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
   const [balanceType, setBalanceType] = useState<'add' | 'deduct'>('add');
   const [balanceNote, setBalanceNote] = useState<string>("");
   
-  // Reset form when user changes
+  // Sync editingUser when initialUser changes
+  useEffect(() => {
+    setEditingUser(initialUser);
+  }, [initialUser]);
+  
+  // Reset form when local editingUser state changes
   useEffect(() => {
     if (editingUser) {
       setFormData({
