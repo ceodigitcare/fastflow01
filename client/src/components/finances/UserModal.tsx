@@ -274,7 +274,7 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
     e.preventDefault();
     
     // Create a copy of form data for submission
-    const submissionData = { ...formData };
+    const submissionData = { ...formData } as any;
     
     // If password is empty and we're editing, remove it to avoid overwriting
     if (editingUser && !submissionData.password) {
