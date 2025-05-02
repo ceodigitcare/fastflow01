@@ -225,7 +225,7 @@ export default function SalesInvoiceFormSplit({
         category: "Sales",
         documentType: "invoice",
         documentNumber: data.invoiceNumber,
-        status: data.status,
+        status: data.status || 'draft', // Ensure we always have a default value
         contactName: customer?.name || "",
         contactEmail: customer?.email || "",
         contactPhone: customer?.phone || "",

@@ -100,7 +100,7 @@ export const salesInvoiceSchema = z.object({
   invoiceNumber: z.string().min(1, "Invoice number is required"),
   invoiceDate: z.date(),
   dueDate: z.date(),
-  status: z.enum(["draft", "sent", "paid", "overdue", "cancelled"]).default("draft"),
+  status: z.enum(["draft", "sent", "paid", "overdue", "cancelled"]).optional().default("draft"),
   items: z.array(salesInvoiceItemSchema).min(1, "At least one item is required"),
   subtotal: z.number().min(0, "Subtotal cannot be negative"),
   taxAmount: z.number().default(0),
