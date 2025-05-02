@@ -16,6 +16,7 @@ import {
   insertAccountCategorySchema,
   insertAccountSchema,
   insertTransferSchema,
+  insertUserSchema,
   Business
 } from "@shared/schema";
 import { chatbotRouter } from "./chatbot";

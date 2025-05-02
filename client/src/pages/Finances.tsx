@@ -7,8 +7,30 @@ import AccountCategoriesPanel from "@/components/finances/AccountCategoriesPanel
 import AccountsPanel from "@/components/finances/AccountsPanel";
 import TransactionForm from "@/components/finances/TransactionForm";
 import { calculateFinancialSummary } from "@/lib/finances";
-import { Transaction } from "@shared/schema";
+import { Transaction, User } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
+
+// Shadcn UI components
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Card,
   CardContent,
@@ -40,12 +62,15 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Download, FileText, DollarSign, TrendingUp, CreditCard, Plus, BarChart4 } from "lucide-react";
+import { Download, FileText, DollarSign, TrendingUp, CreditCard, Plus, BarChart4, RefreshCw, Share } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function Finances() {
   const [period, setPeriod] = useState("month");
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   
   // Get transactions
   const { data: transactions, isLoading: transactionsLoading } = useQuery<Transaction[]>({
@@ -64,6 +89,11 @@ export default function Finances() {
   // Get orders
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ["/api/orders"],
+  });
+
+  // Get users for the user management panel
+  const { data: users, isLoading: usersLoading } = useQuery<User[]>({
+    queryKey: ["/api/users"],
   });
   
   // Calculate financial summary
@@ -178,10 +208,10 @@ export default function Finances() {
       <Tabs defaultValue="overview" className="mb-8">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="sales-invoice">Sales Invoice</TabsTrigger>
+          <TabsTrigger value="purchase-bill">Purchase Bill</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="accounts">Accounts</TabsTrigger>
-          <TabsTrigger value="categories">Chart of Accounts</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="user">User</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview" className="mt-6">
@@ -316,112 +346,111 @@ export default function Finances() {
           />
         </TabsContent>
         
-        <TabsContent value="accounts" className="mt-6">
-          <AccountsPanel />
+        <TabsContent value="sales-invoice" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales Invoice</CardTitle>
+              <CardDescription>Manage your sales invoices</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Sales Invoice feature coming soon.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="purchase-bill" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Purchase Bill</CardTitle>
+              <CardDescription>Manage your purchase bills</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Purchase Bill feature coming soon.</p>
+            </CardContent>
+          </Card>
         </TabsContent>
         
-        <TabsContent value="categories" className="mt-6">
-          <AccountCategoriesPanel />
-        </TabsContent>
-        
-        <TabsContent value="reports" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Cash Flow Report</CardTitle>
-                <CardDescription>Money flowing in and out of your business</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500 mb-4">
-                  View all incoming and outgoing funds for any time period. Understand your business's liquidity and cash position.
-                </p>
-                <Button className="w-full">
-                  <BarChart4 className="mr-2 h-4 w-4" />
-                  Generate Report
-                </Button>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Profit and Loss</CardTitle>
-                <CardDescription>Income, expenses, and bottom line</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500 mb-4">
-                  Comprehensive view of your business profitability with all revenue sources and expense categories.
-                </p>
-                <Button className="w-full">
-                  <BarChart4 className="mr-2 h-4 w-4" />
-                  Generate Report
-                </Button>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Balance Sheet</CardTitle>
-                <CardDescription>Your business's financial position</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500 mb-4">
-                  Complete snapshot of your assets, liabilities, and equity at any point in time.
-                </p>
-                <Button className="w-full">
-                  <BarChart4 className="mr-2 h-4 w-4" />
-                  Generate Report
-                </Button>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Tax Summary</CardTitle>
-                <CardDescription>Tax liability overview</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500 mb-4">
-                  Prepare for tax season with a detailed breakdown of taxable income and potential deductions.
-                </p>
-                <Button className="w-full">
-                  <BarChart4 className="mr-2 h-4 w-4" />
-                  Generate Report
-                </Button>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Expense Analysis</CardTitle>
-                <CardDescription>Where your money is going</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500 mb-4">
-                  Detailed breakdown of all expenses by category with trends and comparisons over time.
-                </p>
-                <Button className="w-full">
-                  <BarChart4 className="mr-2 h-4 w-4" />
-                  Generate Report
-                </Button>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Income Sources</CardTitle>
-                <CardDescription>Where your revenue comes from</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500 mb-4">
-                  Analyze revenue streams by product, service, and customer segment with historical trends.
-                </p>
-                <Button className="w-full">
-                  <BarChart4 className="mr-2 h-4 w-4" />
-                  Generate Report
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+        <TabsContent value="user" className="mt-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>Manage your customers, vendors, and employees</CardDescription>
+              </div>
+              <Button onClick={() => setUserDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4">Name</th>
+                      <th className="text-left py-3 px-4">Type</th>
+                      <th className="text-left py-3 px-4">Email</th>
+                      <th className="text-left py-3 px-4">Phone</th>
+                      <th className="text-left py-3 px-4">Status</th>
+                      <th className="text-right py-3 px-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usersLoading ? (
+                      <tr>
+                        <td colSpan={6} className="text-center py-4">Loading users...</td>
+                      </tr>
+                    ) : users && users.length > 0 ? (
+                      users.map((user) => (
+                        <tr key={user.id} className="border-b hover:bg-muted/50">
+                          <td className="py-3 px-4">{user.name}</td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize" 
+                              style={{
+                                backgroundColor: 
+                                  user.type === 'customer' ? 'rgba(var(--color-success), 0.1)' :
+                                  user.type === 'vendor' ? 'rgba(var(--color-info), 0.1)' :
+                                  'rgba(var(--color-warning), 0.1)',
+                                color: 
+                                  user.type === 'customer' ? 'hsl(var(--success))' :
+                                  user.type === 'vendor' ? 'hsl(var(--info))' :
+                                  'hsl(var(--warning))'
+                              }}
+                            >
+                              {user.type}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">{user.email}</td>
+                          <td className="py-3 px-4">{user.phone || '-'}</td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                              {user.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingUser(user);
+                                setUserDialogOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="text-center py-4">No users found. Click "Add User" to create one.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
       
@@ -433,6 +462,146 @@ export default function Finances() {
         accounts={accounts}
         categories={categories}
       />
+
+      {/* User Form Dialog Placeholder */}
+      {userDialogOpen && (
+        <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                {editingUser ? 'Edit User' : 'Add New User'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingUser ? 'Update user information' : 'Fill in the details to create a new user'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <Tabs defaultValue="main">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="main">Main Information</TabsTrigger>
+                  <TabsTrigger value="login">Login History</TabsTrigger>
+                  <TabsTrigger value="invitation">Invitation</TabsTrigger>
+                </TabsList>
+                <TabsContent value="main" className="mt-4">
+                  <form>
+                    <div className="grid gap-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right" htmlFor="name">Name</Label>
+                        <Input id="name" placeholder="User name" className="col-span-3" defaultValue={editingUser?.name || ''} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right" htmlFor="type">Type</Label>
+                        <Select defaultValue={editingUser?.type || 'customer'}>
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Select user type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="customer">Customer</SelectItem>
+                            <SelectItem value="vendor">Vendor</SelectItem>
+                            <SelectItem value="employee">Employee</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right" htmlFor="email">Email</Label>
+                        <Input id="email" type="email" placeholder="user@example.com" className="col-span-3" defaultValue={editingUser?.email || ''} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right" htmlFor="phone">Phone</Label>
+                        <Input id="phone" placeholder="Phone number" className="col-span-3" defaultValue={editingUser?.phone || ''} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right" htmlFor="address">Address</Label>
+                        <Textarea id="address" placeholder="Address" className="col-span-3" defaultValue={editingUser?.address || ''} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right" htmlFor="status">Status</Label>
+                        <div className="flex items-center space-x-2 col-span-3">
+                          <Switch id="isActive" defaultChecked={editingUser?.isActive ?? true} />
+                          <Label htmlFor="isActive">Active</Label>
+                        </div>
+                      </div>
+                    </div>
+                  </form>
+                </TabsContent>
+                <TabsContent value="login" className="mt-4">
+                  <div className="space-y-4">
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>IP Address</TableHead>
+                            <TableHead>Device</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {editingUser?.loginHistory && editingUser.loginHistory.length > 0 ? (
+                            editingUser.loginHistory.map((entry, index) => (
+                              <TableRow key={index}>
+                                <TableCell>{new Date(entry.timestamp).toLocaleString()}</TableCell>
+                                <TableCell>{entry.ipAddress}</TableCell>
+                                <TableCell>{entry.device}</TableCell>
+                                <TableCell>
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${entry.status === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                    {entry.status}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center">No login history available</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="invitation" className="mt-4">
+                  <div className="space-y-4">
+                    <div className="rounded-md border p-4">
+                      <div className="text-center">
+                        <div className="my-4 flex justify-center">
+                          {editingUser?.invitationToken ? (
+                            <QRCodeSVG value={`https://app.example.com/invite/${editingUser.invitationToken}`} size={200} />
+                          ) : (
+                            <div className="w-[200px] h-[200px] bg-muted flex items-center justify-center">
+                              <p className="text-muted-foreground">No invitation token generated</p>
+                            </div>
+                          )}
+                        </div>
+                        <h3 className="text-lg font-medium mt-2">Invitation Link</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          {editingUser?.invitationToken ? 
+                            `https://app.example.com/invite/${editingUser.invitationToken}` : 
+                            'Generate an invitation token first'}
+                        </p>
+                        <div className="flex space-x-2 justify-center">
+                          <Button>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Generate New Token
+                          </Button>
+                          <Button variant="outline">
+                            <Share className="mr-2 h-4 w-4" />
+                            Share Link
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setUserDialogOpen(false)}>Cancel</Button>
+              <Button type="button">{editingUser ? 'Update User' : 'Create User'}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </MainLayout>
   );
 }

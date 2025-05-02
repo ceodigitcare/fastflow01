@@ -840,7 +840,7 @@ import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Fix the type later
   
   constructor() {
     const PostgresSessionStore = connectPg(session);
@@ -1388,6 +1388,125 @@ export class DatabaseStorage implements IStorage {
       .where(eq(conversations.id, id))
       .returning();
     return conversation || undefined;
+  }
+  
+  // User methods (Customer, Vendor, Employee)
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUsersByBusiness(businessId: number): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(eq(users.businessId, businessId))
+      .orderBy(asc(users.name));
+  }
+
+  async getUsersByType(businessId: number, type: string): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.businessId, businessId),
+          eq(users.type, type)
+        )
+      )
+      .orderBy(asc(users.name));
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    // Generate an invitation token
+    const invitationToken = this.generateUniqueToken();
+    
+    // Create the user with the invitation token
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...insertUser,
+        invitationToken
+      })
+      .returning();
+      
+    return user;
+  }
+
+  async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    const result = await db
+      .delete(users)
+      .where(eq(users.id, id))
+      .returning({ id: users.id });
+    return result.length > 0;
+  }
+
+  async generateInvitationToken(userId: number): Promise<string> {
+    const token = this.generateUniqueToken();
+    const [user] = await db
+      .update(users)
+      .set({ invitationToken: token })
+      .where(eq(users.id, userId))
+      .returning();
+      
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+    
+    return token;
+  }
+
+  private generateUniqueToken(): string {
+    // This should use a secure method in production
+    return Math.random().toString(36).substring(2, 15) + 
+           Math.random().toString(36).substring(2, 15);
+  }
+
+  async addLoginHistory(userId: number, entry: LoginHistoryEntry): Promise<User | undefined> {
+    // Get the current user
+    const [currentUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (!currentUser) {
+      return undefined;
+    }
+    
+    // Update the login history
+    let loginHistory = [];
+    if (currentUser.loginHistory) {
+      try {
+        loginHistory = Array.isArray(currentUser.loginHistory) ? 
+          currentUser.loginHistory : JSON.parse(String(currentUser.loginHistory));
+      } catch (e) {
+        console.error('Error parsing login history:', e);
+        loginHistory = [];
+      }
+    }
+    
+    loginHistory.push(entry);
+    
+    // Update the user
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        loginHistory: loginHistory,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+      
+    return updatedUser || undefined;
   }
 }
 
