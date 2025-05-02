@@ -464,12 +464,11 @@ export default function Finances() {
       />
       
       {/* Invoice Print Dialog */}
-      {invoicePrintDialogOpen && viewingInvoice && (
-        <InvoicePrintDialog
-          invoice={viewingInvoice}
-          onClose={() => setInvoicePrintDialogOpen(false)}
-        />
-      )}
+      <InvoicePrintDialog
+        open={invoicePrintDialogOpen}
+        onOpenChange={setInvoicePrintDialogOpen}
+        invoice={viewingInvoice}
+      />
 
     </MainLayout>
   );

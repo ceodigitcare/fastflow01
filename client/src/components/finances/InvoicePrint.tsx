@@ -1,4 +1,4 @@
-import { forwardRef, useRef } from "react";
+import { forwardRef, useRef, useEffect } from "react";
 import { format } from "date-fns";
 import { Transaction } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
@@ -168,10 +168,29 @@ InvoicePrint.displayName = "InvoicePrint";
 export default InvoicePrint;
 
 // Component for a print-friendly dialog to view and print invoice
-export function InvoicePrintDialog({ invoice, onClose }: { invoice: Transaction, onClose: () => void }) {
+interface InvoicePrintDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  invoice: Transaction | null;
+}
+
+export function InvoicePrintDialog({ open, onOpenChange, invoice }: InvoicePrintDialogProps) {
   const printRef = useRef<HTMLDivElement>(null);
   
+  // Add a useEffect to handle when the dialog is closed
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    // If dialog is opened but no invoice is provided
+    if (!invoice) {
+      onOpenChange(false);
+    }
+  }, [open, invoice, onOpenChange]);
+
   const handlePrint = () => {
+    if (!invoice) return;
+    
     const content = printRef.current;
     if (content) {
       const printWindow = window.open('', '_blank');
@@ -200,6 +219,11 @@ export function InvoicePrintDialog({ invoice, onClose }: { invoice: Transaction,
     }
   };
   
+  // If no invoice or dialog is closed, don't render anything
+  if (!open || !invoice) {
+    return null;
+  }
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-auto">
@@ -213,7 +237,7 @@ export function InvoicePrintDialog({ invoice, onClose }: { invoice: Transaction,
               Print
             </button>
             <button
-              onClick={onClose}
+              onClick={() => onOpenChange(false)}
               className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
             >
               Close
