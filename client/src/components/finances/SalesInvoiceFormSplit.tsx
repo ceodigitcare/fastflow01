@@ -107,6 +107,7 @@ export default function SalesInvoiceFormSplit({
         taxAmount: 0, // Would need to be calculated from items
         discountAmount: 0, // Would need to be calculated from items
         totalAmount: editingInvoice.amount / 100, // Convert cents to dollars
+        paymentReceived: editingInvoice.paymentReceived ? editingInvoice.paymentReceived / 100 : 0, // Convert cents to dollars
         notes: editingInvoice.notes || "",
         termsAndConditions: "Payment is due within 30 days of the invoice date.",
         customerNotes: "",
@@ -129,6 +130,7 @@ export default function SalesInvoiceFormSplit({
         taxAmount: 0,
         discountAmount: 0,
         totalAmount: 0,
+        paymentReceived: 0,
         notes: "",
         termsAndConditions: "Payment is due within 30 days of the invoice date.",
         customerNotes: "",
@@ -230,6 +232,7 @@ export default function SalesInvoiceFormSplit({
         contactAddress: customer?.address || "",
         notes: data.notes,
         items: data.items,
+        paymentReceived: Math.round((data.paymentReceived || 0) * 100), // Convert to cents
       };
       
       // Update or create transaction
@@ -600,8 +603,41 @@ export default function SalesInvoiceFormSplit({
         </div>
 
         {/* Totals & Buttons */}
-        <div className="flex justify-between items-end">
-          <div>
+        <div className="flex flex-col mb-4">
+          <div className="font-medium mb-2">Payment Information</div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="paymentReceived"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Payment Received</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      step="0.01"
+                      placeholder="0.00" 
+                      {...field}
+                      value={field.value !== undefined ? field.value : ""}
+                      onChange={(e) => {
+                        const value = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                        field.onChange(value);
+                        
+                        // Auto-set status to paid if payment equals total amount
+                        if (value >= form.getValues('totalAmount')) {
+                          form.setValue('status', 'paid');
+                        } else if (value > 0 && value < form.getValues('totalAmount')) {
+                          form.setValue('status', 'sent');
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <FormField
               control={form.control}
               name="status"
@@ -631,6 +667,14 @@ export default function SalesInvoiceFormSplit({
                 </FormItem>
               )}
             />
+          </div>
+        </div>
+        
+        <div className="flex justify-between items-end">
+          <div className="text-sm text-gray-500">
+            {form.watch('paymentReceived') > 0 && form.watch('paymentReceived') < form.watch('totalAmount') && (
+              <div>Remaining: {formatCurrency(form.watch('totalAmount') - form.watch('paymentReceived'))}</div>
+            )}
           </div>
           
           <div className="text-right">
