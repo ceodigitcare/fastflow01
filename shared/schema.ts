@@ -219,6 +219,39 @@ export const insertConversationSchema = createInsertSchema(conversations).omit({
   updatedAt: true,
 });
 
+// Users: Customers, Vendors, Employees
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull(),
+  type: text("type").notNull(), // 'customer', 'vendor', 'employee'
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  password: text("password").notNull(),
+  profileImageUrl: text("profile_image_url"),
+  address: text("address"),
+  isActive: boolean("is_active").default(true),
+  loginHistory: jsonb("login_history").default([]),
+  invitationToken: text("invitation_token"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  loginHistory: true,
+  invitationToken: true,
+});
+
+// LoginHistory type for frontend validation
+export const loginHistoryEntrySchema = z.object({
+  timestamp: z.string(),
+  deviceInfo: z.string(),
+  ipAddress: z.string().optional(),
+});
+
 // Export types
 export type Business = typeof businesses.$inferSelect;
 export type InsertBusiness = z.infer<typeof insertBusinessSchema>;
@@ -249,3 +282,7 @@ export type InsertTransfer = z.infer<typeof insertTransferSchema>;
 
 export type Conversation = typeof conversations.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type LoginHistoryEntry = z.infer<typeof loginHistoryEntrySchema>;

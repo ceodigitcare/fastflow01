@@ -8,7 +8,8 @@ import {
   conversations, Conversation, InsertConversation,
   accountCategories, AccountCategory, InsertAccountCategory,
   accounts, Account, InsertAccount,
-  transfers, Transfer, InsertTransfer
+  transfers, Transfer, InsertTransfer,
+  users, User, InsertUser, LoginHistoryEntry
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, asc, desc, and, or, gte, lte } from "drizzle-orm";
@@ -43,6 +44,16 @@ export interface IStorage {
   getOrdersByBusiness(businessId: number): Promise<Order[]>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
+  
+  // User methods (Customer, Vendor, Employee)
+  getUser(id: number): Promise<User | undefined>;
+  getUsersByBusiness(businessId: number): Promise<User[]>;
+  getUsersByType(businessId: number, type: string): Promise<User[]>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, data: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  generateInvitationToken(userId: number): Promise<string>;
+  addLoginHistory(userId: number, entry: LoginHistoryEntry): Promise<User | undefined>;
   
   // Account Category methods
   getAccountCategory(id: number): Promise<AccountCategory | undefined>;
@@ -98,6 +109,7 @@ export class MemStorage implements IStorage {
   private accountCategories: Map<number, AccountCategory>;
   private accounts: Map<number, Account>;
   private transfers: Map<number, Transfer>;
+  private users: Map<number, User>;
   
   private businessId: number;
   private productId: number;
@@ -109,6 +121,7 @@ export class MemStorage implements IStorage {
   private accountCategoryId: number;
   private accountId: number;
   private transferId: number;
+  private userId: number;
   
   constructor() {
     this.businesses = new Map();
@@ -121,6 +134,7 @@ export class MemStorage implements IStorage {
     this.accountCategories = new Map();
     this.accounts = new Map();
     this.transfers = new Map();
+    this.users = new Map();
     
     this.businessId = 1;
     this.productId = 1;
@@ -132,6 +146,7 @@ export class MemStorage implements IStorage {
     this.accountCategoryId = 1;
     this.accountId = 1;
     this.transferId = 1;
+    this.userId = 1;
     
     // Initialize with some template data
     this.initializeTemplates();
@@ -395,6 +410,87 @@ export class MemStorage implements IStorage {
     const updatedOrder = { ...order, status };
     this.orders.set(id, updatedOrder);
     return updatedOrder;
+  }
+
+  // User Methods
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUsersByBusiness(businessId: number): Promise<User[]> {
+    return Array.from(this.users.values())
+      .filter(user => user.businessId === businessId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getUsersByType(businessId: number, type: string): Promise<User[]> {
+    return Array.from(this.users.values())
+      .filter(user => user.businessId === businessId && user.type === type)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const id = this.userId++;
+    const now = new Date();
+    const invitationToken = await this.generateUniqueToken();
+    
+    const newUser: User = {
+      ...user,
+      id,
+      createdAt: now,
+      updatedAt: now,
+      loginHistory: [],
+      invitationToken
+    };
+    
+    this.users.set(id, newUser);
+    return newUser;
+  }
+
+  async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
+    const user = await this.getUser(id);
+    if (!user) return undefined;
+    
+    const updatedUser = {
+      ...user,
+      ...data,
+      updatedAt: new Date()
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    return this.users.delete(id);
+  }
+
+  async generateInvitationToken(userId: number): Promise<string> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error(`User with ID ${userId} not found`);
+    
+    const token = await this.generateUniqueToken();
+    const updatedUser = { ...user, invitationToken: token };
+    this.users.set(userId, updatedUser);
+    
+    return token;
+  }
+
+  private async generateUniqueToken(): Promise<string> {
+    // In a real implementation, this would be cryptographically secure
+    return Math.random().toString(36).substring(2, 15) + 
+           Math.random().toString(36).substring(2, 15);
+  }
+
+  async addLoginHistory(userId: number, entry: LoginHistoryEntry): Promise<User | undefined> {
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
+    
+    const updatedHistory = [...user.loginHistory, entry];
+    const updatedUser = { ...user, loginHistory: updatedHistory, updatedAt: new Date() };
+    
+    this.users.set(userId, updatedUser);
+    return updatedUser;
   }
   
   // Account Category methods
