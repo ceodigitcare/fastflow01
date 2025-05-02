@@ -3,7 +3,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { 
   transactions, 
   accounts, 
-  accountCategories 
+  accountCategories,
+  users,
+  products
 } from "@shared/schema";
 
 // Transaction schema
