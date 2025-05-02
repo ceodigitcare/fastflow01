@@ -8,6 +8,7 @@ import AccountsPanel from "@/components/finances/AccountsPanel";
 import TransactionForm from "@/components/finances/TransactionForm";
 import SalesInvoiceList from "@/components/finances/SalesInvoiceList";
 import SalesInvoiceForm from "@/components/finances/SalesInvoiceForm";
+import SalesInvoiceSplitView from "@/components/finances/SalesInvoiceSplitView";
 import { InvoicePrintDialog } from "@/components/finances/InvoicePrint";
 import UsersPanel from "@/components/finances/UsersPanel";
 import { calculateFinancialSummary } from "@/lib/finances";
@@ -355,29 +356,12 @@ export default function Finances() {
         </TabsContent>
         
         <TabsContent value="sales-invoice" className="mt-6">
-          <SalesInvoiceList 
-            onNewInvoice={() => {
-              setEditingInvoice(null);
-              setSalesInvoiceDialogOpen(true);
-            }}
-            onEditInvoice={(invoice) => {
-              setEditingInvoice(invoice);
-              setSalesInvoiceDialogOpen(true);
-            }}
-            onViewInvoice={(invoice) => {
-              setViewingInvoice(invoice);
-              setInvoicePrintDialogOpen(true);
-            }}
-            onPrintInvoice={(invoice) => {
-              setViewingInvoice(invoice);
-              setInvoicePrintDialogOpen(true);
-            }}
-            onShareInvoice={(invoice) => {
-              // Generate WhatsApp share link with invoice details
-              const message = `Invoice ${invoice.documentNumber} for ${formatCurrency(invoice.amount)} is ready for your review.`;
-              const encodedMessage = encodeURIComponent(message);
-              const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
-              window.open(whatsappUrl, '_blank');
+          <SalesInvoiceSplitView 
+            businessData={{
+              name: "My Business",
+              email: "business@example.com",
+              phone: "+1 (555) 123-4567",
+              address: "123 Business St, Demo City, 12345"
             }}
           />
         </TabsContent>
