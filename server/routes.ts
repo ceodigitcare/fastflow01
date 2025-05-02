@@ -857,6 +857,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Register chatbot router for Gemini AI integration
+  // User Management Routes (Customer, Vendor, Employee) for Finances section
+  app.get("/api/users", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const users = await storage.getUsersByBusiness(businessId);
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get("/api/users/:type", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const type = req.params.type;
+      
+      // Validate type
+      if (!['customer', 'vendor', 'employee'].includes(type.toLowerCase())) {
+        return res.status(400).json({ message: "Invalid user type. Must be 'customer', 'vendor', or 'employee'" });
+      }
+      
+      const users = await storage.getUsersByType(businessId, type.toLowerCase());
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users by type" });
+    }
+  });
+
+  app.post("/api/users", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      
+      // Validate user data
+      const userSchema = insertUserSchema.extend({
+        type: z.enum(['customer', 'vendor', 'employee']),
+        name: z.string().min(2, "Name must be at least 2 characters"),
+        email: z.string().email("Invalid email address"),
+        // Make password optional for invitation-based accounts
+        password: z.string().min(6).optional()
+      });
+      
+      const userData = userSchema.parse({
+        ...req.body,
+        businessId,
+        // For employees, we'll use business contact info
+        // For customers and vendors, we'll use their provided info
+        isActive: true
+      });
+      
+      // If password isn't provided, generate a random one
+      if (!userData.password) {
+        userData.password = Math.random().toString(36).substring(2, 10);
+      }
+      
+      const user = await storage.createUser(userData);
+      res.status(201).json(user);
+    } catch (error) {
+      console.error("Create user error:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create user" });
+      }
+    }
+  });
+
+  app.get("/api/users/detail/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this user" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user details" });
+    }
+  });
+
+  app.patch("/api/users/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this user" });
+      }
+      
+      // Validate update data
+      const updateSchema = z.object({
+        name: z.string().min(2).optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional().nullable(),
+        address: z.string().optional().nullable(),
+        profileImageUrl: z.string().url().optional().nullable(),
+        isActive: z.boolean().optional(),
+        type: z.enum(['customer', 'vendor', 'employee']).optional()
+      });
+      
+      const validatedData = updateSchema.parse(req.body);
+      
+      const updatedUser = await storage.updateUser(userId, validatedData);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Update user error:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update user" });
+      }
+    }
+  });
+
+  app.delete("/api/users/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this user" });
+      }
+      
+      await storage.deleteUser(userId);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  app.post("/api/users/:id/invitation", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this user" });
+      }
+      
+      // Generate a new invitation token
+      const token = await storage.generateInvitationToken(userId);
+      
+      // Generate the invitation URL
+      const invitationUrl = `${req.protocol}://${req.get('host')}/register/invite/${token}`;
+      
+      res.json({ token, invitationUrl });
+    } catch (error) {
+      console.error("Generate invitation error:", error);
+      res.status(500).json({ message: "Failed to generate invitation" });
+    }
+  });
+
+  app.post("/api/users/:id/login-history", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this user" });
+      }
+      
+      // Validate login history entry
+      const loginEntrySchema = z.object({
+        date: z.date().default(() => new Date()),
+        ipAddress: z.string().optional(),
+        userAgent: z.string().optional(),
+        location: z.string().optional()
+      });
+      
+      const loginEntry = loginEntrySchema.parse(req.body);
+      
+      // Add login history entry
+      const updatedUser = await storage.addLoginHistory(userId, loginEntry);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Add login history error:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to add login history" });
+      }
+    }
+  });
+
   app.use("/api/chatbot", chatbotRouter);
 
   // Create HTTP server

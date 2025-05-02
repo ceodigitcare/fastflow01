@@ -6,6 +6,7 @@ import FinancialSummary from "@/components/finances/FinancialSummary";
 import AccountCategoriesPanel from "@/components/finances/AccountCategoriesPanel";
 import AccountsPanel from "@/components/finances/AccountsPanel";
 import TransactionForm from "@/components/finances/TransactionForm";
+import UsersPanel from "@/components/finances/UsersPanel";
 import { calculateFinancialSummary } from "@/lib/finances";
 import { Transaction, User } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
