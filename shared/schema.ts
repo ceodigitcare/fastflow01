@@ -173,10 +173,19 @@ export const transactions = pgTable("transactions", {
   paymentReceived: integer("payment_received").default(0), // Amount paid so far in cents
 });
 
-export const insertTransactionSchema = createInsertSchema(transactions).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertTransactionSchema = createInsertSchema(transactions)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    // Allow date to be provided as either a Date object or a string (which will be converted to a Date)
+    date: z.date().or(z.string().transform(str => new Date(str))),
+    // Make status field optional with a default value of 'draft'
+    status: z.string().optional().default('draft'),
+    // Make paymentReceived optional with a default of 0
+    paymentReceived: z.number().optional().default(0),
+  });
 
 // For transaction transfers between accounts
 export const transfers = pgTable("transfers", {

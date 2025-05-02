@@ -623,13 +623,7 @@ export default function SalesInvoiceFormSplit({
                       onChange={(e) => {
                         const value = e.target.value === "" ? 0 : parseFloat(e.target.value);
                         field.onChange(value);
-                        
-                        // Auto-set status to paid if payment equals total amount
-                        if (value >= form.getValues('totalAmount')) {
-                          form.setValue('status', 'paid');
-                        } else if (value > 0 && value < form.getValues('totalAmount')) {
-                          form.setValue('status', 'sent');
-                        }
+                        // Status is now set manually by the user
                       }}
                     />
                   </FormControl>
