@@ -210,10 +210,12 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
       
       // Auto-fill business name and address for employees
       if (value === 'employee') {
+        // Get the latest business info from the current session
+        // For simplicity, using Demo Business as value
         return {
           ...newData,
           businessName: "Demo Business",
-          address: prev.address || "123 Business St, Demo City, 12345",
+          address: "123 Business St, Demo City, 12345", // Always set the default address for employees
         };
       }
       
@@ -338,181 +340,189 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
 
             <TabsContent value="main" className="mt-4">
               <div className="grid gap-4">
-                {/* User Type */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="type">User Type</Label>
-                  <Select 
-                    value={formData.type} 
-                    onValueChange={handleTypeChange}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select user type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="customer">Customer</SelectItem>
-                      <SelectItem value="vendor">Vendor</SelectItem>
-                      <SelectItem value="employee">Employee</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Business Name */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="businessName">Business Name</Label>
-                  <Input
-                    id="businessName"
-                    name="businessName"
-                    value={formData.businessName}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    required
-                    readOnly={formData.type === 'employee'} // Read-only for employee type
-                  />
-                </div>
-                
-                {/* Business Address */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="address">Business Address</Label>
-                  <Textarea
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    rows={3}
-                    readOnly={formData.type === 'employee'} // Read-only for employee type
-                  />
-                </div>
-                
-                {/* Phone Number */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    placeholder="e.g., +1 123-456-7890"
-                  />
-                </div>
-                
-                {/* Email */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    required
-                    placeholder="email@example.com"
-                  />
-                </div>
-                
-                {/* Contact Person Name */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="name">Contact Person Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    required
-                    placeholder="Full name"
-                  />
-                </div>
-                
-                {/* Password */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    placeholder={editingUser ? "Leave blank to keep current password" : "Create a password"}
-                    required={!editingUser}
-                  />
-                </div>
-                
-                {/* Profile Image Upload */}
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <Label className="text-right mt-2" htmlFor="profileImage">Profile Image</Label>
-                  <div className="col-span-3">
-                    <div className="flex flex-col items-center space-y-4">
-                      {/* Hidden file input */}
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        style={{ display: 'none' }}
-                        onChange={handleImageUpload}
-                        accept="image/jpeg,image/png,image/webp"
-                      />
-                      
-                      {/* Image preview area */}
-                      <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center overflow-hidden">
-                        {imagePreview ? (
-                          <img 
-                            src={imagePreview} 
-                            alt="Profile preview" 
-                            className="w-full h-full object-cover" 
-                          />
-                        ) : (
-                          <div className="text-center p-4">
-                            <FileType className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                            <p className="text-xs text-muted-foreground">No image selected</p>
+                <div className="grid grid-cols-12 gap-4 items-start">
+                  {/* Left column - User Type and Profile Image */}
+                  <div className="col-span-5">
+                    {/* User Type */}
+                    <div className="mb-4">
+                      <Label className="mb-2 block" htmlFor="type">User Type</Label>
+                      <Select 
+                        value={formData.type} 
+                        onValueChange={handleTypeChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="customer">Customer</SelectItem>
+                          <SelectItem value="vendor">Vendor</SelectItem>
+                          <SelectItem value="employee">Employee</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Profile Image */}
+                    <div className="mt-4">
+                      <Label className="mb-2 block" htmlFor="profileImage">Profile Image</Label>
+                      <div>
+                        <div className="flex items-center justify-center mb-4">
+                          {/* Image preview area with drop zone */}
+                          <div 
+                            className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center overflow-hidden"
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const file = e.dataTransfer.files[0];
+                              if (file) {
+                                const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                                if (validTypes.includes(file.type)) {
+                                  const imageUrl = URL.createObjectURL(file);
+                                  setImagePreview(imageUrl);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    profileImageUrl: imageUrl,
+                                  }));
+                                  toast({
+                                    title: "Image uploaded",
+                                    description: "Your profile image has been uploaded successfully",
+                                  });
+                                } else {
+                                  toast({
+                                    title: "Invalid file type",
+                                    description: "Please upload a JPG, PNG, or WebP image",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }
+                            }}
+                          >
+                            {imagePreview ? (
+                              <img 
+                                src={imagePreview} 
+                                alt="Profile preview" 
+                                className="w-full h-full object-cover" 
+                              />
+                            ) : (
+                              <div className="text-center p-4">
+                                <FileType className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                                <p className="text-xs text-muted-foreground">Drag & drop image</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          style={{ display: 'none' }}
+                          onChange={handleImageUpload}
+                          accept="image/jpeg,image/png,image/webp"
+                        />
+                        <p className="text-xs text-muted-foreground text-center">
+                          Accepted: JPG, PNG, WebP
+                        </p>
+                        {imagePreview && (
+                          <div className="mt-2 flex justify-center">
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm"
+                              onClick={handleClearImage}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove
+                            </Button>
                           </div>
                         )}
                       </div>
-                      
-                      {/* Upload buttons */}
-                      <div className="flex space-x-2">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm"
-                          onClick={handleImageButtonClick}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Image
-                        </Button>
-                        {imagePreview && (
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm"
-                            onClick={handleClearImage}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remove
-                          </Button>
-                        )}
+                    </div>
+
+                    {/* Active Status */}
+                    <div className="mt-4">
+                      <Label className="mb-2 block" htmlFor="isActive">Active Status</Label>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="isActive"
+                          checked={formData.isActive}
+                          onCheckedChange={handleSwitchChange}
+                        />
+                        <span className="text-sm text-gray-500">
+                          {formData.isActive ? 'User is active' : 'User is inactive'}
+                        </span>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Accepted formats: JPG, PNG, WebP
-                      </p>
                     </div>
                   </div>
-                </div>
-                
-                {/* Active Status */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="isActive">Active Status</Label>
-                  <div className="col-span-3 flex items-center space-x-2">
-                    <Switch
-                      id="isActive"
-                      checked={formData.isActive}
-                      onCheckedChange={handleSwitchChange}
-                    />
-                    <span className="text-sm text-gray-500">
-                      {formData.isActive ? 'User is active' : 'User is inactive'}
-                    </span>
+
+                  {/* Right column - User Details */}
+                  <div className="col-span-7 space-y-4">
+                    {/* Business Name */}
+                    <div>
+                      <Label className="mb-2 block" htmlFor="businessName">Business Name</Label>
+                      <Input
+                        id="businessName"
+                        name="businessName"
+                        value={formData.businessName}
+                        onChange={handleInputChange}
+                        required
+                        readOnly={formData.type === 'employee'} // Read-only for employee type
+                      />
+                    </div>
+                    
+                    {/* Email */}
+                    <div>
+                      <Label className="mb-2 block" htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="email@example.com"
+                      />
+                    </div>
+                    
+                    {/* Contact Person Name */}
+                    <div>
+                      <Label className="mb-2 block" htmlFor="name">Contact Person Name</Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Full name"
+                      />
+                    </div>
+                    
+                    {/* Phone Number */}
+                    <div>
+                      <Label className="mb-2 block" htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        placeholder="e.g., +1 123-456-7890"
+                      />
+                    </div>
+                    
+                    {/* Password */}
+                    <div>
+                      <Label className="mb-2 block" htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        placeholder={editingUser ? "Leave blank to keep current password" : "Create a password"}
+                        required={!editingUser}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

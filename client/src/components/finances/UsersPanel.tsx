@@ -1,10 +1,9 @@
 import { useState, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Printer, FileDown, Trash2, Edit, ExternalLink } from "lucide-react";
+import { Plus, Printer, FileDown, Edit, ExternalLink } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -20,16 +19,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import UserModal from "./UserModal";
 
 interface UsersPanelProps {
@@ -43,31 +32,6 @@ export default function UsersPanel({ users, isLoading }: UsersPanelProps) {
   const tableRef = useRef<HTMLTableElement>(null);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-
-  // Delete user mutation
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      const res = await apiRequest("DELETE", `/api/users/${userId}`, {});
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({
-        title: "Success",
-        description: "User deleted successfully",
-      });
-      setDeleteDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: `Failed to delete user: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
 
   const handleAddUser = () => {
     setEditingUser(null);
@@ -77,17 +41,6 @@ export default function UsersPanel({ users, isLoading }: UsersPanelProps) {
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setUserDialogOpen(true);
-  };
-
-  const handleDeleteUser = (user: User) => {
-    setUserToDelete(user);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (userToDelete) {
-      deleteUserMutation.mutate(userToDelete.id);
-    }
   };
 
   // Handle printing the user list
@@ -290,13 +243,6 @@ export default function UsersPanel({ users, isLoading }: UsersPanelProps) {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
                           {user.invitationToken && (
                             <Button
                               variant="ghost"
@@ -335,28 +281,7 @@ export default function UsersPanel({ users, isLoading }: UsersPanelProps) {
         editingUser={editingUser}
       />
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the user
-              {userToDelete ? ` "${userToDelete.name}"` : ''} and remove their data from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteUserMutation.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete}
-              disabled={deleteUserMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteUserMutation.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </>
   );
 }
