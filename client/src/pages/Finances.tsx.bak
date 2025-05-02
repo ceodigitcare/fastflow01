@@ -206,9 +206,6 @@ export default function Finances() {
       <Tabs defaultValue="overview" className="mb-8">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="accounts">Accounts</TabsTrigger>
-          <TabsTrigger value="chart-of-accounts">Chart of Accounts</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="sales-invoice">Sales Invoice</TabsTrigger>
           <TabsTrigger value="purchase-bill">Purchase Bill</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
@@ -367,51 +364,6 @@ export default function Finances() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">Purchase Bill feature coming soon.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="accounts" className="mt-6">
-          <AccountsPanel />
-        </TabsContent>
-        
-        <TabsContent value="chart-of-accounts" className="mt-6">
-          <AccountCategoriesPanel />
-        </TabsContent>
-        
-        <TabsContent value="reports" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Financial Reports</CardTitle>
-              <CardDescription>View and generate financial reports</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card>
-                  <CardContent className="p-4">
-                    <Button variant="outline" className="w-full flex flex-col items-center justify-center h-24">
-                      <BarChart4 className="h-8 w-8 mb-2" />
-                      <span>Cash Flow</span>
-                    </Button>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <Button variant="outline" className="w-full flex flex-col items-center justify-center h-24">
-                      <BarChart4 className="h-8 w-8 mb-2" />
-                      <span>Profit & Loss</span>
-                    </Button>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <Button variant="outline" className="w-full flex flex-col items-center justify-center h-24">
-                      <BarChart4 className="h-8 w-8 mb-2" />
-                      <span>Balance Sheet</span>
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

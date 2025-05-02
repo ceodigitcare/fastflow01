@@ -59,6 +59,7 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
     type: "customer",
     phone: "",
     address: "",
+    businessName: "",
     profileImageUrl: "",
     isActive: true,
   });
@@ -75,6 +76,7 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
         type: editingUser.type || "customer",
         phone: editingUser.phone || "",
         address: editingUser.address || "",
+        businessName: editingUser.businessName || "",
         profileImageUrl: editingUser.profileImageUrl || "",
         isActive: editingUser.isActive === null ? true : editingUser.isActive,
       });
@@ -89,6 +91,7 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
         type: "customer",
         phone: "",
         address: "",
+        businessName: "Demo Business", // Default business name for new users
         profileImageUrl: "",
         isActive: true,
       });
@@ -187,6 +190,8 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
     setFormData(prev => ({
       ...prev,
       type: value,
+      // Auto-fill business name for employees if not already set
+      ...(value === 'employee' && (!prev.businessName || prev.businessName === "") ? { businessName: "Demo Business" } : {})
     }));
   };
   
@@ -301,6 +306,18 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="businessName">Business Name</Label>
+                  <Input
+                    id="businessName"
+                    name="businessName"
+                    value={formData.businessName}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                    readOnly={formData.type === 'employee'} // Read-only for employee type
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right" htmlFor="address">Address</Label>
                   <Textarea
                     id="address"
@@ -309,6 +326,7 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
                     onChange={handleInputChange}
                     className="col-span-3"
                     rows={3}
+                    readOnly={formData.type === 'employee'} // Read-only for employee type
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
