@@ -1070,14 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Validate login history entry
-      const loginEntrySchema = z.object({
-        date: z.date().default(() => new Date()),
-        ipAddress: z.string().optional(),
-        userAgent: z.string().optional(),
-        location: z.string().optional()
-      });
-      
-      const loginEntry = loginEntrySchema.parse(req.body);
+      const loginEntry = loginHistoryEntrySchema.parse(req.body);
       
       // Add login history entry
       const updatedUser = await storage.addLoginHistory(userId, loginEntry);

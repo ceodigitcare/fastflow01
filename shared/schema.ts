@@ -247,9 +247,10 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 // LoginHistory type for frontend validation
 export const loginHistoryEntrySchema = z.object({
-  timestamp: z.string(),
-  deviceInfo: z.string(),
+  date: z.date().or(z.string().transform(str => new Date(str))),
   ipAddress: z.string().optional(),
+  userAgent: z.string().optional(),
+  location: z.string().optional(),
 });
 
 // Export types
