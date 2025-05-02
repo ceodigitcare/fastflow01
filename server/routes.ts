@@ -1086,6 +1086,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Balance update endpoint for user financial relationship management
+  app.post("/api/users/:id/balance", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this user" });
+      }
+      
+      // Validate balance update data
+      const balanceUpdateSchema = z.object({
+        amount: z.number().min(1, "Amount must be at least 1"),
+        type: z.enum(['add', 'deduct']),
+        note: z.string().optional()
+      });
+      
+      const { amount, type, note } = balanceUpdateSchema.parse(req.body);
+      
+      // Update user balance
+      const updatedUser = await storage.updateUserBalance(userId, amount, type, note);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Failed to update user balance" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Balance update error:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update balance" });
+      }
+    }
+  });
+
   app.use("/api/chatbot", chatbotRouter);
 
   // Create HTTP server
