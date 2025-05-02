@@ -106,6 +106,7 @@ export const salesInvoiceSchema = z.object({
   taxAmount: z.number().default(0),
   discountAmount: z.number().default(0),
   totalAmount: z.number().min(0.01, "Total amount must be greater than 0"),
+  paymentReceived: z.number().min(0, "Payment amount cannot be negative").optional(),
   notes: z.string().optional(),
   termsAndConditions: z.string().optional(),
   customerNotes: z.string().optional(),
