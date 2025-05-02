@@ -403,9 +403,9 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
           <Tabs defaultValue="main">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="main">Main Information</TabsTrigger>
-              <TabsTrigger value="login">Login History</TabsTrigger>
-              <TabsTrigger value="invitation">Invitation</TabsTrigger>
               <TabsTrigger value="balance">Balance</TabsTrigger>
+              <TabsTrigger value="invitation">Invitation</TabsTrigger>
+              <TabsTrigger value="login">Login History</TabsTrigger>
             </TabsList>
 
             <TabsContent value="main" className="mt-4">
@@ -535,9 +535,22 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
                       <Input
                         id="businessName"
                         name="businessName"
-                        value={formData.businessName}
+                        value={formData.businessName || ''}
                         onChange={handleInputChange}
                         required
+                        readOnly={formData.type === 'employee'} // Read-only for employee type
+                      />
+                    </div>
+                    
+                    {/* Business Address */}
+                    <div>
+                      <Label className="mb-2 block" htmlFor="address">Business Address</Label>
+                      <Input
+                        id="address"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        placeholder="Enter business address"
                         readOnly={formData.type === 'employee'} // Read-only for employee type
                       />
                     </div>
@@ -556,19 +569,6 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
                       />
                     </div>
                     
-                    {/* Contact Person Name */}
-                    <div>
-                      <Label className="mb-2 block" htmlFor="name">Contact Person Name</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Full name"
-                      />
-                    </div>
-                    
                     {/* Phone Number */}
                     <div>
                       <Label className="mb-2 block" htmlFor="phone">Phone Number</Label>
@@ -578,19 +578,6 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
                         value={formData.phone}
                         onChange={handleInputChange}
                         placeholder="e.g., +1 123-456-7890"
-                      />
-                    </div>
-                    
-                    {/* Business Address */}
-                    <div>
-                      <Label className="mb-2 block" htmlFor="address">Business Address</Label>
-                      <Input
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        placeholder="Enter business address"
-                        readOnly={formData.type === 'employee'} // Read-only for employee type
                       />
                     </div>
                     
@@ -621,6 +608,19 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
                           )}
                         </button>
                       </div>
+                    </div>
+                    
+                    {/* Contact Person Name */}
+                    <div>
+                      <Label className="mb-2 block" htmlFor="name">Contact Person Name</Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Full name"
+                      />
                     </div>
                   </div>
                 </div>
@@ -729,7 +729,7 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
 
                         {/* Balance history table */}
                         <div className="mt-4">
-                          <h3 className="text-lg font-medium mb-2">Balance History</h3>
+                          <h3 className="text-lg font-medium mb-2">Manual Balance History</h3>
                           <div className="rounded-md border">
                             <Table>
                               <TableHeader>
