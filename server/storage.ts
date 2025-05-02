@@ -1508,6 +1508,59 @@ export class DatabaseStorage implements IStorage {
       
     return updatedUser || undefined;
   }
+
+  async updateUserBalance(userId: number, amount: number, type: 'add' | 'deduct', note?: string): Promise<User | undefined> {
+    // Get the current user
+    const [currentUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (!currentUser) {
+      return undefined;
+    }
+    
+    // Calculate the new balance
+    const currentBalance = currentUser.balance || 0;
+    const newBalance = type === 'add' ? currentBalance + amount : currentBalance - amount;
+    
+    // Update the balance history
+    let balanceHistory = [];
+    if (currentUser.balanceHistory) {
+      try {
+        balanceHistory = Array.isArray(currentUser.balanceHistory) ? 
+          currentUser.balanceHistory : JSON.parse(String(currentUser.balanceHistory));
+      } catch (e) {
+        console.error('Error parsing balance history:', e);
+        balanceHistory = [];
+      }
+    }
+    
+    // Create a new entry
+    const entry = {
+      date: new Date(),
+      amount,
+      type,
+      note: note || '',
+      previousBalance: currentBalance,
+      newBalance
+    };
+    
+    balanceHistory.push(entry);
+    
+    // Update the user
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        balance: newBalance,
+        balanceHistory: balanceHistory,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+      
+    return updatedUser || undefined;
+  }
 }
 
 // Initialize templates when creating database storage for the first time

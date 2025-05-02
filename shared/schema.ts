@@ -234,6 +234,8 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").default(true),
   loginHistory: jsonb("login_history").default([]),
   invitationToken: text("invitation_token"),
+  balance: integer("balance").default(0), // Balance amount in cents
+  balanceHistory: jsonb("balance_history").default([]),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -252,6 +254,16 @@ export const loginHistoryEntrySchema = z.object({
   ipAddress: z.string().optional(),
   userAgent: z.string().optional(),
   location: z.string().optional(),
+});
+
+// BalanceHistory type for frontend validation
+export const balanceHistoryEntrySchema = z.object({
+  date: z.date().or(z.string().transform(str => new Date(str))),
+  amount: z.number(),
+  type: z.enum(['add', 'deduct']),
+  note: z.string().optional(),
+  previousBalance: z.number(),
+  newBalance: z.number(),
 });
 
 // Export types
@@ -288,3 +300,4 @@ export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginHistoryEntry = z.infer<typeof loginHistoryEntrySchema>;
+export type BalanceHistoryEntry = z.infer<typeof balanceHistoryEntrySchema>;

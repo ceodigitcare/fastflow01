@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { User } from "@shared/schema";
+import { User, BalanceHistoryEntry } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { QRCodeSVG } from "qrcode.react";
@@ -40,7 +40,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RefreshCw, Share, Upload, Trash2, FileType, Download, Printer } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RefreshCw, Share, Upload, Trash2, FileType, Download, Printer, Eye, EyeOff, PlusCircle, MinusCircle } from "lucide-react";
 
 interface UserModalProps {
   open: boolean;
@@ -71,6 +72,14 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
   
   // Invitation token state
   const [invitationUrl, setInvitationUrl] = useState<string>("");
+  
+  // Password visibility state
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Balance adjustment state
+  const [balanceAmount, setBalanceAmount] = useState<string>("");
+  const [balanceType, setBalanceType] = useState<'add' | 'deduct'>('add');
+  const [balanceNote, setBalanceNote] = useState<string>("");
   
   // Reset form when user changes
   useEffect(() => {
@@ -178,6 +187,34 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
       toast({
         title: "Error",
         description: `Failed to generate invitation token: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Update user balance mutation
+  const updateBalanceMutation = useMutation({
+    mutationFn: async ({ userId, amount, type, note }: { userId: number; amount: number; type: 'add' | 'deduct'; note?: string }) => {
+      const res = await apiRequest("POST", `/api/users/${userId}/balance`, {
+        amount,
+        type,
+        note
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setBalanceAmount("");
+      setBalanceNote("");
+      toast({
+        title: "Success",
+        description: `Balance ${balanceType === 'add' ? 'increased' : 'decreased'} successfully`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update balance: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -317,6 +354,38 @@ export default function UserModal({ open, onOpenChange, editingUser }: UserModal
         });
       }
     }
+  };
+  
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(prev => !prev);
+  };
+  
+  // Handle balance update
+  const handleUpdateBalance = () => {
+    if (!editingUser) return;
+    
+    const amount = parseFloat(balanceAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid positive number",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateBalanceMutation.mutate({
+      userId: editingUser.id,
+      amount,
+      type: balanceType,
+      note: balanceNote
+    });
+  };
+  
+  // Handle balance type change
+  const handleBalanceTypeChange = (type: 'add' | 'deduct') => {
+    setBalanceType(type);
   };
   
   return (
