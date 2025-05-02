@@ -82,3 +82,46 @@ export const productSchema = z.object({
   isOnSale: z.boolean().default(false),
   salePrice: z.number().optional()
 });
+
+// Sales Invoice schema
+export const salesInvoiceItemSchema = z.object({
+  productId: z.number().min(1, "Please select a product"),
+  description: z.string().min(1, "Description is required"),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  unitPrice: z.number().min(0.01, "Unit price must be greater than 0"),
+  taxRate: z.number().default(0),
+  discount: z.number().default(0),
+  amount: z.number().min(0.01, "Amount must be greater than 0")
+});
+
+export const salesInvoiceSchema = z.object({
+  customerId: z.number().min(1, "Please select a customer"),
+  accountId: z.number().min(1, "Please select a bank account"),
+  invoiceNumber: z.string().min(1, "Invoice number is required"),
+  invoiceDate: z.date(),
+  dueDate: z.date(),
+  status: z.enum(["draft", "sent", "paid", "overdue", "cancelled"]).default("draft"),
+  items: z.array(salesInvoiceItemSchema).min(1, "At least one item is required"),
+  subtotal: z.number().min(0, "Subtotal cannot be negative"),
+  taxAmount: z.number().default(0),
+  discountAmount: z.number().default(0),
+  totalAmount: z.number().min(0.01, "Total amount must be greater than 0"),
+  notes: z.string().optional(),
+  termsAndConditions: z.string().optional(),
+  customerNotes: z.string().optional(),
+});
+
+// Invoice PDF configuration schema
+export const invoicePdfConfigSchema = z.object({
+  showLogo: z.boolean().default(true),
+  showPaymentInfo: z.boolean().default(true),
+  primaryColor: z.string().default("#4F46E5"),
+  secondaryColor: z.string().default("#8B5CF6"),
+  fontSize: z.number().default(12),
+  fontFamily: z.string().default("Arial"),
+});
+
+// Export types for the sales invoice schemas
+export type SalesInvoiceItem = z.infer<typeof salesInvoiceItemSchema>;
+export type SalesInvoice = z.infer<typeof salesInvoiceSchema>;
+export type InvoicePdfConfig = z.infer<typeof invoicePdfConfigSchema>;

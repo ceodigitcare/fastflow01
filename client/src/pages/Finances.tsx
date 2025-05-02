@@ -348,15 +348,31 @@ export default function Finances() {
         </TabsContent>
         
         <TabsContent value="sales-invoice" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sales Invoice</CardTitle>
-              <CardDescription>Manage your sales invoices</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Sales Invoice feature coming soon.</p>
-            </CardContent>
-          </Card>
+          <SalesInvoiceList 
+            onNewInvoice={() => {
+              setEditingInvoice(null);
+              setSalesInvoiceDialogOpen(true);
+            }}
+            onEditInvoice={(invoice) => {
+              setEditingInvoice(invoice);
+              setSalesInvoiceDialogOpen(true);
+            }}
+            onViewInvoice={(invoice) => {
+              setViewingInvoice(invoice);
+              setInvoicePrintDialogOpen(true);
+            }}
+            onPrintInvoice={(invoice) => {
+              setViewingInvoice(invoice);
+              setInvoicePrintDialogOpen(true);
+            }}
+            onShareInvoice={(invoice) => {
+              // Generate WhatsApp share link with invoice details
+              const message = `Invoice ${invoice.documentNumber} for ${formatCurrency(invoice.amount)} is ready for your review.`;
+              const encodedMessage = encodeURIComponent(message);
+              const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+              window.open(whatsappUrl, '_blank');
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="purchase-bill" className="mt-6">
