@@ -6,6 +6,9 @@ import FinancialSummary from "@/components/finances/FinancialSummary";
 import AccountCategoriesPanel from "@/components/finances/AccountCategoriesPanel";
 import AccountsPanel from "@/components/finances/AccountsPanel";
 import TransactionForm from "@/components/finances/TransactionForm";
+import SalesInvoiceList from "@/components/finances/SalesInvoiceList";
+import SalesInvoiceForm from "@/components/finances/SalesInvoiceForm";
+import { InvoicePrintDialog } from "@/components/finances/InvoicePrint";
 import UsersPanel from "@/components/finances/UsersPanel";
 import { calculateFinancialSummary } from "@/lib/finances";
 import { Transaction, User } from "@shared/schema";
@@ -69,6 +72,10 @@ export default function Finances() {
   const [period, setPeriod] = useState("month");
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [salesInvoiceDialogOpen, setSalesInvoiceDialogOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<Transaction | null>(null);
+  const [viewingInvoice, setViewingInvoice] = useState<Transaction | null>(null);
+  const [invoicePrintDialogOpen, setInvoicePrintDialogOpen] = useState(false);
   
   // Get transactions
   const { data: transactions, isLoading: transactionsLoading } = useQuery<Transaction[]>({
@@ -448,7 +455,21 @@ export default function Finances() {
         accounts={accounts}
         categories={categories}
       />
-
+      
+      {/* Sales Invoice Form Dialog */}
+      <SalesInvoiceForm
+        open={salesInvoiceDialogOpen}
+        onOpenChange={setSalesInvoiceDialogOpen}
+        editingInvoice={editingInvoice}
+      />
+      
+      {/* Invoice Print Dialog */}
+      {invoicePrintDialogOpen && viewingInvoice && (
+        <InvoicePrintDialog
+          invoice={viewingInvoice}
+          onClose={() => setInvoicePrintDialogOpen(false)}
+        />
+      )}
 
     </MainLayout>
   );

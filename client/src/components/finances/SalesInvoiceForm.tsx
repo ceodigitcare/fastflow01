@@ -104,7 +104,7 @@ export default function SalesInvoiceForm({
       invoiceNumber: generateInvoiceNumber(),
       invoiceDate: new Date(),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days from now
-      status: "draft",
+      status: "draft" as "draft" | "sent" | "paid" | "overdue" | "cancelled",
       items: [],
       subtotal: 0,
       taxAmount: 0,
@@ -140,7 +140,7 @@ export default function SalesInvoiceForm({
         dueDate: editingInvoice.date ? 
           new Date(new Date(editingInvoice.date).getTime() + 30 * 24 * 60 * 60 * 1000) : 
           new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        status: editingInvoice.status || "draft",
+        status: (editingInvoice.status as "draft" | "sent" | "paid" | "overdue" | "cancelled") || "draft",
         items: items,
         subtotal: editingInvoice.amount || 0,
         taxAmount: 0, // Default if not available
@@ -158,7 +158,7 @@ export default function SalesInvoiceForm({
         invoiceNumber: generateInvoiceNumber(),
         invoiceDate: new Date(),
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        status: "draft",
+        status: "draft" as "draft" | "sent" | "paid" | "overdue" | "cancelled",
         items: [],
         subtotal: 0,
         taxAmount: 0,

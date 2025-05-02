@@ -86,7 +86,7 @@ export default function SalesInvoiceList({
       case "sent":
         return <Badge variant="secondary">Sent</Badge>;
       case "paid":
-        return <Badge variant="success">Paid</Badge>;
+        return <Badge className="bg-green-500 text-white">Paid</Badge>;
       case "overdue":
         return <Badge variant="destructive">Overdue</Badge>;
       case "cancelled":
