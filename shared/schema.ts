@@ -228,6 +228,7 @@ export const users = pgTable("users", {
   email: text("email").notNull(),
   phone: text("phone"),
   password: text("password").notNull(),
+  businessName: text("business_name"),
   profileImageUrl: text("profile_image_url"),
   address: text("address"),
   isActive: boolean("is_active").default(true),
