@@ -122,7 +122,38 @@ export const invoicePdfConfigSchema = z.object({
   fontFamily: z.string().default("Arial"),
 });
 
-// Export types for the sales invoice schemas
+// Purchase Bill schema
+export const purchaseBillItemSchema = z.object({
+  productId: z.number().min(1, "Please select a product"),
+  description: z.string().min(1, "Description is required"),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  unitPrice: z.number().min(0.01, "Unit price must be greater than 0"),
+  taxRate: z.number().default(0),
+  discount: z.number().default(0),
+  amount: z.number().min(0.01, "Amount must be greater than 0")
+});
+
+export const purchaseBillSchema = z.object({
+  vendorId: z.number().min(1, "Please select a vendor"),
+  accountId: z.number().min(1, "Please select a bank account"),
+  billNumber: z.string().min(1, "Bill number is required"),
+  billDate: z.date(),
+  dueDate: z.date(),
+  status: z.enum(["draft", "received", "paid", "overdue", "cancelled"]).optional().default("draft"),
+  items: z.array(purchaseBillItemSchema).min(1, "At least one item is required"),
+  subtotal: z.number().min(0, "Subtotal cannot be negative"),
+  taxAmount: z.number().default(0),
+  discountAmount: z.number().default(0),
+  totalAmount: z.number().min(0.01, "Total amount must be greater than 0"),
+  paymentMade: z.number().min(0, "Payment amount cannot be negative").optional(),
+  notes: z.string().optional(),
+  termsAndConditions: z.string().optional(),
+  vendorNotes: z.string().optional(),
+});
+
+// Export types for all schemas
 export type SalesInvoiceItem = z.infer<typeof salesInvoiceItemSchema>;
 export type SalesInvoice = z.infer<typeof salesInvoiceSchema>;
+export type PurchaseBillItem = z.infer<typeof purchaseBillItemSchema>;
+export type PurchaseBill = z.infer<typeof purchaseBillSchema>;
 export type InvoicePdfConfig = z.infer<typeof invoicePdfConfigSchema>;
