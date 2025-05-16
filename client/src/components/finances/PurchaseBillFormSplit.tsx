@@ -332,7 +332,24 @@ export default function PurchaseBillFormSplit({
       return;
     }
     
-    saveBillMutation.mutate(data);
+    // Prepare transaction data for saving/updating
+    const billData = {
+      ...data,
+      // Preserve original ID and created date when editing
+      ...(editingBill ? { 
+        id: editingBill.id,
+        createdAt: editingBill.createdAt 
+      } : {}),
+      items: billItems,
+      amount: billItems.reduce((sum, item) => sum + (item.quantity * item.price), 0),
+      status: data.status || "pending",
+      paymentReceived: data.paymentReceived || 0,
+      type: "purchase",
+      category: "Bills"
+    };
+    
+    console.log("Saving bill:", billData);
+    saveBillMutation.mutate(billData);
   };
   
   // Handle add vendor form submission
