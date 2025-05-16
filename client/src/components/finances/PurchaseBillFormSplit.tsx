@@ -371,79 +371,22 @@ export default function PurchaseBillFormSplit({
     createVendorMutation.mutate(newVendor);
   };
 
-  // Add Vendor dialog - completely separate from the form to avoid context issues
-  const AddVendorDialog = () => {
-    return (
-      <Dialog open={addVendorDialogOpen} onOpenChange={setAddVendorDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Vendor</DialogTitle>
-            <DialogDescription>
-              Fill out the form below to create a new vendor.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label className="text-right text-sm font-medium">Name *</label>
-              <Input 
-                className="col-span-3" 
-                value={newVendor.name}
-                onChange={(e) => setNewVendor({...newVendor, name: e.target.value})}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label className="text-right text-sm font-medium">Email *</label>
-              <Input 
-                className="col-span-3" 
-                type="email"
-                value={newVendor.email}
-                onChange={(e) => setNewVendor({...newVendor, email: e.target.value})}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label className="text-right text-sm font-medium">Phone</label>
-              <Input 
-                className="col-span-3" 
-                value={newVendor.phone}
-                onChange={(e) => setNewVendor({...newVendor, phone: e.target.value})}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label className="text-right text-sm font-medium">Business</label>
-              <Input 
-                className="col-span-3" 
-                value={newVendor.businessName}
-                onChange={(e) => setNewVendor({...newVendor, businessName: e.target.value})}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label className="text-right text-sm font-medium">Address</label>
-              <Textarea 
-                className="col-span-3" 
-                value={newVendor.address}
-                onChange={(e) => setNewVendor({...newVendor, address: e.target.value})}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setAddVendorDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="button" 
-              onClick={handleAddVendor}
-              disabled={createVendorMutation.isPending}
-            >
-              {createVendorMutation.isPending ? "Creating..." : "Create Vendor"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  };
+  // Replace the simple dialog with our comprehensive vendor modal
+  const renderVendorModal = () => (
+    <VendorModal 
+      open={addVendorDialogOpen}
+      onOpenChange={setAddVendorDialogOpen}
+      onSuccess={(newVendor) => {
+        // When a new vendor is created, select it in the form
+        if (newVendor && newVendor.id) {
+          form.setValue('vendorId', newVendor.id);
+          
+          // Force a refresh of the vendors query
+          queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+        }
+      }}
+    />
+  );
 
   return (
     <>
