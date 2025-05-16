@@ -281,6 +281,34 @@ export default function PurchaseBillFormSplit({
     updateTotals(newItems);
   };
   
+  // Function to update item tax rates
+  const updateItemTaxRate = (taxRate: number | string, index: number) => {
+    const parsedTaxRate = typeof taxRate === 'string' ? parseFloat(taxRate) || 0 : taxRate || 0;
+    
+    const newItems = [...billItems];
+    newItems[index] = {
+      ...newItems[index],
+      taxRate: parsedTaxRate
+    };
+    
+    setBillItems(newItems);
+    updateTotals(newItems);
+  };
+  
+  // Function to update item discounts
+  const updateItemDiscount = (discount: number | string, index: number) => {
+    const parsedDiscount = typeof discount === 'string' ? parseFloat(discount) || 0 : discount || 0;
+    
+    const newItems = [...billItems];
+    newItems[index] = {
+      ...newItems[index],
+      discount: parsedDiscount
+    };
+    
+    setBillItems(newItems);
+    updateTotals(newItems);
+  };
+  
   // Function to update totals based on line items
   const updateTotals = (items: PurchaseBillItem[]) => {
     const subtotal = items.reduce((total, item) => total + item.amount, 0);
@@ -288,10 +316,16 @@ export default function PurchaseBillFormSplit({
       return total + (item.amount * (item.taxRate / 100));
     }, 0);
     
+    // Calculate total discount amount from all items
+    const discountAmount = items.reduce((total, item) => {
+      return total + (item.amount * (item.discount / 100));
+    }, 0);
+    
     form.setValue('items', items);
     form.setValue('subtotal', subtotal);
     form.setValue('taxAmount', taxAmount);
-    form.setValue('totalAmount', subtotal + taxAmount);
+    form.setValue('discountAmount', discountAmount);
+    form.setValue('totalAmount', subtotal + taxAmount - discountAmount);
   };
   
   // Mutation for saving the purchase bill
