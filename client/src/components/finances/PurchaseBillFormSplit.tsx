@@ -48,7 +48,18 @@ export default function PurchaseBillFormSplit({
   const { toast } = useToast();
   
   // Local state for line items and dialogs
-  const [billItems, setBillItems] = useState<PurchaseBillItem[]>([]);
+  const [billItems, setBillItems] = useState<PurchaseBillItem[]>(
+    // Initialize with existing items if editing a bill
+    editingBill?.items ? editingBill.items.map(item => ({
+      productId: item.productId || 0,
+      description: item.description || "",
+      quantity: item.quantity || 1,
+      unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
+      taxRate: item.taxRate || 0,
+      discount: item.discount || 0,
+      amount: (item.amount || 0) / 100 // Convert from cents to dollars
+    })) : []
+  );
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
   
   // Get vendors (users of type "vendor")
@@ -207,8 +218,8 @@ export default function PurchaseBillFormSplit({
     
     if (product) {
       const newItems = [...billItems];
-      // Ensure we're using the correct property for price (some products might use price, others might have cost)
-      const productPrice = (product.cost !== undefined ? product.cost : (product.unitPrice ?? 0)) / 100;
+      // Use the price property from the product (already in cents)
+      const productPrice = (product.price || 0) / 100;
       
       newItems[index] = {
         ...newItems[index],
@@ -267,7 +278,7 @@ export default function PurchaseBillFormSplit({
     mutationFn: async (data: PurchaseBill) => {
       const vendor = vendors?.find(v => v.id === data.vendorId);
       
-      // Format the data for the transaction endpoint
+      // Format the data for the transaction endpoint - ensuring unit/price amounts are in cents
       const transactionData = {
         type: "expense",
         accountId: data.accountId,
@@ -277,29 +288,37 @@ export default function PurchaseBillFormSplit({
         category: "Purchases",
         documentType: "bill",
         documentNumber: data.billNumber,
-        status: data.status,
+        status: data.status || "draft", // Ensure status is provided (and make optional per request)
         contactName: vendor?.name || "",
         contactEmail: vendor?.email || "",
         contactPhone: vendor?.phone || "",
         contactAddress: vendor?.address || "",
         notes: data.notes,
+        dueDate: data.dueDate, // Include due date
         items: data.items.map(item => ({
           productId: item.productId,
           description: item.description,
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
+          unitPrice: Math.round(item.unitPrice * 100), // Convert to cents
           taxRate: item.taxRate,
           discount: item.discount,
-          amount: item.amount
+          amount: Math.round(item.amount * 100) // Convert to cents
         })),
-        paymentReceived: data.paymentMade
+        // Store additional bill data in metadata
+        metadata: {
+          billNumber: data.billNumber,
+          vendorName: vendor?.businessName || vendor?.name || "Unknown",
+          billType: "purchase"
+        }
       };
       
-      // If editing an existing bill, use PUT to update; otherwise POST to create a new bill
+      // If editing an existing bill, use PATCH to update; otherwise POST to create a new bill
       if (editingBill && editingBill.id) {
-        const response = await apiRequest("PUT", `/api/transactions/${editingBill.id}`, transactionData);
+        // PATCH is used for partial updates to existing records
+        const response = await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, transactionData);
         return await response.json();
       } else {
+        // POST is used to create new records
         const response = await apiRequest("POST", "/api/transactions", transactionData);
         return await response.json();
       }
