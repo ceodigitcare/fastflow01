@@ -11,6 +11,7 @@ import SalesInvoiceForm from "@/components/finances/SalesInvoiceForm";
 import SalesInvoiceSplitView from "@/components/finances/SalesInvoiceSplitView";
 import { InvoicePrintDialog } from "@/components/finances/InvoicePrint";
 import UsersPanel from "@/components/finances/UsersPanel";
+import FinancialInsightBubble from "@/components/finances/FinancialInsightBubble";
 import { calculateFinancialSummary } from "@/lib/finances";
 import { Transaction, User } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
@@ -138,6 +139,9 @@ export default function Finances() {
           <Plus className="mr-2 h-4 w-4" /> New Transaction
         </Button>
       </div>
+      
+      {/* Financial Insight Bubble */}
+      <FinancialInsightBubble />
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <Card>
