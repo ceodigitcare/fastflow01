@@ -453,11 +453,11 @@ export default function PurchaseBillFormSplit({
                         vendors.map((vendor) => (
                           <SelectItem key={vendor.id} value={vendor.id.toString()}>
                             {vendor.name}
-                            {vendor.balance !== undefined && vendor.balance !== 0 && (
-                              <span className={`ml-2 text-xs ${vendor.balance > 0 ? 'text-green-500' : 'text-amber-500'}`}>
-                                {vendor.balance > 0 
-                                  ? `(Advance: ${formatCurrency(vendor.balance / 100)})` 
-                                  : `(Due: ${formatCurrency(Math.abs(vendor.balance) / 100)})`}
+                            {vendor.balance !== undefined && vendor.balance !== null && vendor.balance !== 0 && (
+                              <span className={`ml-2 text-xs ${(vendor.balance || 0) > 0 ? 'text-green-500' : 'text-amber-500'}`}>
+                                {(vendor.balance || 0) > 0 
+                                  ? `(Advance: ${formatCurrency((vendor.balance || 0) / 100)})` 
+                                  : `(Due: ${formatCurrency(Math.abs((vendor.balance || 0)) / 100)})`}
                               </span>
                             )}
                           </SelectItem>

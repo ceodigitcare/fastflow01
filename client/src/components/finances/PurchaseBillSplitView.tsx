@@ -23,6 +23,7 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
   const [selectedBill, setSelectedBill] = useState<Transaction | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
+  const [editingBill, setEditingBill] = useState<Transaction | null>(null);
   
   // Get bills from transactions
   const { data: bills, isLoading } = useQuery<Transaction[]>({
@@ -116,6 +117,16 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
             <div className="flex justify-between items-start">
               <h2 className="text-2xl font-bold">Bill #{selectedBill.documentNumber}</h2>
               <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    setEditingBill(selectedBill);
+                    setIsCreatingNew(true);
+                  }}
+                >
+                  <span className="mr-1">✏️</span> Edit
+                </Button>
                 <Button variant="outline" size="sm" onClick={handlePrintBill}>
                   <Printer className="w-4 h-4 mr-1" /> Print
                 </Button>
@@ -251,18 +262,25 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
         ) : isCreatingNew ? (
           <div className="space-y-6">
             <div className="flex justify-between items-start">
-              <h2 className="text-2xl font-bold">New Purchase Bill</h2>
-              <Button variant="ghost" onClick={() => setIsCreatingNew(false)}>
+              <h2 className="text-2xl font-bold">{editingBill ? 'Edit Purchase Bill' : 'New Purchase Bill'}</h2>
+              <Button variant="ghost" onClick={() => {
+                setIsCreatingNew(false);
+                setEditingBill(null);
+              }}>
                 Cancel
               </Button>
             </div>
             <PurchaseBillFormSplit
-              onCancel={() => setIsCreatingNew(false)}
+              onCancel={() => {
+                setIsCreatingNew(false);
+                setEditingBill(null);
+              }}
               onSave={(bill) => {
                 setSelectedBill(bill);
                 setIsCreatingNew(false);
+                setEditingBill(null);
               }}
-              editingBill={null}
+              editingBill={editingBill}
             />
           </div>
         ) : (
