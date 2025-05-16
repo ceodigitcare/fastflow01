@@ -84,10 +84,36 @@ export default function PurchaseBillFormSplit({
     )
   });
   
-  // Set up form
+  // Set up form with defaults or pre-fill with editing data
   const form = useForm<PurchaseBill>({
     resolver: zodResolver(purchaseBillSchema),
-    defaultValues: {
+    defaultValues: editingBill ? {
+      // Pre-fill with existing bill data when editing
+      vendorId: editingBill.vendorId || 0,
+      accountId: editingBill.accountId || 0,
+      billNumber: editingBill.metadata?.billNumber || generateBillNumber(),
+      billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
+      dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      status: editingBill.status || "draft",
+      items: editingBill.items?.map(item => ({
+        productId: item.productId || 0,
+        description: item.description || "",
+        quantity: item.quantity || 1,
+        unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
+        taxRate: item.taxRate || 0,
+        discount: item.discount || 0,
+        amount: (item.amount || 0) / 100 // Convert from cents to dollars
+      })) || [],
+      subtotal: (editingBill.amount / 100) || 0, // Convert from cents to dollars
+      taxAmount: 0, // We'll calculate this
+      discountAmount: 0, // We'll calculate this
+      totalAmount: (editingBill.amount / 100) || 0, // Convert from cents to dollars
+      paymentMade: 0, // We'll calculate this
+      notes: editingBill.notes || "",
+      termsAndConditions: "Payment is due within 30 days of the bill date.",
+      vendorNotes: editingBill.vendorNotes || "",
+    } : {
+      // Default values for new bill
       vendorId: 0,
       accountId: 0,
       billNumber: generateBillNumber(),
@@ -181,12 +207,15 @@ export default function PurchaseBillFormSplit({
     
     if (product) {
       const newItems = [...billItems];
+      // Ensure we're using the correct property for price (some products might use price, others might have cost)
+      const productPrice = (product.cost !== undefined ? product.cost : (product.unitPrice ?? 0)) / 100;
+      
       newItems[index] = {
         ...newItems[index],
         productId: product.id,
         description: product.description || product.name,
-        unitPrice: product.price / 100, // Convert from cents to dollars
-        amount: (product.price / 100) * newItems[index].quantity
+        unitPrice: productPrice, // Convert from cents to dollars
+        amount: productPrice * newItems[index].quantity
       };
       
       setBillItems(newItems);
