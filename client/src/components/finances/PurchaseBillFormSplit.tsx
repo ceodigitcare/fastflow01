@@ -111,8 +111,8 @@ export default function PurchaseBillFormSplit({
         description: item.description || "",
         quantity: item.quantity || 1,
         unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
-        taxRate: Number(item.taxRate) || 0,
-        discount: Number(item.discount) || 0,
+        taxRate: parseFloat(item.taxRate) || 0,
+        discount: parseFloat(item.discount) || 0,
         amount: (item.amount || 0) / 100 // Convert from cents to dollars
       })) : [],
       subtotal: (editingBill.amount || 0) / 100, // Convert from cents to dollars
@@ -335,8 +335,8 @@ export default function PurchaseBillFormSplit({
             description: item.description,
             quantity: item.quantity,
             unitPrice: Math.round(item.unitPrice * 100),
-            taxRate: Number(item.taxRate) || 0,
-            discount: Number(item.discount) || 0,
+            taxRate: Number(parseFloat(String(item.taxRate || 0))),
+            discount: Number(parseFloat(String(item.discount || 0))),
             amount: Math.round(item.amount * 100)
           }))
         };

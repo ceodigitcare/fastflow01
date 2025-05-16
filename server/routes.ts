@@ -783,7 +783,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access to this transaction" });
       }
       
-      const updatedTransaction = await storage.updateTransaction(transactionId, req.body);
+      // Combine the ID with the request body to create a complete transaction object
+      const updatedTransaction = await storage.updateTransaction({
+        ...req.body,
+        id: transactionId
+      });
       res.json(updatedTransaction);
     } catch (error) {
       console.error("Error updating transaction:", error);
