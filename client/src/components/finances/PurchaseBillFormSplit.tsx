@@ -108,12 +108,17 @@ export default function PurchaseBillFormSplit({
   // Mutation for creating a new vendor
   const createVendorMutation = useMutation({
     mutationFn: async (vendorData: Partial<InsertUser>) => {
+      // Generate a temporary random password
+      const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+      
       const data = {
         ...vendorData,
         type: "vendor",
         businessId: 1, // Current business ID
-        password: "defaultPassword123", // Default password
+        password: tempPassword, // Temporary password that meets requirements
       };
+      
+      console.log("Creating new vendor:", vendorData.name);
       const response = await apiRequest("POST", "/api/users", data);
       return await response.json();
     },
