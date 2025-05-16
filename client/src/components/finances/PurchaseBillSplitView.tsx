@@ -45,6 +45,11 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
     select: (users) => users.filter(user => user.type === "vendor")
   });
   
+  // Get products for displaying in bill items
+  const { data: products } = useQuery<Product[]>({
+    queryKey: ["/api/products"],
+  });
+  
   // Handle search
   const filteredBills = bills?.filter(bill => {
     if (!searchQuery) return true;
@@ -171,7 +176,11 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                     {Array.isArray(selectedBill.items) && selectedBill.items.map((item: any, index: number) => (
                       <tr key={index} className="bg-white">
                         <td className="px-4 py-3 text-sm">
-                          <div className="font-medium">{item.description}</div>
+                          {/* Display item name and description in two separate lines */}
+                          <div className="font-medium">
+                            {products?.find(p => p.id === item.productId)?.name || "Unknown Product"}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">{item.description}</div>
                         </td>
                         <td className="px-4 py-3 text-sm text-center">{item.quantity}</td>
                         <td className="px-4 py-3 text-sm text-right">{formatCurrency(item.unitPrice)}</td>

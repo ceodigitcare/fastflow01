@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { z } from "zod";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Transaction, User, Account, Product, InsertUser } from "@shared/schema";
+import { Transaction, Account, Product, InsertUser, User } from "@shared/schema";
 import { purchaseBillSchema, PurchaseBill, PurchaseBillItem } from "@/lib/validation";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar as CalendarIcon, X, Plus, Save, UserCircle } from "lucide-react";
+import { Calendar as CalendarIcon, X, Plus, Save } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +44,6 @@ export default function PurchaseBillFormSplit({
   onSave,
   editingBill = null 
 }: PurchaseBillFormSplitProps) {
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   
   // Local state for line items and dialogs
@@ -55,7 +53,16 @@ export default function PurchaseBillFormSplit({
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
-    select: (users) => users.filter(user => user.type === "vendor")
+    select: (users) => users.filter((user: User) => user.type === "vendor")
+  });
+  
+  // New vendor form setup
+  const [newVendor, setNewVendor] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    businessName: "",
+    address: ""
   });
   
   // Get products
@@ -95,6 +102,47 @@ export default function PurchaseBillFormSplit({
       notes: "",
       termsAndConditions: "Payment is due within 30 days of the bill date.",
       vendorNotes: "",
+    }
+  });
+  
+  // Mutation for creating a new vendor
+  const createVendorMutation = useMutation({
+    mutationFn: async (vendorData: Partial<InsertUser>) => {
+      const data = {
+        ...vendorData,
+        type: "vendor",
+        businessId: 1, // Current business ID
+        password: "defaultPassword123", // Default password
+      };
+      const response = await apiRequest("POST", "/api/users", data);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Success",
+        description: "Vendor has been created successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setAddVendorDialogOpen(false);
+      setNewVendor({
+        name: "",
+        email: "",
+        phone: "",
+        businessName: "",
+        address: ""
+      });
+      
+      // Select the newly created vendor
+      if (data && data.id) {
+        form.setValue('vendorId', data.id);
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create vendor: ${error.message}`,
+        variant: "destructive",
+      });
     }
   });
   
@@ -281,374 +329,437 @@ export default function PurchaseBillFormSplit({
     saveBillMutation.mutate(data);
   };
   
+  // Handle add vendor form submission
+  const handleAddVendor = () => {
+    if (!newVendor.name || !newVendor.email) {
+      toast({
+        title: "Error",
+        description: "Vendor name and email are required",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createVendorMutation.mutate(newVendor);
+  };
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          {/* Vendor Selection */}
-          <FormField
-            control={form.control}
-            name="vendorId"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex justify-between items-center">
-                  <FormLabel>Vendor</FormLabel>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setAddVendorDialogOpen(true)}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    Add Vendor
-                  </Button>
-                </div>
-                <Select 
-                  onValueChange={(value) => field.onChange(parseInt(value))}
-                  value={field.value.toString()}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a vendor" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {vendorsLoading ? (
-                      <SelectItem value="loading" disabled>Loading vendors...</SelectItem>
-                    ) : vendors && vendors.length > 0 ? (
-                      vendors.map((vendor) => (
-                        <SelectItem key={vendor.id} value={vendor.id.toString()}>
-                          {vendor.name}
-                          {vendor.balance !== null && vendor.balance !== 0 && (
-                            <span className={`ml-2 text-xs ${vendor.balance > 0 ? 'text-green-500' : 'text-amber-500'}`}>
-                              {vendor.balance > 0 
-                                ? `(Advance: ${formatCurrency(vendor.balance / 100)})` 
-                                : `(Due: ${formatCurrency(Math.abs(vendor.balance) / 100)})`}
-                            </span>
-                          )}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="none" disabled>No vendors found</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          {/* Account Selection */}
-          <FormField
-            control={form.control}
-            name="accountId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pay From Account</FormLabel>
-                <Select 
-                  onValueChange={(value) => field.onChange(parseInt(value))}
-                  value={field.value.toString()}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an account" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {accountsLoading ? (
-                      <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
-                    ) : accounts && accounts.length > 0 ? (
-                      accounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id.toString()}>
-                          {account.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="none" disabled>No accounts found</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          {/* Bill Number */}
-          <FormField
-            control={form.control}
-            name="billNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bill Number</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          {/* Bill Date */}
-          <FormField
-            control={form.control}
-            name="billDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bill Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, "PPP") : "Select a date"}
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          {/* Due Date */}
-          <FormField
-            control={form.control}
-            name="dueDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Due Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, "PPP") : "Select a date"}
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          {/* Bill Status */}
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select 
-                  onValueChange={(value) => field.onChange(value)}
-                  value={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="received">Received</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
-        {/* Line Items */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Items</h3>
-            <Button type="button" onClick={addItem} variant="outline" size="sm">
-              <Plus className="mr-1 h-4 w-4" /> Add Item
+    <>
+      {/* Add Vendor Dialog */}
+      <Dialog open={addVendorDialogOpen} onOpenChange={setAddVendorDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Vendor</DialogTitle>
+            <DialogDescription>
+              Fill out the form below to create a new vendor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <FormLabel className="text-right">Name *</FormLabel>
+              <Input 
+                className="col-span-3" 
+                value={newVendor.name}
+                onChange={(e) => setNewVendor({...newVendor, name: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <FormLabel className="text-right">Email *</FormLabel>
+              <Input 
+                className="col-span-3" 
+                type="email"
+                value={newVendor.email}
+                onChange={(e) => setNewVendor({...newVendor, email: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <FormLabel className="text-right">Phone</FormLabel>
+              <Input 
+                className="col-span-3" 
+                value={newVendor.phone}
+                onChange={(e) => setNewVendor({...newVendor, phone: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <FormLabel className="text-right">Business</FormLabel>
+              <Input 
+                className="col-span-3" 
+                value={newVendor.businessName}
+                onChange={(e) => setNewVendor({...newVendor, businessName: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <FormLabel className="text-right">Address</FormLabel>
+              <Textarea 
+                className="col-span-3" 
+                value={newVendor.address}
+                onChange={(e) => setNewVendor({...newVendor, address: e.target.value})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setAddVendorDialogOpen(false)}
+            >
+              Cancel
             </Button>
-          </div>
-          
-          {/* Table headers */}
-          <div className="grid grid-cols-12 gap-2 px-2 py-2 bg-muted text-sm font-medium">
-            <div className="col-span-3">Product</div>
-            <div className="col-span-3">Description</div>
-            <div className="col-span-1 text-center">Qty</div>
-            <div className="col-span-2 text-center">Unit Price</div>
-            <div className="col-span-2 text-right">Amount</div>
-            <div className="col-span-1"></div>
-          </div>
-          
-          {/* Line items */}
-          {billItems.map((item, index) => (
-            <div key={index} className="grid grid-cols-12 gap-2 items-center border-b pb-2">
-              {/* Product */}
-              <div className="col-span-3">
-                <Select 
-                  value={item.productId.toString()}
-                  onValueChange={(value) => handleProductChange(parseInt(value), index)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productsLoading ? (
-                      <SelectItem value="loading" disabled>Loading products...</SelectItem>
-                    ) : products && products.length > 0 ? (
-                      products.map((product) => (
-                        <SelectItem key={product.id} value={product.id.toString()}>
-                          {product.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="none" disabled>No products found</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Description */}
-              <div className="col-span-3">
-                <Input 
-                  value={item.description} 
-                  onChange={(e) => {
-                    const newItems = [...billItems];
-                    newItems[index].description = e.target.value;
-                    setBillItems(newItems);
-                  }}
-                />
-              </div>
-              
-              {/* Quantity */}
-              <div className="col-span-1">
-                <Input 
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) => updateItemQuantity(parseInt(e.target.value) || 1, index)}
-                  className="text-center"
-                />
-              </div>
-              
-              {/* Unit Price */}
-              <div className="col-span-2">
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={item.unitPrice}
-                  onChange={(e) => updateItemPrice(parseFloat(e.target.value) || 0, index)}
-                  className="text-right"
-                />
-              </div>
-              
-              {/* Amount */}
-              <div className="col-span-2 text-right font-medium">
-                {formatCurrency(item.amount)}
-              </div>
-              
-              {/* Remove button */}
-              <div className="col-span-1 text-right">
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => removeItem(index)}
-                  className="h-8 w-8 text-red-500"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-          
-          {/* Totals */}
-          <div className="space-y-2 border-t pt-4">
-            <div className="flex justify-between">
-              <span className="font-medium">Subtotal:</span>
-              <span>{formatCurrency(form.watch('subtotal'))}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Tax:</span>
-              <span>{formatCurrency(form.watch('taxAmount'))}</span>
-            </div>
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total:</span>
-              <span>{formatCurrency(form.watch('totalAmount'))}</span>
-            </div>
-          </div>
-          
-          {/* Payment Made */}
-          <div className="border-t pt-4">
+            <Button 
+              type="button" 
+              onClick={handleAddVendor}
+              disabled={createVendorMutation.isPending}
+            >
+              {createVendorMutation.isPending ? "Creating..." : "Create Vendor"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Vendor Selection */}
             <FormField
               control={form.control}
-              name="paymentMade"
+              name="vendorId"
               render={({ field }) => (
                 <FormItem>
                   <div className="flex justify-between items-center">
-                    <FormLabel>Payment Made</FormLabel>
-                    <div className="space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => field.onChange(0)}
-                      >
-                        No Payment
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => field.onChange(form.watch('totalAmount'))}
-                      >
-                        Pay in Full
-                      </Button>
-                    </div>
+                    <FormLabel>Vendor</FormLabel>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setAddVendorDialogOpen(true)}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      Add Vendor
+                    </Button>
                   </div>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      min="0" 
-                      {...field} 
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  {form.watch('paymentMade') > 0 && form.watch('paymentMade') < form.watch('totalAmount') && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Remaining balance: {formatCurrency(form.watch('totalAmount') - form.watch('paymentMade'))}
-                    </div>
-                  )}
+                  <Select 
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    value={field.value.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a vendor" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {vendorsLoading ? (
+                        <SelectItem value="loading" disabled>Loading vendors...</SelectItem>
+                      ) : vendors && vendors.length > 0 ? (
+                        vendors.map((vendor) => (
+                          <SelectItem key={vendor.id} value={vendor.id.toString()}>
+                            {vendor.name}
+                            {vendor.balance !== undefined && vendor.balance !== 0 && (
+                              <span className={`ml-2 text-xs ${vendor.balance > 0 ? 'text-green-500' : 'text-amber-500'}`}>
+                                {vendor.balance > 0 
+                                  ? `(Advance: ${formatCurrency(vendor.balance / 100)})` 
+                                  : `(Due: ${formatCurrency(Math.abs(vendor.balance) / 100)})`}
+                              </span>
+                            )}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No vendors found</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            
+            {/* Account Selection */}
+            <FormField
+              control={form.control}
+              name="accountId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pay From Account</FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    value={field.value.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an account" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {accountsLoading ? (
+                        <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
+                      ) : accounts && accounts.length > 0 ? (
+                        accounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id.toString()}>
+                            {account.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No accounts found</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Bill Number */}
+            <FormField
+              control={form.control}
+              name="billNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bill Number</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Bill Date */}
+            <FormField
+              control={form.control}
+              name="billDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bill Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, "PPP") : "Select a date"}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Due Date */}
+            <FormField
+              control={form.control}
+              name="dueDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Due Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, "PPP") : "Select a date"}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Status */}
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          {/* Line Items */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium">Items</h3>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={addItem}
+                className="h-8"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Item
+              </Button>
+            </div>
+            
+            <div className="border rounded-md overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="text-left p-2">Product</th>
+                    <th className="text-left p-2">Description</th>
+                    <th className="w-20 p-2">Qty</th>
+                    <th className="w-24 p-2">Price</th>
+                    <th className="w-24 p-2">Amount</th>
+                    <th className="w-10 p-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {billItems.map((item, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-2">
+                        <Select 
+                          value={item.productId.toString()} 
+                          onValueChange={(value) => handleProductChange(parseInt(value), index)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select product" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {productsLoading ? (
+                              <SelectItem value="loading" disabled>Loading products...</SelectItem>
+                            ) : products && products.length > 0 ? (
+                              products.map((product) => (
+                                <SelectItem key={product.id} value={product.id.toString()}>
+                                  {product.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="none" disabled>No products found</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          value={item.description}
+                          onChange={(e) => {
+                            const newItems = [...billItems];
+                            newItems[index].description = e.target.value;
+                            setBillItems(newItems);
+                          }}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateItemQuantity(parseFloat(e.target.value), index)}
+                          min={1}
+                          step={1}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          type="number"
+                          value={item.unitPrice}
+                          onChange={(e) => updateItemPrice(parseFloat(e.target.value), index)}
+                          min={0}
+                          step={0.01}
+                        />
+                      </td>
+                      <td className="p-2 text-right">
+                        {formatCurrency(item.amount)}
+                      </td>
+                      <td className="p-2 text-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeItem(index)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          {/* Totals */}
+          <div className="flex justify-end">
+            <div className="w-64 space-y-2">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span className="font-medium">{formatCurrency(form.watch('subtotal'))}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tax:</span>
+                <span>{formatCurrency(form.watch('taxAmount'))}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Discount:</span>
+                <span>{formatCurrency(form.watch('discountAmount'))}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold border-t pt-2">
+                <span>Total:</span>
+                <span>{formatCurrency(form.watch('totalAmount'))}</span>
+              </div>
+              
+              {/* Payment Made */}
+              <div className="pt-4">
+                <FormField
+                  control={form.control}
+                  name="paymentMade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Made</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field} 
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          min={0}
+                          step={0.01}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
           </div>
           
           {/* Notes */}
@@ -660,8 +771,8 @@ export default function PurchaseBillFormSplit({
                 <FormLabel>Notes</FormLabel>
                 <FormControl>
                   <Textarea 
-                    placeholder="Enter any notes about this purchase bill"
-                    className="min-h-20"
+                    placeholder="Enter any additional notes or details about this bill" 
+                    className="h-24"
                     {...field} 
                   />
                 </FormControl>
@@ -669,21 +780,21 @@ export default function PurchaseBillFormSplit({
               </FormItem>
             )}
           />
-        </div>
-        
-        {/* Form Actions */}
-        <div className="flex justify-end space-x-2 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={saveBillMutation.isPending}
-          >
-            {saveBillMutation.isPending ? "Saving..." : "Save Purchase Bill"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+          
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={saveBillMutation.isPending}
+            >
+              {saveBillMutation.isPending ? "Saving..." : "Save Purchase Bill"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </>
   );
 }
