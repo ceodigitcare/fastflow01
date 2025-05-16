@@ -260,8 +260,14 @@ export default function PurchaseBillFormSplit({
         paymentReceived: data.paymentMade
       };
       
-      const response = await apiRequest("POST", "/api/transactions", transactionData);
-      return await response.json();
+      // If editing an existing bill, use PUT to update; otherwise POST to create a new bill
+      if (editingBill && editingBill.id) {
+        const response = await apiRequest("PUT", `/api/transactions/${editingBill.id}`, transactionData);
+        return await response.json();
+      } else {
+        const response = await apiRequest("POST", "/api/transactions", transactionData);
+        return await response.json();
+      }
     },
     onSuccess: (data: Transaction) => {
       toast({
@@ -436,7 +442,11 @@ export default function PurchaseBillFormSplit({
                       variant="ghost" 
                       size="sm" 
                       className="h-7 px-2 text-xs"
-                      onClick={() => setAddVendorDialogOpen(true)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setAddVendorDialogOpen(true);
+                      }}
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" />
                       Add Vendor
