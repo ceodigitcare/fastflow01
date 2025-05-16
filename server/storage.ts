@@ -629,13 +629,14 @@ export class MemStorage implements IStorage {
     return newTransaction;
   }
   
-  async updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction | undefined> {
+  async updateTransaction(data: Transaction): Promise<Transaction | undefined> {
+    const id = data.id;
     const transaction = await this.getTransaction(id);
     if (!transaction) return undefined;
     
-    const updatedTransaction = { ...transaction, ...data };
-    this.transactions.set(id, updatedTransaction);
-    return updatedTransaction;
+    // Update the transaction in memory
+    this.transactions.set(id, data);
+    return data;
   }
   
   async deleteTransaction(id: number): Promise<boolean> {

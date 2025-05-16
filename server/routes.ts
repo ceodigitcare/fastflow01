@@ -763,6 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // This is for compatibility with older code - redirect to PUT
   app.patch("/api/transactions/:id", requireAuth, async (req, res) => {
     try {
       const businessId = getBusinessId(req);
