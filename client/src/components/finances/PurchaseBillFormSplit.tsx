@@ -343,77 +343,82 @@ export default function PurchaseBillFormSplit({
     createVendorMutation.mutate(newVendor);
   };
 
+  // Create a separate dialog component outside the form context
+  const VendorDialog = () => (
+    <Dialog open={addVendorDialogOpen} onOpenChange={setAddVendorDialogOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add New Vendor</DialogTitle>
+          <DialogDescription>
+            Fill out the form below to create a new vendor.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormLabel className="text-right">Name *</FormLabel>
+            <Input 
+              className="col-span-3" 
+              value={newVendor.name}
+              onChange={(e) => setNewVendor({...newVendor, name: e.target.value})}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormLabel className="text-right">Email *</FormLabel>
+            <Input 
+              className="col-span-3" 
+              type="email"
+              value={newVendor.email}
+              onChange={(e) => setNewVendor({...newVendor, email: e.target.value})}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormLabel className="text-right">Phone</FormLabel>
+            <Input 
+              className="col-span-3" 
+              value={newVendor.phone}
+              onChange={(e) => setNewVendor({...newVendor, phone: e.target.value})}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormLabel className="text-right">Business</FormLabel>
+            <Input 
+              className="col-span-3" 
+              value={newVendor.businessName}
+              onChange={(e) => setNewVendor({...newVendor, businessName: e.target.value})}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormLabel className="text-right">Address</FormLabel>
+            <Textarea 
+              className="col-span-3" 
+              value={newVendor.address}
+              onChange={(e) => setNewVendor({...newVendor, address: e.target.value})}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={() => setAddVendorDialogOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="button" 
+            onClick={handleAddVendor}
+            disabled={createVendorMutation.isPending}
+          >
+            {createVendorMutation.isPending ? "Creating..." : "Create Vendor"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
     <>
-      {/* Add Vendor Dialog */}
-      <Dialog open={addVendorDialogOpen} onOpenChange={setAddVendorDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Vendor</DialogTitle>
-            <DialogDescription>
-              Fill out the form below to create a new vendor.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <FormLabel className="text-right">Name *</FormLabel>
-              <Input 
-                className="col-span-3" 
-                value={newVendor.name}
-                onChange={(e) => setNewVendor({...newVendor, name: e.target.value})}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <FormLabel className="text-right">Email *</FormLabel>
-              <Input 
-                className="col-span-3" 
-                type="email"
-                value={newVendor.email}
-                onChange={(e) => setNewVendor({...newVendor, email: e.target.value})}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <FormLabel className="text-right">Phone</FormLabel>
-              <Input 
-                className="col-span-3" 
-                value={newVendor.phone}
-                onChange={(e) => setNewVendor({...newVendor, phone: e.target.value})}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <FormLabel className="text-right">Business</FormLabel>
-              <Input 
-                className="col-span-3" 
-                value={newVendor.businessName}
-                onChange={(e) => setNewVendor({...newVendor, businessName: e.target.value})}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <FormLabel className="text-right">Address</FormLabel>
-              <Textarea 
-                className="col-span-3" 
-                value={newVendor.address}
-                onChange={(e) => setNewVendor({...newVendor, address: e.target.value})}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setAddVendorDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="button" 
-              onClick={handleAddVendor}
-              disabled={createVendorMutation.isPending}
-            >
-              {createVendorMutation.isPending ? "Creating..." : "Create Vendor"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Render the vendor dialog outside of the form context */}
+      <VendorDialog />
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
