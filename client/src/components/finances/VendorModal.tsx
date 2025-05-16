@@ -34,7 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, Share, Upload, Trash2, FileType, Download, Printer, Eye, EyeOff, PlusCircle, MinusCircle } from "lucide-react";
+import { RefreshCw, Share, Upload, Trash2, Eye, EyeOff, PlusCircle, MinusCircle } from "lucide-react";
 
 interface VendorModalProps {
   open: boolean;
@@ -53,19 +53,18 @@ export default function VendorModal({
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Vendor state (maintain local copy that can be updated without waiting for refetch)
+  // Vendor state
   const [editingVendor, setEditingVendor] = useState<User | null>(initialVendor || null);
   
-  // Form state
+  // Form state - maintaining exact field order as specified
   const [formData, setFormData] = useState({
-    // Type is locked to "vendor"
-    type: "vendor" as const,
     businessName: "",
     address: "",
     email: "",
     phone: "",
-    name: "",
     password: "",
+    name: "", // Contact Person Name
+    type: "vendor" as const, // Locked to vendor
     profileImageUrl: "",
     isActive: true,
   });
@@ -93,13 +92,13 @@ export default function VendorModal({
   useEffect(() => {
     if (editingVendor) {
       setFormData({
-        type: "vendor", // Always vendor, regardless of actual type
         businessName: editingVendor.businessName || "",
         address: editingVendor.address || "",
         email: editingVendor.email || "",
         phone: editingVendor.phone || "",
-        name: editingVendor.name || "",
         password: "", // Don't populate password for editing
+        name: editingVendor.name || "",
+        type: "vendor", // Always locked to vendor
         profileImageUrl: editingVendor.profileImageUrl || "",
         isActive: editingVendor.isActive === null ? true : editingVendor.isActive,
       });
@@ -116,13 +115,13 @@ export default function VendorModal({
       }
     } else {
       setFormData({
-        type: "vendor", // Always vendor for new vendors
         businessName: "",
         address: "",
         email: "",
         phone: "",
-        name: "",
         password: "",
+        name: "",
+        type: "vendor", // Always locked to vendor
         profileImageUrl: "",
         isActive: true,
       });
@@ -134,7 +133,7 @@ export default function VendorModal({
   // Create vendor mutation
   const createVendorMutation = useMutation({
     mutationFn: async (vendorData: any) => {
-      // Force the type to be vendor
+      // Force the type to be vendor regardless of what might be sent
       const data = {
         ...vendorData,
         type: "vendor",
@@ -227,8 +226,8 @@ export default function VendorModal({
   
   // Update vendor balance mutation
   const updateBalanceMutation = useMutation({
-    mutationFn: async ({ vendorId, amount, type, note }: { vendorId: number; amount: number; type: 'add' | 'deduct'; note?: string }) => {
-      const res = await apiRequest("POST", `/api/users/${vendorId}/balance`, {
+    mutationFn: async ({ userId, amount, type, note }: { userId: number; amount: number; type: 'add' | 'deduct'; note?: string }) => {
+      const res = await apiRequest("POST", `/api/users/${userId}/balance`, {
         amount,
         type,
         note
@@ -296,7 +295,6 @@ export default function VendorModal({
     setImagePreview(imageUrl);
     
     // In a real implementation, you would upload the file to a server
-    // For now, we'll just set the URL and simulate the upload
     toast({
       title: "Image uploaded",
       description: "Your profile image has been uploaded successfully",
@@ -414,7 +412,7 @@ export default function VendorModal({
     }
     
     updateBalanceMutation.mutate({
-      vendorId: editingVendor.id,
+      userId: editingVendor.id,
       amount,
       type: balanceType,
       note: balanceNote
@@ -556,7 +554,7 @@ export default function VendorModal({
                     </div>
                   </div>
                   
-                  {/* Right column - Vendor Info Fields */}
+                  {/* Right column - Vendor Info Fields - in EXACT specified order */}
                   <div className="col-span-7 grid gap-4">
                     {/* Business Name */}
                     <div>
@@ -744,8 +742,8 @@ export default function VendorModal({
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {editingVendor.balanceHistory && (editingVendor.balanceHistory as BalanceHistoryEntry[]).length > 0 ? (
-                              (editingVendor.balanceHistory as BalanceHistoryEntry[]).map((entry, index) => (
+                            {editingVendor.balanceHistory && Array.isArray(editingVendor.balanceHistory) && editingVendor.balanceHistory.length > 0 ? (
+                              editingVendor.balanceHistory.map((entry: BalanceHistoryEntry, index: number) => (
                                 <TableRow key={index}>
                                   <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
                                   <TableCell>
@@ -870,8 +868,8 @@ export default function VendorModal({
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {editingVendor.loginHistory && editingVendor.loginHistory.length > 0 ? (
-                              editingVendor.loginHistory.map((login, index) => (
+                            {editingVendor.loginHistory && Array.isArray(editingVendor.loginHistory) && editingVendor.loginHistory.length > 0 ? (
+                              editingVendor.loginHistory.map((login: any, index: number) => (
                                 <TableRow key={index}>
                                   <TableCell>{new Date(login.timestamp).toLocaleString()}</TableCell>
                                   <TableCell>{login.ipAddress}</TableCell>

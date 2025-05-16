@@ -9,6 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { Calendar as CalendarIcon, X, Plus, Save } from "lucide-react";
+import VendorModal from "./VendorModal";
 import {
   Dialog,
   DialogContent,
@@ -371,27 +372,22 @@ export default function PurchaseBillFormSplit({
     createVendorMutation.mutate(newVendor);
   };
 
-  // Replace the simple dialog with our comprehensive vendor modal
-  const renderVendorModal = () => (
-    <VendorModal 
-      open={addVendorDialogOpen}
-      onOpenChange={setAddVendorDialogOpen}
-      onSuccess={(newVendor) => {
-        // When a new vendor is created, select it in the form
-        if (newVendor && newVendor.id) {
-          form.setValue('vendorId', newVendor.id);
-          
-          // Force a refresh of the vendors query
-          queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-        }
-      }}
-    />
-  );
-
   return (
     <>
-      {/* Render the vendor dialog outside of the form context */}
-      <AddVendorDialog />
+      {/* Render the vendor modal outside of the form context */}
+      <VendorModal
+        open={addVendorDialogOpen}
+        onOpenChange={setAddVendorDialogOpen}
+        onSuccess={(newVendor) => {
+          // When a new vendor is created, select it in the form
+          if (newVendor && newVendor.id) {
+            form.setValue('vendorId', newVendor.id);
+            
+            // Force a refresh of the vendors query
+            queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+          }
+        }}
+      />
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
