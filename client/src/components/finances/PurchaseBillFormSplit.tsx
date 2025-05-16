@@ -782,7 +782,7 @@ export default function PurchaseBillFormSplit({
               </div>
               <div className="flex justify-between">
                 <span>Discount:</span>
-                <span>{formatCurrency(form.watch('discountAmount'))}</span>
+                <span>{formatCurrency(form.watch('discountAmount') || 0)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t pt-2">
                 <span>Total:</span>
