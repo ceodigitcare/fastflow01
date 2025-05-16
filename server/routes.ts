@@ -729,6 +729,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.put("/api/transactions/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const transactionId = parseInt(req.params.id);
+      
+      // Verify the transaction exists and belongs to this business
+      const existingTransaction = await storage.getTransaction(transactionId);
+      if (!existingTransaction || existingTransaction.businessId !== businessId) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      // Update the transaction with new data
+      console.log("Updating transaction with data:", JSON.stringify(req.body, null, 2));
+      const parsedData = {
+        ...req.body,
+        businessId,
+        id: transactionId
+      };
+      
+      // Parse the transaction data
+      console.log("Parsed transaction data:", JSON.stringify(parsedData, null, 2));
+      const updatedTransaction = await storage.updateTransaction(parsedData);
+      
+      if (updatedTransaction) {
+        res.status(200).json(updatedTransaction);
+      } else {
+        res.status(500).json({ message: "Failed to update transaction" });
+      }
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      res.status(500).json({ message: "Error updating transaction" });
+    }
+  });
+  
   app.patch("/api/transactions/:id", requireAuth, async (req, res) => {
     try {
       const businessId = getBusinessId(req);

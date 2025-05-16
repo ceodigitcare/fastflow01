@@ -77,7 +77,7 @@ export interface IStorage {
   getTransactionsByAccount(accountId: number): Promise<Transaction[]>;
   getTransactionsByDateRange(businessId: number, startDate: Date, endDate: Date): Promise<Transaction[]>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
-  updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction | undefined>;
+  updateTransaction(transaction: Transaction): Promise<Transaction | undefined>;
   deleteTransaction(id: number): Promise<boolean>;
   
   // Transfer methods
@@ -1071,7 +1071,8 @@ export class DatabaseStorage implements IStorage {
     return transaction;
   }
   
-  async updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction | undefined> {
+  async updateTransaction(data: Transaction): Promise<Transaction | undefined> {
+    const id = data.id;
     const [transaction] = await db
       .update(transactions)
       .set(data)
