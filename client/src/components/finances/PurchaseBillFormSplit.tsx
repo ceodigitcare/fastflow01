@@ -111,14 +111,14 @@ export default function PurchaseBillFormSplit({
         description: item.description || "",
         quantity: item.quantity || 1,
         unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
-        taxRate: item.taxRate || 0,
-        discount: item.discount || 0,
+        taxRate: Number(item.taxRate) || 0,
+        discount: Number(item.discount) || 0,
         amount: (item.amount || 0) / 100 // Convert from cents to dollars
       })) : [],
-      subtotal: (editingBill.amount / 100) || 0, // Convert from cents to dollars
+      subtotal: (editingBill.amount || 0) / 100, // Convert from cents to dollars
       taxAmount: 0, // We'll calculate this
       discountAmount: 0, // We'll calculate this
-      totalAmount: (editingBill.amount / 100) || 0, // Convert from cents to dollars
+      totalAmount: (editingBill.amount || 0) / 100, // Convert from cents to dollars
       paymentMade: (editingBill.paymentReceived || 0) / 100, // Convert from cents to dollars
       notes: editingBill.notes || "",
       termsAndConditions: "Payment is due within 30 days of the bill date.",
@@ -279,7 +279,7 @@ export default function PurchaseBillFormSplit({
       const vendor = vendors?.find(v => v.id === data.vendorId);
       
       // Format the data for the transaction endpoint - ensuring unit/price amounts are in cents
-      const transactionData = {
+      const transactionData: any = {
         type: "expense",
         accountId: data.accountId,
         amount: Math.round(data.totalAmount * 100), // Convert to cents
@@ -289,33 +289,59 @@ export default function PurchaseBillFormSplit({
         documentType: "bill",
         documentNumber: data.billNumber,
         status: data.status || "draft", // Ensure status is provided (and make optional per request)
+        contactId: data.vendorId, // Add contactId for the vendor relationship
         contactName: vendor?.name || "",
         contactEmail: vendor?.email || "",
         contactPhone: vendor?.phone || "",
         contactAddress: vendor?.address || "",
         notes: data.notes,
-        dueDate: data.dueDate, // Include due date
+        paymentReceived: Math.round((data.paymentMade || 0) * 100), // Convert payment to cents
         items: data.items.map(item => ({
           productId: item.productId,
           description: item.description,
           quantity: item.quantity,
           unitPrice: Math.round(item.unitPrice * 100), // Convert to cents
-          taxRate: item.taxRate,
-          discount: item.discount,
+          taxRate: item.taxRate || 0,
+          discount: item.discount || 0,
           amount: Math.round(item.amount * 100) // Convert to cents
-        })),
-        // Store additional bill data in metadata
-        metadata: {
-          billNumber: data.billNumber,
-          vendorName: vendor?.businessName || vendor?.name || "Unknown",
-          billType: "purchase"
-        }
+        }))
       };
+      
+      // Include ID property if editing an existing bill
+      if (editingBill && editingBill.id) {
+        transactionData.id = editingBill.id;
+      }
       
       // If editing an existing bill, use PATCH to update; otherwise POST to create a new bill
       if (editingBill && editingBill.id) {
-        // PATCH is used for partial updates to existing records
-        const response = await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, transactionData);
+        // For updates, we need to be explicit about the fields we're updating to avoid "No values to set" error
+        // Only include fields that are actually changing
+        const updateData = {
+          id: editingBill.id,
+          accountId: data.accountId,
+          amount: Math.round(data.totalAmount * 100),
+          date: data.billDate,
+          documentNumber: data.billNumber,
+          status: data.status || "draft",
+          contactId: data.vendorId,
+          contactName: vendor?.name || "",
+          contactEmail: vendor?.email || "",
+          contactPhone: vendor?.phone || "",
+          contactAddress: vendor?.address || "",
+          notes: data.notes,
+          paymentReceived: Math.round((data.paymentMade || 0) * 100),
+          items: data.items.map(item => ({
+            productId: item.productId,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: Math.round(item.unitPrice * 100),
+            taxRate: Number(item.taxRate) || 0,
+            discount: Number(item.discount) || 0,
+            amount: Math.round(item.amount * 100)
+          }))
+        };
+        
+        const response = await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, updateData);
         return await response.json();
       } else {
         // POST is used to create new records
