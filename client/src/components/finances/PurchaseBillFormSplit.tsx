@@ -50,15 +50,26 @@ export default function PurchaseBillFormSplit({
   // Local state for line items and dialogs
   const [billItems, setBillItems] = useState<PurchaseBillItem[]>(
     // Initialize with existing items if editing a bill
-    editingBill?.items ? editingBill.items.map(item => ({
-      productId: item.productId || 0,
-      description: item.description || "",
-      quantity: item.quantity || 1,
-      unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
-      taxRate: item.taxRate || 0,
-      discount: item.discount || 0,
-      amount: (item.amount || 0) / 100 // Convert from cents to dollars
-    })) : []
+    editingBill?.items ? editingBill.items.map(item => {
+      // Safely parse numeric values with fallbacks to avoid NaN
+      const taxRateValue = typeof item.taxRate === 'string' 
+        ? parseFloat(item.taxRate) || 0 
+        : Number(item.taxRate || 0);
+      
+      const discountValue = typeof item.discount === 'string' 
+        ? parseFloat(item.discount) || 0 
+        : Number(item.discount || 0);
+      
+      return {
+        productId: item.productId || 0,
+        description: item.description || "",
+        quantity: item.quantity || 1,
+        unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
+        taxRate: taxRateValue,
+        discount: discountValue,
+        amount: (item.amount || 0) / 100 // Convert from cents to dollars
+      };
+    }) : []
   );
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
   
@@ -106,15 +117,25 @@ export default function PurchaseBillFormSplit({
       billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
       dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       status: editingBill.status || "draft",
-      items: Array.isArray(editingBill.items) ? editingBill.items.map(item => ({
-        productId: item.productId || 0,
-        description: item.description || "",
-        quantity: item.quantity || 1,
-        unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
-        taxRate: parseFloat(item.taxRate) || 0,
-        discount: parseFloat(item.discount) || 0,
-        amount: (item.amount || 0) / 100 // Convert from cents to dollars
-      })) : [],
+      items: Array.isArray(editingBill.items) ? editingBill.items.map(item => {
+        const taxRateValue = item.taxRate !== undefined && item.taxRate !== null 
+          ? (typeof item.taxRate === 'string' ? parseFloat(item.taxRate) : Number(item.taxRate)) 
+          : 0;
+        
+        const discountValue = item.discount !== undefined && item.discount !== null 
+          ? (typeof item.discount === 'string' ? parseFloat(item.discount) : Number(item.discount)) 
+          : 0;
+          
+        return {
+          productId: item.productId || 0,
+          description: item.description || "",
+          quantity: item.quantity || 1,
+          unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
+          taxRate: taxRateValue,
+          discount: discountValue,
+          amount: (item.amount || 0) / 100 // Convert from cents to dollars
+        };
+      }) : [],
       subtotal: (editingBill.amount || 0) / 100, // Convert from cents to dollars
       taxAmount: 0, // We'll calculate this
       discountAmount: 0, // We'll calculate this
