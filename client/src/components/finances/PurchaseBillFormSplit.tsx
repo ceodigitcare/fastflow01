@@ -311,17 +311,29 @@ export default function PurchaseBillFormSplit({
   
   // Function to update totals based on line items
   const updateTotals = (items: PurchaseBillItem[]) => {
-    const subtotal = items.reduce((total, item) => total + item.amount, 0);
-    const taxAmount = items.reduce((total, item) => {
-      return total + (item.amount * (item.taxRate / 100));
+    // Ensure all numeric values are properly defined to prevent NaN
+    const sanitizedItems = items.map(item => ({
+      ...item,
+      quantity: item.quantity || 1,
+      unitPrice: item.unitPrice || 0,
+      taxRate: typeof item.taxRate === 'number' ? item.taxRate : 0,
+      discount: typeof item.discount === 'number' ? item.discount : 0,
+      amount: item.amount || 0
+    }));
+    
+    const subtotal = sanitizedItems.reduce((total, item) => total + item.amount, 0);
+    const taxAmount = sanitizedItems.reduce((total, item) => {
+      const taxRate = typeof item.taxRate === 'number' ? item.taxRate : 0;
+      return total + (item.amount * (taxRate / 100));
     }, 0);
     
     // Calculate total discount amount from all items
-    const discountAmount = items.reduce((total, item) => {
-      return total + (item.amount * (item.discount / 100));
+    const discountAmount = sanitizedItems.reduce((total, item) => {
+      const discount = typeof item.discount === 'number' ? item.discount : 0;
+      return total + (item.amount * (discount / 100));
     }, 0);
     
-    form.setValue('items', items);
+    form.setValue('items', sanitizedItems);
     form.setValue('subtotal', subtotal);
     form.setValue('taxAmount', taxAmount);
     form.setValue('discountAmount', discountAmount);
@@ -745,6 +757,8 @@ export default function PurchaseBillFormSplit({
                     <th className="text-left p-2">Description</th>
                     <th className="w-20 p-2">Qty</th>
                     <th className="w-24 p-2">Price</th>
+                    <th className="w-20 p-2">Tax %</th>
+                    <th className="w-20 p-2">Disc %</th>
                     <th className="w-24 p-2">Amount</th>
                     <th className="w-10 p-2"></th>
                   </tr>
@@ -801,6 +815,26 @@ export default function PurchaseBillFormSplit({
                           onChange={(e) => updateItemPrice(parseFloat(e.target.value), index)}
                           min={0}
                           step={0.01}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          type="number"
+                          value={item.taxRate ?? 0}
+                          onChange={(e) => updateItemTaxRate(parseFloat(e.target.value), index)}
+                          min={0}
+                          max={100}
+                          step={0.1}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          type="number"
+                          value={item.discount ?? 0}
+                          onChange={(e) => updateItemDiscount(parseFloat(e.target.value), index)}
+                          min={0}
+                          max={100}
+                          step={0.1}
                         />
                       </td>
                       <td className="p-2 text-right">
