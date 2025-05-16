@@ -100,13 +100,13 @@ export default function PurchaseBillFormSplit({
     resolver: zodResolver(purchaseBillSchema),
     defaultValues: editingBill ? {
       // Pre-fill with existing bill data when editing
-      vendorId: editingBill.vendorId || 0,
+      vendorId: editingBill.contactId || 0,
       accountId: editingBill.accountId || 0,
-      billNumber: editingBill.metadata?.billNumber || generateBillNumber(),
+      billNumber: editingBill.documentNumber || generateBillNumber(),
       billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
       dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       status: editingBill.status || "draft",
-      items: editingBill.items?.map(item => ({
+      items: Array.isArray(editingBill.items) ? editingBill.items.map(item => ({
         productId: item.productId || 0,
         description: item.description || "",
         quantity: item.quantity || 1,
@@ -114,15 +114,15 @@ export default function PurchaseBillFormSplit({
         taxRate: item.taxRate || 0,
         discount: item.discount || 0,
         amount: (item.amount || 0) / 100 // Convert from cents to dollars
-      })) || [],
+      })) : [],
       subtotal: (editingBill.amount / 100) || 0, // Convert from cents to dollars
       taxAmount: 0, // We'll calculate this
       discountAmount: 0, // We'll calculate this
       totalAmount: (editingBill.amount / 100) || 0, // Convert from cents to dollars
-      paymentMade: 0, // We'll calculate this
+      paymentMade: (editingBill.paymentReceived || 0) / 100, // Convert from cents to dollars
       notes: editingBill.notes || "",
       termsAndConditions: "Payment is due within 30 days of the bill date.",
-      vendorNotes: editingBill.vendorNotes || "",
+      vendorNotes: editingBill.description || "",
     } : {
       // Default values for new bill
       vendorId: 0,
@@ -324,12 +324,12 @@ export default function PurchaseBillFormSplit({
       }
     },
     onSuccess: (data: Transaction) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       toast({
         title: "Success",
-        description: "Purchase bill has been saved successfully.",
+        description: editingBill ? "Purchase bill has been updated successfully." : "Purchase bill has been created successfully.",
       });
       
-      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       onSave(data);
     },
     onError: (error: Error) => {

@@ -121,8 +121,12 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                   variant="outline" 
                   size="sm" 
                   onClick={() => {
+                    // When Edit is clicked, we switch to edit mode with the current bill
                     setEditingBill(selectedBill);
                     setIsCreatingNew(true);
+                    
+                    // Important: This is needed to show the edit form
+                    setSelectedBill(null);
                   }}
                 >
                   <span className="mr-1">✏️</span> Edit
