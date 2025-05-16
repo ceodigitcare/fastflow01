@@ -141,8 +141,7 @@ export default function Finances() {
         </Button>
       </div>
       
-      {/* Financial Insight Bubble */}
-      <FinancialInsightBubble />
+      {/* Financial Insight Bubble will be added inside the Overview tab */}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <Card>
@@ -228,7 +227,10 @@ export default function Finances() {
           <TabsTrigger value="user">User</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="overview" className="mt-6">
+        <TabsContent value="overview" className="mt-6 relative">
+          {/* Financial Insight Bubble - only shown in Overview tab */}
+          <FinancialInsightBubble />
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2">
               <CardHeader>

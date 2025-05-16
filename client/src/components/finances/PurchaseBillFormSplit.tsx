@@ -4,12 +4,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { format } from "date-fns";
-import { Transaction, User, Account, Product } from "@shared/schema";
+import { Transaction, User, Account, Product, InsertUser } from "@shared/schema";
 import { purchaseBillSchema, PurchaseBill, PurchaseBillItem } from "@/lib/validation";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar as CalendarIcon, X, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, X, Plus, Save, UserCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,8 +48,9 @@ export default function PurchaseBillFormSplit({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // Local state for line items
+  // Local state for line items and dialogs
   const [billItems, setBillItems] = useState<PurchaseBillItem[]>([]);
+  const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
   
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
@@ -282,7 +291,19 @@ export default function PurchaseBillFormSplit({
             name="vendorId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Vendor</FormLabel>
+                <div className="flex justify-between items-center">
+                  <FormLabel>Vendor</FormLabel>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setAddVendorDialogOpen(true)}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Add Vendor
+                  </Button>
+                </div>
                 <Select 
                   onValueChange={(value) => field.onChange(parseInt(value))}
                   value={field.value.toString()}
@@ -299,6 +320,13 @@ export default function PurchaseBillFormSplit({
                       vendors.map((vendor) => (
                         <SelectItem key={vendor.id} value={vendor.id.toString()}>
                           {vendor.name}
+                          {vendor.balance !== null && vendor.balance !== 0 && (
+                            <span className={`ml-2 text-xs ${vendor.balance > 0 ? 'text-green-500' : 'text-amber-500'}`}>
+                              {vendor.balance > 0 
+                                ? `(Advance: ${formatCurrency(vendor.balance / 100)})` 
+                                : `(Due: ${formatCurrency(Math.abs(vendor.balance) / 100)})`}
+                            </span>
+                          )}
                         </SelectItem>
                       ))
                     ) : (

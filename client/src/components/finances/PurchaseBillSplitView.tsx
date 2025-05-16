@@ -279,7 +279,14 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1"
           />
-          <Button variant="outline" onClick={() => setIsCreatingNew(true)}>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setSelectedBill(null);
+              setIsCreatingNew(true);
+            }}
+            title="Create New Purchase Bill"
+          >
             <PlusCircle className="h-4 w-4" />
           </Button>
         </div>
