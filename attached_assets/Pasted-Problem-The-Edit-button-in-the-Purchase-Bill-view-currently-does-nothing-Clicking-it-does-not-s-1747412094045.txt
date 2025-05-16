@@ -1,0 +1,58 @@
+Problem:
+The "Edit" button in the Purchase Bill view currently does nothing. Clicking it does not switch the interface into an editable state, and none of the bill fields become changeable. This defeats the purpose of having an edit feature and limits users to only viewing or cloning bills.
+Objective:
+Implement a fully functional Edit Mode for Purchase Bills.
+Frontend (React):
+When the "Edit" button is clicked from a purchase bill view:
+
+
+The view should seamlessly switch into edit mode (no navigation or route change needed).
+
+
+All previously displayed fields (such as Vendor, Items, Quantity, Unit Price, Notes, etc.) should become editable form fields.
+
+
+Maintain the same layout and structure — just make it editable.
+
+
+Include "Save Changes" and "Cancel" buttons at the bottom:
+
+
+"Save Changes" will trigger the update.
+
+
+"Cancel" will revert to the original view mode without saving changes.
+
+
+Ensure any validations (e.g., required fields, number formats) are also applied in edit mode.
+
+
+Backend (Node.js / Express):
+Implement or verify an endpoint such as PUT /purchase-bill/:id to:
+
+
+Accept updated data.
+
+
+Validate and sanitize input.
+
+
+Update the existing purchase bill record in the database, not create a new one.
+
+
+UX Considerations:
+In edit mode, keep the context and visual structure consistent with the view mode for familiarity.
+
+
+While editing, temporarily disable actions like Clone or Delete to prevent user confusion or conflicting states.
+
+
+If the vendor is changed during editing, the system should still show the correct current balance (as already implemented).
+
+
+Optional Enhancement:
+If edit mode is implemented using component state (e.g., isEditing), consider smooth transitions (like fade or slide animations) to visually indicate switching modes.
+
+
+Summary:
+The Edit button must convert the bill view into an inline editable form, preserve the existing bill layout, and allow users to update the bill directly — not clone it. The update should persist changes to the database using the proper update endpoint.
