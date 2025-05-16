@@ -9,6 +9,7 @@ import TransactionForm from "@/components/finances/TransactionForm";
 import SalesInvoiceList from "@/components/finances/SalesInvoiceList";
 import SalesInvoiceForm from "@/components/finances/SalesInvoiceForm";
 import SalesInvoiceSplitView from "@/components/finances/SalesInvoiceSplitView";
+import PurchaseBillSplitView from "@/components/finances/PurchaseBillSplitView";
 import { InvoicePrintDialog } from "@/components/finances/InvoicePrint";
 import UsersPanel from "@/components/finances/UsersPanel";
 import FinancialInsightBubble from "@/components/finances/FinancialInsightBubble";
@@ -371,15 +372,14 @@ export default function Finances() {
         </TabsContent>
 
         <TabsContent value="purchase-bill" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Purchase Bill</CardTitle>
-              <CardDescription>Manage your purchase bills</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Purchase Bill feature coming soon.</p>
-            </CardContent>
-          </Card>
+          <PurchaseBillSplitView 
+            businessData={{
+              name: "My Business",
+              email: "business@example.com",
+              phone: "+1 (555) 123-4567",
+              address: "123 Business St, Demo City, 12345"
+            }}
+          />
         </TabsContent>
         
         <TabsContent value="accounts" className="mt-6">

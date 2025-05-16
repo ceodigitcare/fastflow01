@@ -146,6 +146,8 @@ export function BillPrintDialog({
   const [isPrinting, setIsPrinting] = useState(false);
   
   const handlePrint = useReactToPrint({
+    documentTitle: "Purchase Bill",
+    onPrintError: (error) => console.error("Print failed", error),
     content: () => componentRef.current,
     onBeforeGetContent: () => {
       setIsPrinting(true);
