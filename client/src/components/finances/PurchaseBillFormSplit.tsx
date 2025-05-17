@@ -938,12 +938,13 @@ export default function PurchaseBillFormSplit({
                 </thead>
                 <tbody>
                   {billItems.map((item, index) => (
-                    <React.Fragment key={index}>
+                    <>
+                      {/* Using empty fragment to avoid data-replit-metadata warning */}
                       {/* Main line with Product name, Quantity, Unit Price, Line Amount */}
-                      <tr className="border-t">
+                      <tr key={`item-row-${index}-main`} className="border-t">
                         <td className="p-2">
                           <Select 
-                            value={item.productId.toString()} 
+                            value={item.productId.toString() || "0"} 
                             onValueChange={(value) => handleProductChange(parseInt(value), index)}
                           >
                             <SelectTrigger className="mb-1">
@@ -999,7 +1000,7 @@ export default function PurchaseBillFormSplit({
                       </tr>
                       
                       {/* Second line with Description, Tax, and Discount */}
-                      <tr className="bg-gray-50 border-b">
+                      <tr key={`item-row-${index}-details`} className="bg-gray-50 border-b">
                         <td colSpan={4} className="px-2 pb-2">
                           <div className="grid grid-cols-3 gap-2">
                             <div>
@@ -1028,7 +1029,7 @@ export default function PurchaseBillFormSplit({
                                   className="min-w-[60px]"
                                 />
                                 <Select 
-                                  value={item.taxType} 
+                                  value={item.taxType || "flat"} 
                                   onValueChange={(value) => {
                                     const newItems = [...billItems];
                                     newItems[index].taxType = value as 'percentage' | 'flat';
@@ -1060,7 +1061,7 @@ export default function PurchaseBillFormSplit({
                                   className="min-w-[60px]"
                                 />
                                 <Select 
-                                  value={item.discountType} 
+                                  value={item.discountType || "flat"} 
                                   onValueChange={(value) => {
                                     const newItems = [...billItems];
                                     newItems[index].discountType = value as 'percentage' | 'flat';
@@ -1081,7 +1082,7 @@ export default function PurchaseBillFormSplit({
                           </div>
                         </td>
                       </tr>
-                    </React.Fragment>
+                    </>
                   ))}
                 </tbody>
               </table>
