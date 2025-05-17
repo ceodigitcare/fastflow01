@@ -44,7 +44,16 @@ export default function ChatbotSettings() {
   
   useEffect(() => {
     if (business?.chatbotSettings) {
-      setSettings(business.chatbotSettings);
+      // Ensure all properties have values to prevent controlled/uncontrolled input warnings
+      const safeSettings = {
+        name: business.chatbotSettings.name || "ShopAssist",
+        welcomeMessage: business.chatbotSettings.welcomeMessage || "👋 Hi there! I'm ShopAssist, your AI shopping assistant. How can I help you today?",
+        enableRecommendations: business.chatbotSettings.enableRecommendations ?? true,
+        allowOrderCreation: business.chatbotSettings.allowOrderCreation ?? true,
+        enableOrderTracking: business.chatbotSettings.enableOrderTracking ?? true,
+        widgetPosition: business.chatbotSettings.widgetPosition || "bottomRight",
+      };
+      setSettings(safeSettings);
     }
   }, [business]);
   
