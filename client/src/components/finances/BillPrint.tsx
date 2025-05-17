@@ -68,8 +68,8 @@ function BillPrintContent({ bill, businessData }: BillPrintProps) {
                 <div className="font-medium">{item.description}</div>
               </td>
               <td className="py-2 text-center">{item.quantity}</td>
-              <td className="py-2 text-right">{formatCurrency(item.unitPrice)}</td>
-              <td className="py-2 text-right font-medium">{formatCurrency(item.amount)}</td>
+              <td className="py-2 text-right">{formatCurrency(item.unitPrice / 100)}</td>
+              <td className="py-2 text-right font-medium">{formatCurrency(item.amount / 100)}</td>
             </tr>
           ))}
         </tbody>
@@ -83,7 +83,7 @@ function BillPrintContent({ bill, businessData }: BillPrintProps) {
             <span>
               {formatCurrency(
                 Array.isArray(bill.items) 
-                  ? bill.items.reduce((sum: number, item: any) => sum + item.amount, 0) 
+                  ? bill.items.reduce((sum: number, item: any) => sum + (item.amount / 100), 0) 
                   : 0
               )}
             </span>
