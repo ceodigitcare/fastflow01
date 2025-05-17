@@ -147,7 +147,7 @@ export const purchaseBillSchema = z.object({
   taxAmount: z.number().default(0),
   discountAmount: z.number().default(0), // Line item discounts
   totalDiscount: z.number().default(0), // Total discount amount
-  totalDiscountType: z.enum(["percentage", "flat"]).default("percentage"), // Total discount type (% or flat)
+  totalDiscountType: z.enum(["percentage", "flat"]).default("flat"), // Total discount type (% or flat) - default to flat amount
   totalAmount: z.number().min(0.01, "Total amount must be greater than 0"),
   paymentMade: z.number().min(0, "Payment amount cannot be negative").optional(),
   notes: z.string().optional(),

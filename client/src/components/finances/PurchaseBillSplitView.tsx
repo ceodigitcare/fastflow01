@@ -210,8 +210,8 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-center">{item.quantity}</td>
-                        <td className="px-4 py-3 text-sm text-right">{formatCurrency(item.unitPrice)}</td>
-                        <td className="px-4 py-3 text-sm text-right font-medium">{formatCurrency(item.amount)}</td>
+                        <td className="px-4 py-3 text-sm text-right">{formatCurrency(item.unitPrice / 100)}</td>
+                        <td className="px-4 py-3 text-sm text-right font-medium">{formatCurrency(item.amount / 100)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -229,7 +229,7 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                     {formatCurrency(
                       Array.isArray(selectedBill.items) 
                         ? selectedBill.items.reduce((sum: number, item: any) => 
-                            sum + (item.quantity * item.unitPrice), 0) 
+                            sum + (item.quantity * (item.unitPrice / 100)), 0) 
                         : 0
                     )}
                   </span>
@@ -247,18 +247,18 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                           if (item.taxRate <= 0) return sum;
                           
                           if (item.taxType === 'percentage') {
-                            const subtotal = item.quantity * item.unitPrice;
+                            const subtotal = item.quantity * (item.unitPrice / 100);
                             // For percentage, apply discount first if applicable
                             let discountAmount = 0;
                             if (item.discountType === 'percentage') {
                               discountAmount = subtotal * (item.discount / 100);
                             } else {
-                              discountAmount = Math.min(item.discount, subtotal);
+                              discountAmount = Math.min((item.discount / 100), subtotal);
                             }
                             return sum + ((subtotal - discountAmount) * (item.taxRate / 100));
                           } else {
-                            // For flat tax, use the exact amount
-                            return sum + item.taxRate;
+                            // For flat tax, use the exact amount (converted from cents)
+                            return sum + (item.taxRate / 100);
                           }
                         }, 0)
                       )}
@@ -277,11 +277,11 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                         selectedBill.items.reduce((sum: number, item: any) => {
                           if (item.discount <= 0) return sum;
                           
-                          const subtotal = item.quantity * item.unitPrice;
+                          const subtotal = item.quantity * (item.unitPrice / 100);
                           if (item.discountType === 'percentage') {
                             return sum + (subtotal * (item.discount / 100));
                           } else {
-                            return sum + Math.min(item.discount, subtotal);
+                            return sum + Math.min((item.discount / 100), subtotal);
                           }
                         }, 0)
                       )}
