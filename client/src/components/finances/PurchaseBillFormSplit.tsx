@@ -159,6 +159,8 @@ export default function PurchaseBillFormSplit({
       subtotal: 0,
       taxAmount: 0,
       discountAmount: 0,
+      totalDiscount: 0,
+      totalDiscountType: "flat", // Set to flat by default
       totalAmount: 0,
       paymentMade: 0,
       notes: "",
@@ -1286,6 +1288,7 @@ export default function PurchaseBillFormSplit({
                     />
                     <Select 
                       value={form.watch('totalDiscountType')} 
+                      defaultValue="flat"
                       onValueChange={(value) => {
                         form.setValue('totalDiscountType', value as 'percentage' | 'flat');
                         updateTotalsWithTotalDiscount();
@@ -1297,8 +1300,8 @@ export default function PurchaseBillFormSplit({
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="percentage">%</SelectItem>
-                        <SelectItem value="flat">$</SelectItem>
+                        <SelectItem value="flat">Flat ($)</SelectItem>
+                        <SelectItem value="percentage">Percentage (%)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
