@@ -266,11 +266,11 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                   </div>
                 )}
                 
-                {/* Discount Amount - Show only if discount exists */}
+                {/* Item Discount Amount - Show only if item discounts exist */}
                 {Array.isArray(selectedBill.items) && selectedBill.items.some((item: any) => item.discount > 0) && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">
-                      Discount{selectedBill.items.every((item: any) => item.discountType === 'percentage') ? ' (%)' : ''}:
+                      Item Discount{selectedBill.items.every((item: any) => item.discountType === 'percentage') ? ' (%)' : ''}:
                     </span>
                     <span className="font-medium text-red-500">
                       -{formatCurrency(
@@ -284,6 +284,22 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                             return sum + Math.min(item.discount, subtotal);
                           }
                         }, 0)
+                      )}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Total Discount - Show only if total discount exists */}
+                {selectedBill.totalDiscount > 0 && (
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="text-gray-600">
+                      Total Discount{selectedBill.totalDiscountType === 'percentage' ? ` (${selectedBill.totalDiscount}%)` : ''}:
+                    </span>
+                    <span className="font-medium text-red-500">
+                      -{formatCurrency(
+                        selectedBill.totalDiscountType === 'percentage'
+                          ? ((selectedBill.amount / 100) * selectedBill.totalDiscount / 100)
+                          : selectedBill.totalDiscount
                       )}
                     </span>
                   </div>
