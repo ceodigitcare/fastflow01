@@ -742,10 +742,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update the transaction with new data
       console.log("Updating transaction with data:", JSON.stringify(req.body, null, 2));
+      
+      // Ensure date is properly formatted as a Date object for database compatibility
+      let transactionData = { ...req.body };
+      
+      // Convert string date to Date object if needed
+      if (typeof transactionData.date === 'string') {
+        transactionData.date = new Date(transactionData.date);
+      }
+      
+      // Handle items array - ensure all numeric values are properly formatted
+      if (Array.isArray(transactionData.items)) {
+        transactionData.items = transactionData.items.map(item => ({
+          ...item,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          taxRate: Number(item.taxRate || 0),
+          discount: Number(item.discount || 0),
+          amount: Number(item.amount)
+        }));
+      }
+      
       const parsedData = {
-        ...req.body,
+        ...transactionData,
         businessId,
-        id: transactionId
+        id: transactionId,
+        // Add any other required default values
+        paymentReceived: transactionData.paymentReceived !== undefined ? Number(transactionData.paymentReceived) : 0,
+        amount: Number(transactionData.amount)
       };
       
       // Parse the transaction data
@@ -759,7 +783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Error updating transaction:", error);
-      res.status(500).json({ message: "Error updating transaction" });
+      res.status(500).json({ message: "Failed to update transaction: " + (error instanceof Error ? error.message : String(error)) });
     }
   });
   
@@ -783,15 +807,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access to this transaction" });
       }
       
+      // Ensure date is properly handled
+      let transactionData = { ...req.body };
+      
+      // Convert string date to Date object if needed
+      if (typeof transactionData.date === 'string') {
+        transactionData.date = new Date(transactionData.date);
+      }
+      
+      // Handle items array - ensure all numeric values are properly formatted
+      if (Array.isArray(transactionData.items)) {
+        transactionData.items = transactionData.items.map(item => ({
+          ...item,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          taxRate: Number(item.taxRate || 0),
+          discount: Number(item.discount || 0),
+          amount: Number(item.amount)
+        }));
+      }
+      
       // Combine the ID with the request body to create a complete transaction object
       const updatedTransaction = await storage.updateTransaction({
-        ...req.body,
-        id: transactionId
+        ...transactionData,
+        businessId,
+        id: transactionId,
+        paymentReceived: transactionData.paymentReceived !== undefined ? Number(transactionData.paymentReceived) : 0,
+        amount: Number(transactionData.amount)
       });
-      res.json(updatedTransaction);
+      
+      if (updatedTransaction) {
+        res.json(updatedTransaction);
+      } else {
+        res.status(500).json({ message: "Failed to update transaction" });
+      }
     } catch (error) {
       console.error("Error updating transaction:", error);
-      res.status(500).json({ message: "Failed to update transaction" });
+      res.status(500).json({ message: "Failed to update transaction: " + (error instanceof Error ? error.message : String(error)) });
     }
   });
 
