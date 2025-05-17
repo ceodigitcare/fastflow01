@@ -967,8 +967,8 @@ export default function PurchaseBillFormSplit({
                         <td className="p-2">
                           <Input
                             type="number"
-                            value={item.quantity}
-                            onChange={(e) => updateItemQuantity(parseFloat(e.target.value), index)}
+                            value={item.quantity || 1} // Ensure it's never undefined
+                            onChange={(e) => updateItemQuantity(parseFloat(e.target.value) || 1, index)}
                             min={1}
                             step={1}
                           />
@@ -976,8 +976,8 @@ export default function PurchaseBillFormSplit({
                         <td className="p-2">
                           <Input
                             type="number"
-                            value={item.unitPrice}
-                            onChange={(e) => updateItemPrice(parseFloat(e.target.value), index)}
+                            value={item.unitPrice || 0} // Ensure it's never undefined
+                            onChange={(e) => updateItemPrice(parseFloat(e.target.value) || 0, index)}
                             min={0}
                             step={0.01}
                           />
@@ -1005,7 +1005,7 @@ export default function PurchaseBillFormSplit({
                             <div>
                               <label className="text-xs text-gray-500 mb-1 block">Description</label>
                               <Input
-                                value={item.description}
+                                value={item.description || ""} 
                                 onChange={(e) => {
                                   const newItems = [...billItems];
                                   newItems[index].description = e.target.value;
@@ -1021,7 +1021,7 @@ export default function PurchaseBillFormSplit({
                                 <Input
                                   type="number"
                                   value={item.taxRate ?? 0}
-                                  onChange={(e) => updateItemTaxRate(parseFloat(e.target.value), index)}
+                                  onChange={(e) => updateItemTaxRate(parseFloat(e.target.value) || 0, index)}
                                   min={0}
                                   max={item.taxType === 'percentage' ? 100 : undefined}
                                   step={0.1}

@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Transaction } from "@shared/schema";
 import { useReactToPrint } from "react-to-print";
 import { useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Printer, FileText, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 interface BillPrintProps {
   bill: Transaction | null;
@@ -148,7 +150,7 @@ export function BillPrintDialog({
   const handlePrint = useReactToPrint({
     documentTitle: "Purchase Bill",
     onPrintError: (error) => console.error("Print failed", error),
-    content: () => componentRef.current,
+    contentRef: componentRef,
     onBeforeGetContent: () => {
       setIsPrinting(true);
       return Promise.resolve();
@@ -158,17 +160,70 @@ export function BillPrintDialog({
     },
   });
   
-  const handleShare = () => {
-    // Share functionality could be implemented here
-    // For now, we'll just show a message
-    alert("Share functionality is coming soon!");
+  const handleShare = async () => {
+    try {
+      // Create a unique URL for this bill - modify as needed for your app
+      const shareText = `Purchase Bill #${bill?.documentNumber} for ${bill?.contactName}`;
+      const shareData = {
+        title: 'Purchase Bill',
+        text: shareText,
+        // This would be a proper URL in a production app
+        // url: window.location.origin + '/bills/' + bill?.id,
+      };
+      
+      if (navigator.share && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback for browsers without Web Share API
+        navigator.clipboard.writeText(shareText);
+        alert("Bill information copied to clipboard!");
+      }
+    } catch (error) {
+      console.error("Error sharing the bill:", error);
+      alert("Could not share the bill. Please try again.");
+    }
+  };
+  
+  const handleDownloadPDF = async () => {
+    if (!componentRef.current) return;
+    
+    try {
+      const printElement = componentRef.current;
+      const canvas = await html2canvas(printElement, {
+        scale: 2, // Higher quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#FFFFFF'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for PDF
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.save(`Purchase_Bill_${bill?.documentNumber || 'document'}.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
+    }
   };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col" aria-describedby="bill-print-description">
         <DialogHeader>
           <DialogTitle>Print Purchase Bill</DialogTitle>
+          <DialogDescription id="bill-print-description">
+            Print, share, or download this purchase bill as a PDF.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="flex space-x-2 mb-4">
@@ -180,7 +235,7 @@ export function BillPrintDialog({
             <Share2 className="mr-2 h-4 w-4" />
             Share
           </Button>
-          <Button variant="outline" className="flex items-center ml-auto">
+          <Button variant="outline" onClick={handleDownloadPDF} className="flex items-center ml-auto">
             <FileText className="mr-2 h-4 w-4" />
             Download PDF
           </Button>
