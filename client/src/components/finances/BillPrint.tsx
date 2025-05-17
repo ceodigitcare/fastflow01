@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Transaction } from "@shared/schema";
-import { useReactToPrint } from "react-to-print";
+// Removed the problematic import
 import { useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -147,18 +147,59 @@ export function BillPrintDialog({
   const componentRef = useRef<HTMLDivElement>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   
-  const handlePrint = useReactToPrint({
-    documentTitle: "Purchase Bill",
-    onPrintError: (error) => console.error("Print failed", error),
-    contentRef: componentRef,
-    onBeforeGetContent: () => {
-      setIsPrinting(true);
-      return Promise.resolve();
-    },
-    onAfterPrint: () => {
-      setIsPrinting(false);
-    },
-  });
+  // Create a simple function to handle printing rather than deal with type issues
+  const handlePrint = () => {
+    if (!componentRef.current) return;
+    
+    setIsPrinting(true);
+    
+    const printContent = () => {
+      try {
+        const printableContent = componentRef.current;
+        if (!printableContent) return;
+        
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+          console.error("Could not open print window");
+          setIsPrinting(false);
+          return;
+        }
+        
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Purchase Bill</title>
+              <style>
+                body { font-family: Arial, sans-serif; }
+                .bill-container { padding: 20px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                th { background-color: #f2f2f2; }
+              </style>
+            </head>
+            <body>
+              <div class="bill-container">
+                ${printableContent.innerHTML}
+              </div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.onafterprint = () => {
+          printWindow.close();
+          setIsPrinting(false);
+        };
+      } catch (error) {
+        console.error("Print failed:", error);
+        setIsPrinting(false);
+      }
+    };
+    
+    // Small delay to ensure the document is ready
+    setTimeout(printContent, 100);
+  };
   
   const handleShare = async () => {
     try {

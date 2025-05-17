@@ -1053,7 +1053,7 @@ export default function PurchaseBillFormSplit({
                                 <Input
                                   type="number"
                                   value={item.discount ?? 0}
-                                  onChange={(e) => updateItemDiscount(parseFloat(e.target.value), index)}
+                                  onChange={(e) => updateItemDiscount(parseFloat(e.target.value) || 0, index)}
                                   min={0}
                                   max={item.discountType === 'percentage' ? 100 : undefined}
                                   step={0.1}
