@@ -298,8 +298,11 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                     <span className="font-medium text-red-500">
                       -{formatCurrency(
                         selectedBill.totalDiscountType === 'percentage'
-                          ? ((selectedBill.amount / 100) * selectedBill.totalDiscount / 100)
-                          : selectedBill.totalDiscount
+                          ? ((Array.isArray(selectedBill.items) 
+                              ? selectedBill.items.reduce((sum: number, item: any) => 
+                                  sum + (item.quantity * (item.unitPrice / 100)), 0) 
+                              : 0) * (selectedBill.totalDiscount / 100))
+                          : (selectedBill.totalDiscount / 100)
                       )}
                     </span>
                   </div>
