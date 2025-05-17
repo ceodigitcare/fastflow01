@@ -856,7 +856,8 @@ export default function PurchaseBillFormSplit({
               </Button>
             </div>
             
-            <div className="border rounded-md overflow-hidden">
+            {/* Desktop Table View */}
+            <div className="hidden md:block border rounded-md overflow-hidden">
               <table className="w-full">
                 <thead className="bg-muted">
                   <tr>
@@ -864,8 +865,8 @@ export default function PurchaseBillFormSplit({
                     <th className="text-left p-2">Description</th>
                     <th className="w-20 p-2">Qty</th>
                     <th className="w-24 p-2">Price</th>
-                    <th className="w-20 p-2">Tax %</th>
-                    <th className="w-20 p-2">Disc %</th>
+                    <th className="w-20 p-2">Tax</th>
+                    <th className="w-20 p-2">Disc</th>
                     <th className="w-24 p-2">Amount</th>
                     <th className="w-10 p-2"></th>
                   </tr>
@@ -1002,6 +1003,161 @@ export default function PurchaseBillFormSplit({
                   ))}
                 </tbody>
               </table>
+            </div>
+            
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+              {billItems.map((item, index) => (
+                <div key={index} className="border rounded-md p-4 bg-card">
+                  {/* Product and Remove button */}
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="w-5/6">
+                      <label className="text-xs text-gray-500 mb-1 block">Product</label>
+                      <Select 
+                        value={item.productId.toString()} 
+                        onValueChange={(value) => handleProductChange(parseInt(value), index)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select product" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {productsLoading ? (
+                            <SelectItem value="loading" disabled>Loading products...</SelectItem>
+                          ) : products && products.length > 0 ? (
+                            products.map((product) => (
+                              <SelectItem key={product.id} value={product.id.toString()}>
+                                {product.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="none" disabled>No products found</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeItem(index)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Description */}
+                  <div className="mb-3">
+                    <label className="text-xs text-gray-500 mb-1 block">Description</label>
+                    <Input
+                      value={item.description}
+                      onChange={(e) => {
+                        const newItems = [...billItems];
+                        newItems[index].description = e.target.value;
+                        setBillItems(newItems);
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Quantity and Price */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Quantity</label>
+                      <Input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => updateItemQuantity(parseFloat(e.target.value), index)}
+                        min={1}
+                        step={1}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Unit Price</label>
+                      <Input
+                        type="number"
+                        value={item.unitPrice}
+                        onChange={(e) => updateItemPrice(parseFloat(e.target.value), index)}
+                        min={0}
+                        step={0.01}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Tax and Discount */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Tax</label>
+                      <div className="flex items-center space-x-1">
+                        <Input
+                          type="number"
+                          value={item.taxRate ?? 0}
+                          onChange={(e) => updateItemTaxRate(parseFloat(e.target.value), index)}
+                          min={0}
+                          max={item.taxType === 'percentage' ? 100 : undefined}
+                          step={0.1}
+                          className="min-w-[60px]"
+                        />
+                        <Select 
+                          value={item.taxType} 
+                          onValueChange={(value) => {
+                            const newItems = [...billItems];
+                            newItems[index].taxType = value as 'percentage' | 'flat';
+                            setBillItems(newItems);
+                            updateTotals(newItems);
+                          }}
+                        >
+                          <SelectTrigger className="w-[60px] h-9">
+                            <SelectValue>{item.taxType === 'percentage' ? '%' : '$'}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="percentage">%</SelectItem>
+                            <SelectItem value="flat">$</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Discount</label>
+                      <div className="flex items-center space-x-1">
+                        <Input
+                          type="number"
+                          value={item.discount ?? 0}
+                          onChange={(e) => updateItemDiscount(parseFloat(e.target.value), index)}
+                          min={0}
+                          max={item.discountType === 'percentage' ? 100 : undefined}
+                          step={0.1}
+                          className="min-w-[60px]"
+                        />
+                        <Select 
+                          value={item.discountType} 
+                          onValueChange={(value) => {
+                            const newItems = [...billItems];
+                            newItems[index].discountType = value as 'percentage' | 'flat';
+                            setBillItems(newItems);
+                            updateTotals(newItems);
+                          }}
+                        >
+                          <SelectTrigger className="w-[60px] h-9">
+                            <SelectValue>{item.discountType === 'percentage' ? '%' : '$'}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="percentage">%</SelectItem>
+                            <SelectItem value="flat">$</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Amount */}
+                  <div className="flex justify-between items-center pt-2 border-t mt-2">
+                    <span className="font-medium">Line Total:</span>
+                    <span className="text-right font-semibold">
+                      {formatCurrency(item.amount)}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
           
