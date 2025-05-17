@@ -408,14 +408,54 @@ export default function PurchaseBillFormSplit({
     const roundedSubtotal = Math.round(subtotal * 100) / 100;
     const roundedTaxAmount = Math.round(taxAmount * 100) / 100;
     const roundedDiscountAmount = Math.round(discountAmount * 100) / 100;
-    const roundedTotalAmount = Math.round((roundedSubtotal + roundedTaxAmount - roundedDiscountAmount) * 100) / 100;
     
-    // Set the form values with updated calculations
+    // Set the form values with updated calculations for line items
     form.setValue('items', recalculatedItems);
     form.setValue('subtotal', roundedSubtotal);
     form.setValue('taxAmount', roundedTaxAmount);
     form.setValue('discountAmount', roundedDiscountAmount);
-    form.setValue('totalAmount', roundedTotalAmount);
+    
+    // After updating line item totals, apply the total discount
+    updateTotalsWithTotalDiscount();
+  };
+  
+  // Calculate the total discount amount based on the discount type and value
+  const calculateTotalDiscountAmount = (): number => {
+    const totalDiscount = form.watch('totalDiscount') || 0;
+    const totalDiscountType = form.watch('totalDiscountType');
+    const subtotal = form.watch('subtotal');
+    const itemDiscountAmount = form.watch('discountAmount') || 0;
+    const taxAmount = form.watch('taxAmount') || 0;
+    
+    // The base amount to apply the percentage discount to (subtotal - item discounts + tax)
+    const baseAmount = subtotal - itemDiscountAmount + taxAmount;
+    
+    if (totalDiscountType === 'percentage') {
+      // Calculate percentage discount based on the subtotal after item discounts and taxes
+      return (baseAmount * totalDiscount / 100);
+    } else {
+      // For flat amount, just return the value (capped at the baseAmount to prevent negative totals)
+      return Math.min(totalDiscount, baseAmount);
+    }
+  };
+  
+  // Update the final total amount considering both line item discounts and total discount
+  const updateTotalsWithTotalDiscount = () => {
+    const subtotal = form.watch('subtotal');
+    const itemDiscountAmount = form.watch('discountAmount') || 0;
+    const taxAmount = form.watch('taxAmount') || 0;
+    
+    // Calculate the total discount amount
+    const totalDiscountAmount = calculateTotalDiscountAmount();
+    
+    // Calculate the final total = subtotal - item discounts + tax - total discount
+    const finalTotal = Math.max(0, subtotal - itemDiscountAmount + taxAmount - totalDiscountAmount);
+    
+    // Round to 2 decimal places
+    const roundedFinalTotal = Math.round(finalTotal * 100) / 100;
+    
+    // Update the form value
+    form.setValue('totalAmount', roundedFinalTotal);
   };
   
   // Mutation for saving the purchase bill
@@ -1204,19 +1244,75 @@ export default function PurchaseBillFormSplit({
           
           {/* Totals */}
           <div className="flex justify-end">
-            <div className="w-64 space-y-2">
+            <div className="w-80 space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
                 <span className="font-medium">{formatCurrency(form.watch('subtotal'))}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Tax:</span>
-                <span>{formatCurrency(form.watch('taxAmount'))}</span>
+              
+              {/* Item Discounts Summary - Only show if there are item discounts */}
+              {form.watch('discountAmount') > 0 && (
+                <div className="flex justify-between">
+                  <span>Item Discounts:</span>
+                  <span className="text-red-500">-{formatCurrency(form.watch('discountAmount') || 0)}</span>
+                </div>
+              )}
+              
+              {/* Tax Summary - Only show if there are taxes */}
+              {form.watch('taxAmount') > 0 && (
+                <div className="flex justify-between">
+                  <span>Tax:</span>
+                  <span>{formatCurrency(form.watch('taxAmount'))}</span>
+                </div>
+              )}
+              
+              {/* Total Discount */}
+              <div className="border-t pt-2 pb-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium">Total Discount:</span>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      type="number"
+                      value={form.watch('totalDiscount')}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        form.setValue('totalDiscount', value);
+                        updateTotalsWithTotalDiscount();
+                      }}
+                      min={0}
+                      max={form.watch('totalDiscountType') === 'percentage' ? 100 : undefined}
+                      step={0.1}
+                      className="w-20 h-8 text-right"
+                    />
+                    <Select 
+                      value={form.watch('totalDiscountType')} 
+                      onValueChange={(value) => {
+                        form.setValue('totalDiscountType', value as 'percentage' | 'flat');
+                        updateTotalsWithTotalDiscount();
+                      }}
+                    >
+                      <SelectTrigger className="w-[60px] h-8">
+                        <SelectValue>
+                          {form.watch('totalDiscountType') === 'percentage' ? '%' : '$'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">%</SelectItem>
+                        <SelectItem value="flat">$</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {/* Display calculated total discount amount if percentage */}
+                {form.watch('totalDiscount') > 0 && (
+                  <div className="flex justify-between text-sm text-red-500">
+                    <span>Discount Amount:</span>
+                    <span>-{formatCurrency(calculateTotalDiscountAmount())}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span>Discount:</span>
-                <span>{formatCurrency(form.watch('discountAmount') || 0)}</span>
-              </div>
+              
               <div className="flex justify-between text-lg font-bold border-t pt-2">
                 <span>Total:</span>
                 <span>{formatCurrency(form.watch('totalAmount'))}</span>
