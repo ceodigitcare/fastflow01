@@ -222,24 +222,86 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
             {/* Bill Totals */}
             <div className="flex justify-end">
               <div className="w-64 space-y-2">
+                {/* Subtotal */}
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal:</span>
                   <span className="font-medium">
                     {formatCurrency(
                       Array.isArray(selectedBill.items) 
-                        ? selectedBill.items.reduce((sum: number, item: any) => sum + item.amount, 0) 
+                        ? selectedBill.items.reduce((sum: number, item: any) => 
+                            sum + (item.quantity * item.unitPrice), 0) 
                         : 0
                     )}
                   </span>
                 </div>
+                
+                {/* Tax Amount - Show only if tax exists */}
+                {Array.isArray(selectedBill.items) && selectedBill.items.some((item: any) => item.taxRate > 0) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">
+                      Tax{selectedBill.items.every((item: any) => item.taxType === 'percentage') ? ' (%)' : ''}:
+                    </span>
+                    <span className="font-medium">
+                      {formatCurrency(
+                        selectedBill.items.reduce((sum: number, item: any) => {
+                          if (item.taxRate <= 0) return sum;
+                          
+                          if (item.taxType === 'percentage') {
+                            const subtotal = item.quantity * item.unitPrice;
+                            // For percentage, apply discount first if applicable
+                            let discountAmount = 0;
+                            if (item.discountType === 'percentage') {
+                              discountAmount = subtotal * (item.discount / 100);
+                            } else {
+                              discountAmount = Math.min(item.discount, subtotal);
+                            }
+                            return sum + ((subtotal - discountAmount) * (item.taxRate / 100));
+                          } else {
+                            // For flat tax, use the exact amount
+                            return sum + item.taxRate;
+                          }
+                        }, 0)
+                      )}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Discount Amount - Show only if discount exists */}
+                {Array.isArray(selectedBill.items) && selectedBill.items.some((item: any) => item.discount > 0) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">
+                      Discount{selectedBill.items.every((item: any) => item.discountType === 'percentage') ? ' (%)' : ''}:
+                    </span>
+                    <span className="font-medium text-red-500">
+                      -{formatCurrency(
+                        selectedBill.items.reduce((sum: number, item: any) => {
+                          if (item.discount <= 0) return sum;
+                          
+                          const subtotal = item.quantity * item.unitPrice;
+                          if (item.discountType === 'percentage') {
+                            return sum + (subtotal * (item.discount / 100));
+                          } else {
+                            return sum + Math.min(item.discount, subtotal);
+                          }
+                        }, 0)
+                      )}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Total */}
                 <div className="flex justify-between border-t pt-2">
                   <span className="text-gray-600">Total:</span>
                   <span className="font-bold">{formatCurrency(selectedBill.amount / 100)}</span>
                 </div>
+                
+                {/* Payment Made */}
                 <div className="flex justify-between border-t pt-2">
                   <span className="text-gray-600">Payment Made:</span>
                   <span className="font-medium">{formatCurrency((selectedBill.paymentReceived || 0) / 100)}</span>
                 </div>
+                
+                {/* Balance Due - Only show if there's a balance */}
                 {(selectedBill.paymentReceived || 0) < selectedBill.amount && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Balance Due:</span>

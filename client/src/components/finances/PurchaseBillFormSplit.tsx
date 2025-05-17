@@ -231,6 +231,16 @@ export default function PurchaseBillFormSplit({
     setBillItems([...billItems, newItem]);
   };
   
+  // Helper function to ensure consistent amount formatting between edit and view modes
+  const ensureProperUnitConversion = (value: number, fromCents: boolean = false): number => {
+    // If the value is from cents (stored in DB), convert to dollars for display
+    if (fromCents && value > 0) {
+      return value / 100;
+    }
+    // If it's in dollars already, just return it
+    return value;
+  };
+  
   // Function to remove a line item
   const removeItem = (index: number) => {
     const newItems = [...billItems];
@@ -351,7 +361,8 @@ export default function PurchaseBillFormSplit({
         taxAmount = item.taxRate;
       }
       
-      const finalAmount = subtotal - discountAmount + taxAmount;
+      // Round to 2 decimal places to avoid floating point issues
+      const finalAmount = Math.round((subtotal - discountAmount + taxAmount) * 100) / 100;
       
       return {
         ...item,
@@ -393,12 +404,18 @@ export default function PurchaseBillFormSplit({
       }
     }, 0);
     
+    // Round all totals to 2 decimal places to avoid floating point issues
+    const roundedSubtotal = Math.round(subtotal * 100) / 100;
+    const roundedTaxAmount = Math.round(taxAmount * 100) / 100;
+    const roundedDiscountAmount = Math.round(discountAmount * 100) / 100;
+    const roundedTotalAmount = Math.round((roundedSubtotal + roundedTaxAmount - roundedDiscountAmount) * 100) / 100;
+    
     // Set the form values with updated calculations
     form.setValue('items', recalculatedItems);
-    form.setValue('subtotal', subtotal);
-    form.setValue('taxAmount', taxAmount);
-    form.setValue('discountAmount', discountAmount);
-    form.setValue('totalAmount', subtotal + taxAmount - discountAmount);
+    form.setValue('subtotal', roundedSubtotal);
+    form.setValue('taxAmount', roundedTaxAmount);
+    form.setValue('discountAmount', roundedDiscountAmount);
+    form.setValue('totalAmount', roundedTotalAmount);
   };
   
   // Mutation for saving the purchase bill
@@ -407,10 +424,13 @@ export default function PurchaseBillFormSplit({
       const vendor = vendors?.find(v => v.id === data.vendorId);
       
       // Format the data for the transaction endpoint - ensuring unit/price amounts are in cents
+      // First, round the total amount to 2 decimal places to ensure consistency
+      const roundedTotalAmount = Math.round(data.totalAmount * 100) / 100;
+      
       const transactionData: any = {
         type: "expense",
         accountId: data.accountId,
-        amount: Math.round(data.totalAmount * 100), // Convert to cents
+        amount: Math.round(roundedTotalAmount * 100), // Convert to cents after ensuring consistent decimal places
         date: data.billDate, // Use the bill date for the transaction date
         description: `Bill #${data.billNumber}`,
         category: "Purchases",
