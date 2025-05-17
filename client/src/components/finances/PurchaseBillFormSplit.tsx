@@ -67,6 +67,9 @@ export default function PurchaseBillFormSplit({
         unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
         taxRate: taxRateValue,
         discount: discountValue,
+        // Add type flags for tax and discount
+        taxType: 'percentage', // Default to percentage
+        discountType: 'percentage', // Default to percentage
         amount: (item.amount || 0) / 100 // Convert from cents to dollars
       };
     }) : []
@@ -219,6 +222,9 @@ export default function PurchaseBillFormSplit({
       unitPrice: 0,
       taxRate: 0,
       discount: 0,
+      // Add new fields
+      taxType: "percentage", 
+      discountType: "percentage",
       amount: 0
     };
     
@@ -818,24 +824,64 @@ export default function PurchaseBillFormSplit({
                         />
                       </td>
                       <td className="p-2">
-                        <Input
-                          type="number"
-                          value={item.taxRate ?? 0}
-                          onChange={(e) => updateItemTaxRate(parseFloat(e.target.value), index)}
-                          min={0}
-                          max={100}
-                          step={0.1}
-                        />
+                        <div className="flex items-center space-x-1">
+                          <Input
+                            type="number"
+                            value={item.taxRate ?? 0}
+                            onChange={(e) => updateItemTaxRate(parseFloat(e.target.value), index)}
+                            min={0}
+                            max={item.taxType === 'percentage' ? 100 : undefined}
+                            step={0.1}
+                            className="min-w-[60px]"
+                          />
+                          <Select 
+                            value={item.taxType} 
+                            onValueChange={(value) => {
+                              const newItems = [...billItems];
+                              newItems[index].taxType = value as 'percentage' | 'flat';
+                              setBillItems(newItems);
+                              updateTotals(newItems);
+                            }}
+                          >
+                            <SelectTrigger className="w-[70px] h-8">
+                              <SelectValue>{item.taxType === 'percentage' ? '%' : '$'}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percentage">%</SelectItem>
+                              <SelectItem value="flat">$</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </td>
                       <td className="p-2">
-                        <Input
-                          type="number"
-                          value={item.discount ?? 0}
-                          onChange={(e) => updateItemDiscount(parseFloat(e.target.value), index)}
-                          min={0}
-                          max={100}
-                          step={0.1}
-                        />
+                        <div className="flex items-center space-x-1">
+                          <Input
+                            type="number"
+                            value={item.discount ?? 0}
+                            onChange={(e) => updateItemDiscount(parseFloat(e.target.value), index)}
+                            min={0}
+                            max={item.discountType === 'percentage' ? 100 : undefined}
+                            step={0.1}
+                            className="min-w-[60px]"
+                          />
+                          <Select 
+                            value={item.discountType} 
+                            onValueChange={(value) => {
+                              const newItems = [...billItems];
+                              newItems[index].discountType = value as 'percentage' | 'flat';
+                              setBillItems(newItems);
+                              updateTotals(newItems);
+                            }}
+                          >
+                            <SelectTrigger className="w-[70px] h-8">
+                              <SelectValue>{item.discountType === 'percentage' ? '%' : '$'}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percentage">%</SelectItem>
+                              <SelectItem value="flat">$</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </td>
                       <td className="p-2 text-right">
                         {formatCurrency(item.amount)}

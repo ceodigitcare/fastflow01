@@ -130,6 +130,8 @@ export const purchaseBillItemSchema = z.object({
   unitPrice: z.number().min(0.01, "Unit price must be greater than 0"),
   taxRate: z.number().default(0),
   discount: z.number().default(0),
+  taxType: z.enum(["percentage", "flat"]).default("percentage"),
+  discountType: z.enum(["percentage", "flat"]).default("percentage"),
   amount: z.number().min(0.01, "Amount must be greater than 0")
 });
 
