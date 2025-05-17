@@ -1,0 +1,27 @@
+Warning: A component is changing a controlled input to be uncontrolled. This is likely caused by the value changing from a defined to undefined, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://reactjs.org/link/controlled-components%s 
+    at input
+    at _c (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/components/ui/input.tsx:20:11)
+    at div
+    at div
+    at _c9 (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/components/ui/card.tsx:20:11)
+    at ChatbotSettings (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/components/dashboard/ChatbotSettings.tsx:36:21)
+    at div
+    at div
+    at main
+    at div
+    at div
+    at MainLayout (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/components/layout/MainLayout.tsx:24:38)
+    at Dashboard (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/pages/Dashboard.tsx:30:30)
+    at Route (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=015cd83d:323:16)
+    at ProtectedRoute (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=015cd83d:379:17)
+    at Router
+    at Provider (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=015cd83d:38:15)
+    at TooltipProvider (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=015cd83d:64:5)
+    at AuthProvider (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/hooks/use-auth.tsx:32:32)
+    at QueryClientProvider (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=015cd83d:2805:3)
+    at App
+    at V (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/next-themes.js?v=015cd83d:44:25)
+    at J (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/next-themes.js?v=015cd83d:42:18)

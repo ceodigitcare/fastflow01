@@ -937,153 +937,154 @@ export default function PurchaseBillFormSplit({
                   </tr>
                 </thead>
                 <tbody>
-                  {billItems.map((item, index) => (
-                    <>
-                      {/* Using empty fragment to avoid data-replit-metadata warning */}
-                      {/* Main line with Product name, Quantity, Unit Price, Line Amount */}
-                      <tr key={`item-row-${index}-main`} className="border-t">
-                        <td className="p-2">
-                          <Select 
-                            value={item.productId.toString() || "0"} 
-                            onValueChange={(value) => handleProductChange(parseInt(value), index)}
-                          >
-                            <SelectTrigger className="mb-1">
-                              <SelectValue placeholder="Select product" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {productsLoading ? (
-                                <SelectItem value="loading" disabled>Loading products...</SelectItem>
-                              ) : products && products.length > 0 ? (
-                                products.map((product) => (
-                                  <SelectItem key={product.id} value={product.id.toString()}>
-                                    {product.name}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="none" disabled>No products found</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            type="number"
-                            value={item.quantity || 1} // Ensure it's never undefined
-                            onChange={(e) => updateItemQuantity(parseFloat(e.target.value) || 1, index)}
-                            min={1}
-                            step={1}
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            type="number"
-                            value={item.unitPrice || 0} // Ensure it's never undefined
-                            onChange={(e) => updateItemPrice(parseFloat(e.target.value) || 0, index)}
-                            min={0}
-                            step={0.01}
-                          />
-                        </td>
-                        <td className="p-2 text-right font-medium">
-                          {formatCurrency(item.amount)}
-                        </td>
-                        <td className="p-2 text-center" rowSpan={2}>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeItem(index)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                      
-                      {/* Second line with Description, Tax, and Discount */}
-                      <tr key={`item-row-${index}-details`} className="bg-gray-50 border-b">
-                        <td colSpan={4} className="px-2 pb-2">
-                          <div className="grid grid-cols-3 gap-2">
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block">Description</label>
-                              <Input
-                                value={item.description || ""} 
-                                onChange={(e) => {
-                                  const newItems = [...billItems];
-                                  newItems[index].description = e.target.value;
-                                  setBillItems(newItems);
-                                }}
-                                placeholder="Item description"
-                              />
-                            </div>
-                            
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block">Tax</label>
-                              <div className="flex items-center space-x-1">
+                  {billItems.map((item, index) => {
+                    return (
+                      <React.Fragment key={`item-${index}`}>
+                        {/* Main line with Product name, Quantity, Unit Price, Line Amount */}
+                        <tr className="border-t">
+                          <td className="p-2">
+                            <Select 
+                              value={item.productId?.toString() || "0"} 
+                              onValueChange={(value) => handleProductChange(parseInt(value), index)}
+                            >
+                              <SelectTrigger className="mb-1">
+                                <SelectValue placeholder="Select product" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {productsLoading ? (
+                                  <SelectItem value="loading" disabled>Loading products...</SelectItem>
+                                ) : products && products.length > 0 ? (
+                                  products.map((product) => (
+                                    <SelectItem key={product.id} value={product.id.toString()}>
+                                      {product.name}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <SelectItem value="none" disabled>No products found</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              type="number"
+                              value={item.quantity || 1} // Ensure it's never undefined
+                              onChange={(e) => updateItemQuantity(parseFloat(e.target.value) || 1, index)}
+                              min={1}
+                              step={1}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              type="number"
+                              value={item.unitPrice || 0} // Ensure it's never undefined
+                              onChange={(e) => updateItemPrice(parseFloat(e.target.value) || 0, index)}
+                              min={0}
+                              step={0.01}
+                            />
+                          </td>
+                          <td className="p-2 text-right font-medium">
+                            {formatCurrency(item.amount)}
+                          </td>
+                          <td className="p-2 text-center" rowSpan={2}>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeItem(index)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        {/* Second line with Description, Tax, and Discount */}
+                        <tr className="bg-gray-50 border-b">
+                          <td colSpan={4} className="px-2 pb-2">
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Description</label>
                                 <Input
-                                  type="number"
-                                  value={item.taxRate ?? 0}
-                                  onChange={(e) => updateItemTaxRate(parseFloat(e.target.value) || 0, index)}
-                                  min={0}
-                                  max={item.taxType === 'percentage' ? 100 : undefined}
-                                  step={0.1}
-                                  className="min-w-[60px]"
-                                />
-                                <Select 
-                                  value={item.taxType || "flat"} 
-                                  onValueChange={(value) => {
+                                  value={item.description || ""} 
+                                  onChange={(e) => {
                                     const newItems = [...billItems];
-                                    newItems[index].taxType = value as 'percentage' | 'flat';
+                                    newItems[index].description = e.target.value;
                                     setBillItems(newItems);
-                                    updateTotals(newItems);
                                   }}
-                                >
-                                  <SelectTrigger className="w-[70px] h-9">
-                                    <SelectValue>{item.taxType === 'percentage' ? '%' : '$'}</SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="percentage">%</SelectItem>
-                                    <SelectItem value="flat">$</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                  placeholder="Item description"
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Tax</label>
+                                <div className="flex items-center space-x-1">
+                                  <Input
+                                    type="number"
+                                    value={item.taxRate ?? 0}
+                                    onChange={(e) => updateItemTaxRate(parseFloat(e.target.value) || 0, index)}
+                                    min={0}
+                                    max={item.taxType === 'percentage' ? 100 : undefined}
+                                    step={0.1}
+                                    className="min-w-[60px]"
+                                  />
+                                  <Select 
+                                    value={item.taxType || "flat"} 
+                                    onValueChange={(value) => {
+                                      const newItems = [...billItems];
+                                      newItems[index].taxType = value as 'percentage' | 'flat';
+                                      setBillItems(newItems);
+                                      updateTotals(newItems);
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-[70px] h-9">
+                                      <SelectValue>{item.taxType === 'percentage' ? '%' : '$'}</SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="percentage">%</SelectItem>
+                                      <SelectItem value="flat">$</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Discount</label>
+                                <div className="flex items-center space-x-1">
+                                  <Input
+                                    type="number"
+                                    value={item.discount ?? 0}
+                                    onChange={(e) => updateItemDiscount(parseFloat(e.target.value) || 0, index)}
+                                    min={0}
+                                    max={item.discountType === 'percentage' ? 100 : undefined}
+                                    step={0.1}
+                                    className="min-w-[60px]"
+                                  />
+                                  <Select 
+                                    value={item.discountType || "flat"} 
+                                    onValueChange={(value) => {
+                                      const newItems = [...billItems];
+                                      newItems[index].discountType = value as 'percentage' | 'flat';
+                                      setBillItems(newItems);
+                                      updateTotals(newItems);
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-[70px] h-9">
+                                      <SelectValue>{item.discountType === 'percentage' ? '%' : '$'}</SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="percentage">%</SelectItem>
+                                      <SelectItem value="flat">$</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
                             </div>
-                            
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block">Discount</label>
-                              <div className="flex items-center space-x-1">
-                                <Input
-                                  type="number"
-                                  value={item.discount ?? 0}
-                                  onChange={(e) => updateItemDiscount(parseFloat(e.target.value) || 0, index)}
-                                  min={0}
-                                  max={item.discountType === 'percentage' ? 100 : undefined}
-                                  step={0.1}
-                                  className="min-w-[60px]"
-                                />
-                                <Select 
-                                  value={item.discountType || "flat"} 
-                                  onValueChange={(value) => {
-                                    const newItems = [...billItems];
-                                    newItems[index].discountType = value as 'percentage' | 'flat';
-                                    setBillItems(newItems);
-                                    updateTotals(newItems);
-                                  }}
-                                >
-                                  <SelectTrigger className="w-[70px] h-9">
-                                    <SelectValue>{item.discountType === 'percentage' ? '%' : '$'}</SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="percentage">%</SelectItem>
-                                    <SelectItem value="flat">$</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    </>
-                  ))}
+                          </td>
+                        </tr>
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
