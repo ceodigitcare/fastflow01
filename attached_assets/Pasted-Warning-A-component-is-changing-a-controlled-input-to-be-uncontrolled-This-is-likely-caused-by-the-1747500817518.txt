@@ -1,0 +1,40 @@
+Warning: A component is changing a controlled input to be uncontrolled. This is likely caused by the value changing from a defined to undefined, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://reactjs.org/link/controlled-components%s 
+    at input
+    at _c (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/components/ui/input.tsx:20:11)
+    at div
+    at div
+    at div
+    at div
+    at div
+    at form
+    at FormProvider (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-4BFJKWC4.js?v=015cd83d:102:11)
+    at PurchaseBillFormSplit (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/components/finances/PurchaseBillFormSplit.tsx?t=1747500690026:43:3)
+    at div
+    at div
+    at div
+    at PurchaseBillSplitView (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/components/finances/PurchaseBillSplitView.tsx?t=1747500690026:28:49)
+    at div
+    at https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AXMZZQ2X.js?v=015cd83d:42:13
+    at Presence (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-E4UC4BFD.js?v=015cd83d:24:11)
+    at https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=015cd83d:176:13
+    at _c5 (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/components/ui/tabs.tsx:72:12)
+    at div
+    at https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AXMZZQ2X.js?v=015cd83d:42:13
+    at Provider (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=015cd83d:38:15)
+    at https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=015cd83d:54:7
+    at main
+    at div
+    at div
+    at MainLayout (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/components/layout/MainLayout.tsx:24:38)
+    at Finances (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/pages/Finances.tsx?t=1747500690026:68:31)
+    at Route (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=015cd83d:323:16)
+    at ProtectedRoute (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=015cd83d:379:17)
+    at Router
+    at Provider (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=015cd83d:38:15)
+    at TooltipProvider (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=015cd83d:64:5)
+    at AuthProvider (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/src/hooks/use-auth.tsx:32:32)
+    at QueryClientProvider (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=015cd83d:2805:3)
+    at App
+    at V (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/next-themes.js?v=015cd83d:44:25)
+    at J (https://cb74fdaf-0e58-4ba6-9c3c-1cd8a48f4511-00-3cyzvo1rtvmui.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/next-themes.js?v=015cd83d:42:18)

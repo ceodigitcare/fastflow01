@@ -663,9 +663,10 @@ export default function PurchaseBillFormSplit({
         createdAt: editingBill.createdAt 
       } : {}),
       items: billItems,
-      amount: billItems.reduce((sum, item) => sum + (item.quantity * item.price), 0),
-      status: data.status || "pending",
-      paymentReceived: data.paymentReceived || 0,
+      // Use unitPrice instead of price to calculate the amount correctly
+      amount: billItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
+      status: data.status || "draft", // Use "draft" as default status
+      paymentReceived: data.paymentMade || 0, // Use paymentMade from form data
       type: "purchase",
       category: "Bills"
     };
