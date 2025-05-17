@@ -1340,8 +1340,11 @@ export default function PurchaseBillFormSplit({
                       <FormControl>
                         <Input 
                           type="number" 
-                          {...field} 
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          value={field.value ?? 0} // Ensure value is never undefined
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                            field.onChange(isNaN(value) ? 0 : value);
+                          }}
                           min={0}
                           step={0.01}
                         />
