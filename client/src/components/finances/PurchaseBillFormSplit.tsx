@@ -136,12 +136,18 @@ export default function PurchaseBillFormSplit({
           unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
           taxRate: taxRateValue,
           discount: discountValue,
+          taxType: item.taxType || 'percentage', // Default to percentage for tax
+          discountType: item.discountType || 'percentage', // Default to percentage for item discount
           amount: (item.amount || 0) / 100 // Convert from cents to dollars
         };
       }) : [],
       subtotal: (editingBill.amount || 0) / 100, // Convert from cents to dollars
       taxAmount: 0, // We'll calculate this
       discountAmount: 0, // We'll calculate this
+      // Set total discount properties - if editing a bill with a total discount, use its values
+      // otherwise default to a flat discount of 0
+      totalDiscount: editingBill.totalDiscount !== undefined ? (editingBill.totalDiscount / 100) : 0,
+      totalDiscountType: editingBill.totalDiscountType || 'flat', // Default to flat for total discount
       totalAmount: (editingBill.amount || 0) / 100, // Convert from cents to dollars
       paymentMade: (editingBill.paymentReceived || 0) / 100, // Convert from cents to dollars
       notes: editingBill.notes || "",
