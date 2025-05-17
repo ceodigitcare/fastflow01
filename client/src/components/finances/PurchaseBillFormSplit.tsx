@@ -324,22 +324,77 @@ export default function PurchaseBillFormSplit({
       unitPrice: item.unitPrice || 0,
       taxRate: typeof item.taxRate === 'number' ? item.taxRate : 0,
       discount: typeof item.discount === 'number' ? item.discount : 0,
+      taxType: item.taxType || 'percentage',
+      discountType: item.discountType || 'percentage',
       amount: item.amount || 0
     }));
     
-    const subtotal = sanitizedItems.reduce((total, item) => total + item.amount, 0);
-    const taxAmount = sanitizedItems.reduce((total, item) => {
-      const taxRate = typeof item.taxRate === 'number' ? item.taxRate : 0;
-      return total + (item.amount * (taxRate / 100));
+    // Recalculate item amounts to ensure they reflect current tax/discount settings
+    const recalculatedItems = sanitizedItems.map(item => {
+      const subtotal = item.quantity * item.unitPrice;
+      
+      // Calculate discount based on type
+      let discountAmount = 0;
+      if (item.discountType === 'percentage') {
+        discountAmount = subtotal * (item.discount / 100);
+      } else {
+        // Flat discount
+        discountAmount = Math.min(item.discount, subtotal);
+      }
+      
+      // Calculate tax based on type
+      let taxAmount = 0;
+      if (item.taxType === 'percentage') {
+        taxAmount = (subtotal - discountAmount) * (item.taxRate / 100);
+      } else {
+        // Flat tax
+        taxAmount = item.taxRate;
+      }
+      
+      const finalAmount = subtotal - discountAmount + taxAmount;
+      
+      return {
+        ...item,
+        amount: Math.max(0, finalAmount) // Ensure amount is not negative
+      };
+    });
+    
+    // Calculate totals from updated items
+    const subtotal = recalculatedItems.reduce((total, item) => {
+      return total + (item.quantity * item.unitPrice);
     }, 0);
     
-    // Calculate total discount amount from all items
-    const discountAmount = sanitizedItems.reduce((total, item) => {
-      const discount = typeof item.discount === 'number' ? item.discount : 0;
-      return total + (item.amount * (discount / 100));
+    // Calculate total tax from all items
+    const taxAmount = recalculatedItems.reduce((total, item) => {
+      if (item.taxType === 'percentage') {
+        const itemSubtotal = item.quantity * item.unitPrice;
+        // For percentage, apply discount first if applicable
+        let discountAmount = 0;
+        if (item.discountType === 'percentage') {
+          discountAmount = itemSubtotal * (item.discount / 100);
+        } else {
+          discountAmount = Math.min(item.discount, itemSubtotal);
+        }
+        return total + ((itemSubtotal - discountAmount) * (item.taxRate / 100));
+      } else {
+        // For flat tax, use the exact amount
+        return total + item.taxRate;
+      }
     }, 0);
     
-    form.setValue('items', sanitizedItems);
+    // Calculate total discount from all items
+    const discountAmount = recalculatedItems.reduce((total, item) => {
+      const itemSubtotal = item.quantity * item.unitPrice;
+      if (item.discountType === 'percentage') {
+        return total + (itemSubtotal * (item.discount / 100));
+      } else {
+        // For flat discount, use the specified amount
+        return total + Math.min(item.discount, itemSubtotal);
+      }
+    }, 0);
+    
+    // Set the form values with updated calculations
+    form.setValue('items', recalculatedItems);
     form.setValue('subtotal', subtotal);
     form.setValue('taxAmount', taxAmount);
     form.setValue('discountAmount', discountAmount);
@@ -376,6 +431,8 @@ export default function PurchaseBillFormSplit({
           unitPrice: Math.round(item.unitPrice * 100), // Convert to cents
           taxRate: item.taxRate || 0,
           discount: item.discount || 0,
+          taxType: item.taxType || 'percentage',
+          discountType: item.discountType || 'percentage',
           amount: Math.round(item.amount * 100) // Convert to cents
         }))
       };
@@ -410,6 +467,8 @@ export default function PurchaseBillFormSplit({
             unitPrice: Math.round(item.unitPrice * 100),
             taxRate: Number(parseFloat(String(item.taxRate || 0))),
             discount: Number(parseFloat(String(item.discount || 0))),
+            taxType: item.taxType || 'percentage',
+            discountType: item.discountType || 'percentage',
             amount: Math.round(item.amount * 100)
           }))
         };
@@ -444,11 +503,52 @@ export default function PurchaseBillFormSplit({
   useEffect(() => {
     if (editingBill) {
       // Extract items from the transaction
-      const items = editingBill.items as PurchaseBillItem[] || [];
+      let items = editingBill.items as any[] || [];
+      
+      // Ensure each item has the taxType and discountType properties
+      // If they don't exist in the data, default to percentage
+      items = items.map(item => ({
+        ...item,
+        taxType: item.taxType || 'percentage',
+        discountType: item.discountType || 'percentage',
+        // Convert amounts from cents to dollars if needed
+        amount: typeof item.amount === 'number' && item.amount > 100 ? item.amount / 100 : item.amount,
+        unitPrice: typeof item.unitPrice === 'number' && item.unitPrice > 100 ? item.unitPrice / 100 : item.unitPrice
+      }));
+      
       setBillItems(items);
       
       // Find the vendor
       const vendorId = vendors?.find(v => v.name === editingBill.contactName)?.id || 0;
+      
+      // Recalculate subtotal and tax based on the processed items
+      const subtotal = items.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
+      
+      // Calculate tax based on type for each item
+      const taxAmount = items.reduce((total, item) => {
+        if (item.taxType === 'percentage') {
+          const itemSubtotal = item.quantity * item.unitPrice;
+          let discountAmount = 0;
+          if (item.discountType === 'percentage') {
+            discountAmount = itemSubtotal * (item.discount / 100);
+          } else {
+            discountAmount = Math.min(item.discount, itemSubtotal);
+          }
+          return total + ((itemSubtotal - discountAmount) * (item.taxRate / 100));
+        } else {
+          return total + item.taxRate;
+        }
+      }, 0);
+      
+      // Calculate discount based on type for each item
+      const discountAmount = items.reduce((total, item) => {
+        const itemSubtotal = item.quantity * item.unitPrice;
+        if (item.discountType === 'percentage') {
+          return total + (itemSubtotal * (item.discount / 100));
+        } else {
+          return total + Math.min(item.discount, itemSubtotal);
+        }
+      }, 0);
       
       form.reset({
         vendorId,
@@ -458,9 +558,10 @@ export default function PurchaseBillFormSplit({
         dueDate: new Date(new Date(editingBill.date || new Date()).getTime() + 30 * 24 * 60 * 60 * 1000),
         status: editingBill.status as any || "draft",
         items,
-        subtotal: items.reduce((total, item) => total + item.amount, 0),
-        taxAmount: items.reduce((total, item) => total + (item.amount * (item.taxRate / 100)), 0),
-        totalAmount: editingBill.amount / 100, // Convert from cents to dollars
+        subtotal,
+        taxAmount,
+        discountAmount,
+        totalAmount: subtotal + taxAmount - discountAmount,
         paymentMade: editingBill.paymentReceived ? editingBill.paymentReceived / 100 : 0,
         notes: editingBill.notes || "",
         termsAndConditions: "Payment is due within 30 days of the bill date.",

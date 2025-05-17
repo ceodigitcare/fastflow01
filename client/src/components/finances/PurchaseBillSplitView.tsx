@@ -199,12 +199,12 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                           <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
                             {item.discount > 0 && (
                               <span className="inline-flex items-center bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded">
-                                Disc: {item.discount}%
+                                Disc: {item.discount}{item.discountType === 'percentage' ? '%' : ' $'}
                               </span>
                             )}
                             {item.taxRate > 0 && (
                               <span className="inline-flex items-center bg-green-50 text-green-800 px-1.5 py-0.5 rounded">
-                                Tax: {item.taxRate}%
+                                Tax: {item.taxRate}{item.taxType === 'percentage' ? '%' : ' $'}
                               </span>
                             )}
                           </div>
