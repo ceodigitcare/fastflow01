@@ -750,12 +750,31 @@ export default function PurchaseBillFormSplit({
         }
       }, 0);
       
-      // Get values from metadata if available
-      const totalDiscount = editingBill.metadata?.totalDiscount !== undefined 
-        ? Number(editingBill.metadata.totalDiscount) / 100 
-        : 0;
+      // Get values from metadata with extensive logging for debugging
+      console.log("Checking for metadata in editingBill:", {
+        hasMetadata: Boolean(editingBill.metadata),
+        metadata: editingBill.metadata,
+        directTotalDiscount: editingBill.totalDiscount,
+        metadataTotalDiscount: editingBill.metadata?.totalDiscount
+      });
       
-      const totalDiscountType = editingBill.metadata?.totalDiscountType || 'flat';
+      // Get total discount - check both metadata and direct properties with proper fallbacks
+      let totalDiscount = 0;
+      if (editingBill.metadata?.totalDiscount !== undefined) {
+        // If in metadata (preferred), convert from cents to dollars
+        totalDiscount = Number(editingBill.metadata.totalDiscount) / 100;
+        console.log("Using totalDiscount from metadata:", totalDiscount);
+      } else if (editingBill.totalDiscount !== undefined) {
+        // Fallback to direct property if available
+        totalDiscount = Number(editingBill.totalDiscount) / 100;
+        console.log("Using totalDiscount from direct property:", totalDiscount);
+      }
+      
+      // Get discount type from metadata or direct property
+      const totalDiscountType = 
+        editingBill.metadata?.totalDiscountType || 
+        editingBill.totalDiscountType || 
+        'flat';
       
       // Get due date from metadata if available
       const dueDate = editingBill.metadata?.dueDate 

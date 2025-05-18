@@ -125,6 +125,9 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                     // Make a deep copy to prevent reference issues
                     const billToEdit = JSON.parse(JSON.stringify(selectedBill));
                     
+                    // Log the original bill data for debugging
+                    console.log("Original bill for editing:", selectedBill);
+                    
                     // Ensure metadata exists to store custom fields
                     if (!billToEdit.metadata) {
                       billToEdit.metadata = {};
@@ -132,23 +135,45 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                     
                     // Make sure each item's quantityReceived is properly set
                     if (Array.isArray(billToEdit.items)) {
-                      billToEdit.items = billToEdit.items.map(item => ({
-                        ...item,
-                        // Ensure quantityReceived is a number and not undefined
-                        quantityReceived: item.quantityReceived !== undefined ? 
-                          Number(item.quantityReceived) : 0
-                      }));
+                      billToEdit.items = billToEdit.items.map(item => {
+                        console.log(`Processing item ${item.description} for edit`, {
+                          originalQuantityReceived: item.quantityReceived,
+                          quantity: item.quantity
+                        });
+                        
+                        return {
+                          ...item,
+                          // Ensure quantityReceived is a number and not undefined
+                          quantityReceived: item.quantityReceived !== undefined ? 
+                            Number(item.quantityReceived) : 0
+                        };
+                      });
                     }
                     
-                    // Store total discount in metadata if it exists on the bill directly
-                    if (billToEdit.totalDiscount !== undefined) {
-                      billToEdit.metadata.totalDiscount = billToEdit.totalDiscount;
+                    // Extract existing discount data from metadata with fallback to properties
+                    let totalDiscount = 0;
+                    let totalDiscountType = 'flat';
+                    
+                    // Check if totalDiscount exists in metadata
+                    if (billToEdit.metadata && typeof billToEdit.metadata.totalDiscount !== 'undefined') {
+                      totalDiscount = Number(billToEdit.metadata.totalDiscount);
+                      totalDiscountType = billToEdit.metadata.totalDiscountType || 'flat';
+                      console.log("Found totalDiscount in metadata:", totalDiscount);
+                    } 
+                    // If not in metadata, check if it exists directly on the bill
+                    else if (typeof billToEdit.totalDiscount !== 'undefined') {
+                      totalDiscount = Number(billToEdit.totalDiscount);
+                      totalDiscountType = billToEdit.totalDiscountType || 'flat';
+                      console.log("Found totalDiscount directly on bill:", totalDiscount);
                     }
                     
-                    // Store discount type in metadata
-                    if (billToEdit.totalDiscountType !== undefined) {
-                      billToEdit.metadata.totalDiscountType = billToEdit.totalDiscountType;
-                    }
+                    // Store values back in metadata to ensure consistency
+                    billToEdit.metadata.totalDiscount = totalDiscount;
+                    billToEdit.metadata.totalDiscountType = totalDiscountType;
+                    
+                    // Expose the values as direct properties for easier form access
+                    billToEdit.totalDiscount = totalDiscount;
+                    billToEdit.totalDiscountType = totalDiscountType;
                     
                     console.log("Prepared bill for editing:", billToEdit);
                     
