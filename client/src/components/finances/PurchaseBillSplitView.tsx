@@ -363,12 +363,19 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                     metadataTotalDiscount: selectedBill.metadata?.totalDiscount
                   });
                   
+                  // Extract discount with extensive logging
+                  console.log("Bill metadata when checking discount:", selectedBill.metadata);
+                  
                   // Check both metadata and direct properties with fallbacks
                   let discountValue = 0;
-                  if (selectedBill.metadata?.totalDiscount !== undefined) {
+                  if (selectedBill.metadata?.totalDiscount !== undefined && 
+                      Number(selectedBill.metadata.totalDiscount) > 0) {
                     discountValue = Number(selectedBill.metadata.totalDiscount);
-                  } else if (selectedBill.totalDiscount !== undefined) {
+                    console.log("Found non-zero discount in metadata:", discountValue);
+                  } else if (selectedBill.totalDiscount !== undefined && 
+                            Number(selectedBill.totalDiscount) > 0) {
                     discountValue = Number(selectedBill.totalDiscount);
+                    console.log("Found non-zero discount in direct property:", discountValue);
                   }
                   
                   const discountType = 
