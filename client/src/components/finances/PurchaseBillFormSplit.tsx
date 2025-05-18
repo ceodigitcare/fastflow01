@@ -855,11 +855,16 @@ export default function PurchaseBillFormSplit({
     
     // Process items to ensure all numeric values are correctly formatted
     const processedItems = billItems.map(item => {
+      // Check if the unitPrice is already in cents (>100) or in dollars (<100)
+      // This is important for existing data that might already be in cents
+      const isUnitPriceInCents = Number(item.unitPrice) > 100;
+      
       // Log each item's data for debugging
       console.log(`Processing item ${item.description} for save:`, {
         quantity: item.quantity,
         quantityReceived: item.quantityReceived,
-        unitPrice: item.unitPrice
+        unitPrice: item.unitPrice,
+        isAlreadyInCents: isUnitPriceInCents
       });
       
       return {
@@ -867,9 +872,11 @@ export default function PurchaseBillFormSplit({
         // Ensure quantityReceived is a number and stored correctly
         quantityReceived: item.quantityReceived !== undefined ? 
           Number(item.quantityReceived) : 0,
-        // Convert dollars to cents for storage (if not already done)
-        unitPrice: Number(item.unitPrice) * 100,
-        amount: Number(item.amount) * 100
+        // Keep unitPrice as is - do NOT multiply by 100! 
+        // The backend already handles this amount as cents
+        unitPrice: Number(item.unitPrice),
+        // Same for amount - don't do the cents conversion here
+        amount: Number(item.amount)
       };
     });
     
