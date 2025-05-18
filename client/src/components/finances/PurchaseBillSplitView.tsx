@@ -407,27 +407,37 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                         sum + (item.quantity * (item.unitPrice / 100)), 0) 
                     : 0;
                     
-                  // Calculate the actual discount amount based on type
+                  // Fixed calculation to handle the discount amount correctly
                   let actualDiscountAmount = 0;
                   if (discountType === 'percentage') {
-                    actualDiscountAmount = subtotal * (discountValue / 100);
+                    // For percentage type, we need to convert the value to a decimal percentage
+                    // If the value is already small (less than 1), don't divide by 100 again
+                    const percentageValue = discountValue > 100 ? discountValue / 100 : discountValue;
+                    actualDiscountAmount = subtotal * (percentageValue / 100);
                   } else {
-                    actualDiscountAmount = discountValue / 100;
+                    // For flat type, convert from cents to dollars if needed
+                    actualDiscountAmount = discountValue > 100 ? discountValue / 100 : discountValue;
                   }
                   
-                  console.log("Discount calculation:", {
-                    discountValue,
+                  console.log("Discount calculation with improved handling:", {
+                    originalDiscountValue: discountValue,
                     discountType,
                     subtotal,
-                    actualDiscountAmount
+                    actualDiscountAmount,
+                    isCentsValue: discountValue > 100
                   });
                   
                   // Only show the discount row if there's actually a discount amount
                   if (discountValue > 0) {
+                    // Determine the display value for percentage
+                    const displayValue = discountType === 'percentage' 
+                      ? (discountValue > 100 ? discountValue / 100 : discountValue)
+                      : null;
+                      
                     return (
                       <div className="flex justify-between border-t pt-2">
                         <span className="text-gray-600">
-                          Total Discount{discountType === 'percentage' ? ` (${discountValue/100}%)` : ''}:
+                          Total Discount{discountType === 'percentage' && displayValue ? ` (${displayValue}%)` : ''}:
                         </span>
                         <span className="font-medium text-red-500">
                           -{formatCurrency(actualDiscountAmount)}

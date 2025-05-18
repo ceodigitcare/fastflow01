@@ -684,6 +684,15 @@ export default function PurchaseBillFormSplit({
     }
   });
   
+  // Add fields for total discount tracking - these are separate from form.values and help us preserve values
+  const [totalDiscountField, setTotalDiscountField] = useState<string>("0");
+  const [totalDiscountType, setTotalDiscountType] = useState<"flat" | "percentage">("flat");
+  const [totalDiscountDebug, setTotalDiscountDebug] = useState({
+    source: "initial",
+    value: 0,
+    type: "flat"
+  });
+  
   // Initialize form if editing an existing bill
   useEffect(() => {
     if (editingBill) {
@@ -719,25 +728,44 @@ export default function PurchaseBillFormSplit({
       
       setBillItems(items);
       
-      // CRITICAL FIX: Set the total discount field value from either metadata or direct property
-      // This ensures the visible discount input field shows the correct value
+      // CRITICAL FIX: Get total discount and type from either metadata or direct props
       let discountValue = 0;
+      let discountSource = "none";
       
+      // First check metadata field, which should be the preferred source after our fixes
       if (editingBill.metadata?.totalDiscount !== undefined) {
         discountValue = Number(editingBill.metadata.totalDiscount) / 100;
-        console.log("Setting totalDiscountField from metadata:", discountValue);
-      } else if (editingBill.totalDiscount !== undefined) {
+        discountSource = "metadata";
+        console.log("Found totalDiscount in metadata:", discountValue);
+      } 
+      // Fallback to direct property if needed
+      else if (editingBill.totalDiscount !== undefined) {
         discountValue = Number(editingBill.totalDiscount) / 100;
-        console.log("Setting totalDiscountField from direct prop:", discountValue);
+        discountSource = "direct";
+        console.log("Found totalDiscount in direct property:", discountValue);
       }
       
-      // Format the discount value as a string for the controlled input
-      setTotalDiscountField(discountValue.toString());
-      
-      // Set the discount type if available
+      // Get discount type with similar fallback logic
       const discountType = editingBill.metadata?.totalDiscountType || 
                           editingBill.totalDiscountType || 'flat';
+      
+      // Update both the form field values and our controlled input state
+      console.log("Setting totalDiscount:", discountValue, "type:", discountType);
+      
+      // Update form values
+      form.setValue('totalDiscount', discountValue);
+      form.setValue('totalDiscountType', discountType as "flat" | "percentage");
+      
+      // Update state for controlled inputs
+      setTotalDiscountField(discountValue.toString());
       setTotalDiscountType(discountType as "flat" | "percentage");
+      
+      // Track debug info
+      setTotalDiscountDebug({
+        source: discountSource,
+        value: discountValue,
+        type: discountType as "flat" | "percentage"
+      });
       
       // Find the vendor
       const vendorId = vendors?.find(v => v.name === editingBill.contactName)?.id || 0;
