@@ -965,23 +965,18 @@ export default function PurchaseBillFormSplit({
       } : {}),
       // Use the processed items array
       items: processedItems,
-      // Store all custom fields in metadata
-      metadata: {
-        // Preserve any existing metadata fields from the original bill
-        ...(editingBill?.metadata || {}),
-        // Add/update our metadata fields
+      // Store metadata as a simple object
+      metadata: JSON.stringify({
+        // Only include the essential fields we need to preserve
         totalDiscount: totalDiscountValue,
         totalDiscountType: data.totalDiscountType || "flat",
-        dueDate: data.dueDate,
-        // Store item quantities in a more structured way to ensure they persist
+        dueDate: data.dueDate ? data.dueDate.toISOString() : new Date().toISOString(),
+        // Save item quantities in a simple array
         itemQuantitiesReceived: processedItems.map(item => ({
           productId: item.productId,
-          quantityReceived: item.quantityReceived,
-          quantity: item.quantity,
-          // Include identifiers to help match items during editing
-          description: item.description
+          quantityReceived: item.quantityReceived || 0
         }))
-      },
+      }),
       // Calculate the total amount correctly
       amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
       status: data.status || "draft",

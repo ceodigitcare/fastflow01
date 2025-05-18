@@ -121,77 +121,108 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                   variant="outline" 
                   size="sm" 
                   onClick={() => {
-                    // When Edit is clicked, ensure all bill data is properly prepared
-                    // Make a deep copy to prevent reference issues
-                    const billToEdit = JSON.parse(JSON.stringify(selectedBill));
+                    // COMPLETELY NEW APPROACH: Create a fresh object with ONLY the necessary data
+                    // This avoids reference issues and ensures clean data
                     
-                    // Log the original bill data for debugging
+                    // Log the original bill data to understand what we're working with
                     console.log("Original bill for editing:", selectedBill);
                     
-                    // Ensure metadata exists to store custom fields
-                    if (!billToEdit.metadata) {
-                      billToEdit.metadata = {};
-                    }
+                    // Parse metadata from JSON string if it exists, or create a new object
+                    let metadata = { 
+                      totalDiscount: 0,
+                      totalDiscountType: 'flat',
+                      dueDate: selectedBill.date,
+                      itemQuantitiesReceived: []
+                    };
                     
-                    // CRITICAL FIX: Copy totalDiscount and totalDiscountType from either metadata or direct properties
-                    // This ensures discount information persists during edit sessions
-                    if (selectedBill.metadata?.totalDiscount !== undefined) {
-                      billToEdit.totalDiscount = Number(selectedBill.metadata.totalDiscount);
-                      console.log("Setting totalDiscount from metadata:", billToEdit.totalDiscount);
-                    } else if (selectedBill.totalDiscount !== undefined) {
-                      billToEdit.totalDiscount = Number(selectedBill.totalDiscount);
-                      console.log("Setting totalDiscount from direct prop:", billToEdit.totalDiscount);
-                    }
-                    
-                    if (selectedBill.metadata?.totalDiscountType) {
-                      billToEdit.totalDiscountType = selectedBill.metadata.totalDiscountType;
-                      console.log("Setting totalDiscountType from metadata:", billToEdit.totalDiscountType);
-                    } else if (selectedBill.totalDiscountType) {
-                      billToEdit.totalDiscountType = selectedBill.totalDiscountType;
-                      console.log("Setting totalDiscountType from direct prop:", billToEdit.totalDiscountType);
-                    }
-                    
-                    // Make sure each item's quantityReceived is properly set
-                    if (Array.isArray(billToEdit.items)) {
-                      billToEdit.items = billToEdit.items.map(item => {
-                        console.log(`Processing item ${item.description} for edit`, {
-                          originalQuantityReceived: item.quantityReceived,
-                          quantity: item.quantity
-                        });
-                        
-                        return {
-                          ...item,
-                          // Ensure quantityReceived is a number and not undefined
-                          quantityReceived: item.quantityReceived !== undefined ? 
-                            Number(item.quantityReceived) : 0
+                    try {
+                      // Try to parse metadata if it exists
+                      if (selectedBill.metadata && typeof selectedBill.metadata === 'string') {
+                        const parsedMetadata = JSON.parse(selectedBill.metadata);
+                        metadata = {
+                          ...metadata,
+                          ...parsedMetadata
                         };
-                      });
+                        console.log("Successfully parsed metadata:", metadata);
+                      }
+                    } catch (error) {
+                      console.error("Error parsing metadata:", error);
                     }
                     
-                    // Extract existing discount data from metadata with fallback to properties
-                    let totalDiscount = 0;
-                    let totalDiscountType = 'flat';
+                    console.log("Prepared metadata for edit:", metadata);
                     
-                    // Check if totalDiscount exists in metadata
-                    if (billToEdit.metadata && typeof billToEdit.metadata.totalDiscount !== 'undefined') {
-                      totalDiscount = Number(billToEdit.metadata.totalDiscount);
-                      totalDiscountType = billToEdit.metadata.totalDiscountType || 'flat';
-                      console.log("Found totalDiscount in metadata:", totalDiscount);
-                    } 
-                    // If not in metadata, check if it exists directly on the bill
-                    else if (typeof billToEdit.totalDiscount !== 'undefined') {
-                      totalDiscount = Number(billToEdit.totalDiscount);
-                      totalDiscountType = billToEdit.totalDiscountType || 'flat';
-                      console.log("Found totalDiscount directly on bill:", totalDiscount);
-                    }
+                    // Process items to ensure they have the right structure and type conversions
+                    const processedItems = Array.isArray(selectedBill.items) 
+                      ? selectedBill.items.map(item => {
+                          // Find matching metadata for this item if it exists in itemQuantitiesReceived
+                          const itemMetadata = metadata.itemQuantitiesReceived && Array.isArray(metadata.itemQuantitiesReceived) 
+                            ? metadata.itemQuantitiesReceived.find((m: any) => m.productId === item.productId)
+                            : null;
+                          
+                          return {
+                            ...item,
+                            // Use metadata value for quantityReceived if available, otherwise direct property
+                            quantityReceived: itemMetadata?.quantityReceived !== undefined 
+                              ? Number(itemMetadata.quantityReceived) 
+                              : (item.quantityReceived !== undefined ? Number(item.quantityReceived) : 0),
+                            // Ensure all numeric values are properly typed
+                            quantity: Number(item.quantity),
+                            unitPrice: Number(item.unitPrice),
+                            // Ensure all required fields are present
+                            taxType: item.taxType || 'percentage',
+                            discountType: item.discountType || 'percentage'
+                          };
+                        })
+                      : [];
+                      
+                    // Calculate contact ID from the selectedBill (vendor contact)
+                    const contactId = selectedBill.contactId || 
+                                     (selectedBill.contact?.id) || 
+                                     null;
                     
-                    // Store values back in metadata to ensure consistency
-                    billToEdit.metadata.totalDiscount = totalDiscount;
-                    billToEdit.metadata.totalDiscountType = totalDiscountType;
+                    // Log processed items to verify they have all required data
+                    console.log("Processed items:", processedItems);
+                                         
+                    // Create an EditBill object with the data that the form expects
+                    // This should match the structure expected by the PurchaseBillForm component
+                    const billToEdit = {
+                      // Basic transaction data
+                      id: selectedBill.id,
+                      businessId: selectedBill.businessId,
+                      accountId: selectedBill.accountId,
+                      documentNumber: selectedBill.documentNumber || "",
+                      date: selectedBill.date,
+                      notes: selectedBill.notes || "",
+                      description: selectedBill.description || "",
+                      status: selectedBill.status || "draft",
+                      contactName: selectedBill.contactName || "",
+                      
+                      // Form-specific fields
+                      vendorId: contactId, // Key field for the form
+                      billNumber: selectedBill.documentNumber || "",
+                      billDate: selectedBill.date || new Date(),
+                      dueDate: metadata.dueDate ? new Date(metadata.dueDate) : new Date(),
+                      
+                      // Financial details
+                      amount: selectedBill.amount,
+                      paymentReceived: selectedBill.paymentReceived || 0,
+                      items: processedItems,
+                      
+                      // Custom metadata fields (exposed directly for form usage)
+                      totalDiscount: Number(metadata.totalDiscount || 0) / 100, // Convert to dollars
+                      totalDiscountType: (metadata.totalDiscountType || 'flat') as 'flat' | 'percentage',
+                      
+                      // Set other necessary fields the form expects
+                      createdAt: selectedBill.createdAt,
+                      type: selectedBill.type || "purchase_bill",
+                      category: selectedBill.category || "expense",
+                      
+                      // Store the processed metadata string for saving
+                      metadata: JSON.stringify(metadata),
+                    };
                     
-                    // Expose the values as direct properties for easier form access
-                    billToEdit.totalDiscount = totalDiscount;
-                    billToEdit.totalDiscountType = totalDiscountType;
+                    // Log the clean bill object we've created
+                    console.log("Clean bill object prepared for editing:", billToEdit);
                     
                     console.log("Prepared bill for editing:", billToEdit);
                     
