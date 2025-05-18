@@ -764,11 +764,17 @@ export default function PurchaseBillFormSplit({
         id: editingBill.id,
         createdAt: editingBill.createdAt 
       } : {}),
-      items: billItems,
+      items: billItems.map(item => ({
+        ...item,
+        // Make sure quantityReceived is included when saving
+        quantityReceived: item.quantityReceived !== undefined ? item.quantityReceived : 0
+      })),
       // Use unitPrice instead of price to calculate the amount correctly
       amount: billItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
       status: data.status || "draft", // Use "draft" as default status
       paymentReceived: data.paymentMade || 0, // Use paymentMade from form data
+      totalDiscount: data.totalDiscount, // Explicitly include totalDiscount
+      totalDiscountType: data.totalDiscountType, // Explicitly include totalDiscountType
       type: "purchase",
       category: "Bills"
     };
