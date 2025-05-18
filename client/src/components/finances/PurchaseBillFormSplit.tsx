@@ -690,16 +690,31 @@ export default function PurchaseBillFormSplit({
       // Extract items from the transaction
       let items = editingBill.items as any[] || [];
       
-      // Ensure each item has the taxType and discountType properties
-      // If they don't exist in the data, default to percentage
-      items = items.map(item => ({
-        ...item,
-        taxType: item.taxType || 'percentage',
-        discountType: item.discountType || 'percentage',
-        // Convert amounts from cents to dollars if needed
-        amount: typeof item.amount === 'number' && item.amount > 100 ? item.amount / 100 : item.amount,
-        unitPrice: typeof item.unitPrice === 'number' && item.unitPrice > 100 ? item.unitPrice / 100 : item.unitPrice
-      }));
+      // Process and normalize all item fields, ensuring proper types
+      items = items.map(item => {
+        // Safely get the quantityReceived value, ensuring it's a number
+        const quantityReceived = item.quantityReceived !== undefined ? 
+          Number(item.quantityReceived) : 0;
+          
+        // Log each item processing for debugging
+        console.log(`Processing item: ${item.description}`, {
+          quantity: item.quantity,
+          quantityReceived: quantityReceived,
+          originalQuantityReceived: item.quantityReceived
+        });
+        
+        return {
+          ...item,
+          // Ensure required properties have default values if missing
+          taxType: item.taxType || 'percentage',
+          discountType: item.discountType || 'percentage',
+          // Important: Explicitly set quantityReceived as a number
+          quantityReceived: quantityReceived,
+          // Convert amounts from cents to dollars if needed
+          amount: typeof item.amount === 'number' && item.amount > 100 ? item.amount / 100 : item.amount,
+          unitPrice: typeof item.unitPrice === 'number' && item.unitPrice > 100 ? item.unitPrice / 100 : item.unitPrice
+        };
+      });
       
       setBillItems(items);
       
@@ -735,22 +750,58 @@ export default function PurchaseBillFormSplit({
         }
       }, 0);
       
+      // Get values from metadata if available
+      const totalDiscount = editingBill.metadata?.totalDiscount !== undefined 
+        ? Number(editingBill.metadata.totalDiscount) / 100 
+        : 0;
+      
+      const totalDiscountType = editingBill.metadata?.totalDiscountType || 'flat';
+      
+      // Get due date from metadata if available
+      const dueDate = editingBill.metadata?.dueDate 
+        ? new Date(editingBill.metadata.dueDate) 
+        : new Date(new Date(editingBill.date || new Date()).getTime() + 30 * 24 * 60 * 60 * 1000);
+      
+      // Calculate total amount with discount applied
+      let totalAmount = subtotal + taxAmount - discountAmount;
+      
+      // Apply total discount if it exists
+      if (totalDiscount > 0) {
+        if (totalDiscountType === 'percentage') {
+          totalAmount -= subtotal * (totalDiscount / 100);
+        } else {
+          totalAmount -= totalDiscount;
+        }
+      }
+      
+      console.log("Form values being set:", {
+        totalDiscount,
+        totalDiscountType,
+        items: items.map(i => ({
+          description: i.description,
+          quantityReceived: i.quantityReceived
+        }))
+      });
+      
       form.reset({
         vendorId,
         accountId: editingBill.accountId,
         billNumber: editingBill.documentNumber || generateBillNumber(),
         billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
-        dueDate: new Date(new Date(editingBill.date || new Date()).getTime() + 30 * 24 * 60 * 60 * 1000),
+        dueDate: dueDate,
         status: editingBill.status as any || "draft",
         items,
         subtotal,
         taxAmount,
         discountAmount,
-        totalAmount: subtotal + taxAmount - discountAmount,
+        // Include total discount values from metadata
+        totalDiscount: totalDiscount,
+        totalDiscountType: totalDiscountType,
+        totalAmount: totalAmount,
         paymentMade: editingBill.paymentReceived ? editingBill.paymentReceived / 100 : 0,
         notes: editingBill.notes || "",
         termsAndConditions: "Payment is due within 30 days of the bill date.",
-        vendorNotes: "",
+        vendorNotes: editingBill.description || "",
       });
     } else {
       // Add an empty item if creating a new bill

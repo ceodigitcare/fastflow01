@@ -121,9 +121,36 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                   variant="outline" 
                   size="sm" 
                   onClick={() => {
-                    // When Edit is clicked, first get a complete copy of the bill
-                    // to ensure all data is loaded before showing the form
-                    const billToEdit = { ...selectedBill };
+                    // When Edit is clicked, ensure all bill data is properly prepared
+                    // Make a deep copy to prevent reference issues
+                    const billToEdit = JSON.parse(JSON.stringify(selectedBill));
+                    
+                    // Ensure metadata exists to store custom fields
+                    if (!billToEdit.metadata) {
+                      billToEdit.metadata = {};
+                    }
+                    
+                    // Make sure each item's quantityReceived is properly set
+                    if (Array.isArray(billToEdit.items)) {
+                      billToEdit.items = billToEdit.items.map(item => ({
+                        ...item,
+                        // Ensure quantityReceived is a number and not undefined
+                        quantityReceived: item.quantityReceived !== undefined ? 
+                          Number(item.quantityReceived) : 0
+                      }));
+                    }
+                    
+                    // Store total discount in metadata if it exists on the bill directly
+                    if (billToEdit.totalDiscount !== undefined) {
+                      billToEdit.metadata.totalDiscount = billToEdit.totalDiscount;
+                    }
+                    
+                    // Store discount type in metadata
+                    if (billToEdit.totalDiscountType !== undefined) {
+                      billToEdit.metadata.totalDiscountType = billToEdit.totalDiscountType;
+                    }
+                    
+                    console.log("Prepared bill for editing:", billToEdit);
                     
                     // Only proceed when we have the data
                     if (billToEdit) {
