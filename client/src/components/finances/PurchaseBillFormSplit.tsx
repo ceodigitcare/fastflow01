@@ -187,6 +187,7 @@ export default function PurchaseBillFormSplit({
           discount: discountValue,
           taxType: item.taxType ?? 'percentage', // Default to percentage for tax
           discountType: item.discountType ?? 'percentage', // Default to percentage for item discount
+          quantityReceived: item.quantityReceived ?? 0, // Add the saved quantityReceived value
           amount: (item.amount ?? 0) / 100 // Convert from cents to dollars
         };
       }) : [],
@@ -216,6 +217,38 @@ export default function PurchaseBillFormSplit({
         billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
         dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         status: editingBill.status ?? "draft",
+        items: Array.isArray(editingBill.items) ? editingBill.items.map(item => {
+          const taxRateValue = item.taxRate !== undefined && item.taxRate !== null 
+            ? (typeof item.taxRate === 'string' ? parseFloat(item.taxRate) : Number(item.taxRate)) 
+            : 0;
+          
+          const discountValue = item.discount !== undefined && item.discount !== null 
+            ? (typeof item.discount === 'string' ? parseFloat(item.discount) : Number(item.discount)) 
+            : 0;
+            
+          return {
+            productId: item.productId ?? 0,
+            description: item.description ?? "",
+            quantity: item.quantity ?? 1,
+            unitPrice: (item.unitPrice ?? 0) / 100, // Convert from cents to dollars
+            taxRate: taxRateValue,
+            discount: discountValue,
+            taxType: item.taxType ?? 'percentage', // Default to percentage for tax
+            discountType: item.discountType ?? 'percentage', // Default to percentage for item discount
+            quantityReceived: item.quantityReceived ?? 0, // Add the saved quantityReceived value
+            amount: (item.amount ?? 0) / 100 // Convert from cents to dollars
+          };
+        }) : [],
+        subtotal: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
+        taxAmount: 0, // We'll calculate this
+        discountAmount: 0, // We'll calculate this
+        totalDiscount: editingBill.totalDiscount !== undefined ? (editingBill.totalDiscount / 100) : 0,
+        totalDiscountType: editingBill.totalDiscountType ?? 'flat', // Default to flat for total discount
+        totalAmount: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
+        paymentMade: (editingBill.paymentReceived ?? 0) / 100, // Convert from cents to dollars
+        notes: editingBill.notes ?? "",
+        termsAndConditions: "Payment is due within 30 days of the bill date.",
+        vendorNotes: editingBill.description ?? "",
         // Include other fields from editingBill as needed
       });
     }
