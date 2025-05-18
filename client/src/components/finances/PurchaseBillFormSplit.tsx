@@ -696,11 +696,12 @@ export default function PurchaseBillFormSplit({
         const quantityReceived = item.quantityReceived !== undefined ? 
           Number(item.quantityReceived) : 0;
           
-        // Log each item processing for debugging
+        // Log each item processing for debugging with detailed info
         console.log(`Processing item: ${item.description}`, {
           quantity: item.quantity,
           quantityReceived: quantityReceived,
-          originalQuantityReceived: item.quantityReceived
+          originalQuantityReceived: item.quantityReceived,
+          fullItem: item
         });
         
         return {
@@ -717,6 +718,26 @@ export default function PurchaseBillFormSplit({
       });
       
       setBillItems(items);
+      
+      // CRITICAL FIX: Set the total discount field value from either metadata or direct property
+      // This ensures the visible discount input field shows the correct value
+      let discountValue = 0;
+      
+      if (editingBill.metadata?.totalDiscount !== undefined) {
+        discountValue = Number(editingBill.metadata.totalDiscount) / 100;
+        console.log("Setting totalDiscountField from metadata:", discountValue);
+      } else if (editingBill.totalDiscount !== undefined) {
+        discountValue = Number(editingBill.totalDiscount) / 100;
+        console.log("Setting totalDiscountField from direct prop:", discountValue);
+      }
+      
+      // Format the discount value as a string for the controlled input
+      setTotalDiscountField(discountValue.toString());
+      
+      // Set the discount type if available
+      const discountType = editingBill.metadata?.totalDiscountType || 
+                          editingBill.totalDiscountType || 'flat';
+      setTotalDiscountType(discountType as "flat" | "percentage");
       
       // Find the vendor
       const vendorId = vendors?.find(v => v.name === editingBill.contactName)?.id || 0;

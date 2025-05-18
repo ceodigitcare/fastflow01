@@ -133,6 +133,24 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                       billToEdit.metadata = {};
                     }
                     
+                    // CRITICAL FIX: Copy totalDiscount and totalDiscountType from either metadata or direct properties
+                    // This ensures discount information persists during edit sessions
+                    if (selectedBill.metadata?.totalDiscount !== undefined) {
+                      billToEdit.totalDiscount = Number(selectedBill.metadata.totalDiscount);
+                      console.log("Setting totalDiscount from metadata:", billToEdit.totalDiscount);
+                    } else if (selectedBill.totalDiscount !== undefined) {
+                      billToEdit.totalDiscount = Number(selectedBill.totalDiscount);
+                      console.log("Setting totalDiscount from direct prop:", billToEdit.totalDiscount);
+                    }
+                    
+                    if (selectedBill.metadata?.totalDiscountType) {
+                      billToEdit.totalDiscountType = selectedBill.metadata.totalDiscountType;
+                      console.log("Setting totalDiscountType from metadata:", billToEdit.totalDiscountType);
+                    } else if (selectedBill.totalDiscountType) {
+                      billToEdit.totalDiscountType = selectedBill.totalDiscountType;
+                      console.log("Setting totalDiscountType from direct prop:", billToEdit.totalDiscountType);
+                    }
+                    
                     // Make sure each item's quantityReceived is properly set
                     if (Array.isArray(billToEdit.items)) {
                       billToEdit.items = billToEdit.items.map(item => {
