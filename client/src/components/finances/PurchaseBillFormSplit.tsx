@@ -859,15 +859,24 @@ export default function PurchaseBillFormSplit({
         }
       }
       
+      // Log the form values we're setting with detailed breakdowns
       console.log("Form values being set:", {
-        totalDiscount,
-        totalDiscountType,
+        totalDiscount: discountValue,
+        totalDiscountType: discountType,
+        totalDiscountSource: discountSource,
         items: items.map(i => ({
           description: i.description,
+          productId: i.productId,
+          quantity: i.quantity,
           quantityReceived: i.quantityReceived
         }))
       });
       
+      // Before form reset, ensure our state values are updated
+      setTotalDiscountField(discountValue.toString());
+      setTotalDiscountType(discountType as "flat" | "percentage");
+      
+      // Now reset the form with all values including those from metadata
       form.reset({
         vendorId,
         accountId: editingBill.accountId,
@@ -879,9 +888,9 @@ export default function PurchaseBillFormSplit({
         subtotal,
         taxAmount,
         discountAmount,
-        // Include total discount values from metadata
-        totalDiscount: totalDiscount,
-        totalDiscountType: totalDiscountType,
+        // Important: Use our explicitly processed discount values
+        totalDiscount: discountValue, 
+        totalDiscountType: discountType as "flat" | "percentage",
         totalAmount: totalAmount,
         paymentMade: editingBill.paymentReceived ? editingBill.paymentReceived / 100 : 0,
         notes: editingBill.notes || "",
@@ -964,10 +973,13 @@ export default function PurchaseBillFormSplit({
         totalDiscount: totalDiscountValue,
         totalDiscountType: data.totalDiscountType || "flat",
         dueDate: data.dueDate,
-        // Add item level quantityReceived in metadata to ensure it persists
+        // Store item quantities in a more structured way to ensure they persist
         itemQuantitiesReceived: processedItems.map(item => ({
           productId: item.productId,
-          quantityReceived: item.quantityReceived
+          quantityReceived: item.quantityReceived,
+          quantity: item.quantity,
+          // Include identifiers to help match items during editing
+          description: item.description
         }))
       },
       // Calculate the total amount correctly

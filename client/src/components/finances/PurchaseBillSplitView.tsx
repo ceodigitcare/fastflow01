@@ -429,15 +429,15 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                   
                   // Only show the discount row if there's actually a discount amount
                   if (discountValue > 0) {
-                    // Determine the display value for percentage
-                    const displayValue = discountType === 'percentage' 
-                      ? (discountValue > 100 ? discountValue / 100 : discountValue)
-                      : null;
+                    // Determine the display value correctly based on type
+                    const percentageValue = discountValue > 100 
+                      ? (discountValue / 100).toFixed(2) 
+                      : discountValue.toFixed(2);
                       
                     return (
                       <div className="flex justify-between border-t pt-2">
                         <span className="text-gray-600">
-                          Total Discount{discountType === 'percentage' && displayValue ? ` (${displayValue}%)` : ''}:
+                          Total Discount{discountType === 'percentage' ? ` (${percentageValue}%)` : ''}:
                         </span>
                         <span className="font-medium text-red-500">
                           -{formatCurrency(actualDiscountAmount)}
