@@ -177,6 +177,14 @@ export default function PurchaseBillFormSplit({
         const discountValue = item.discount !== undefined && item.discount !== null 
           ? (typeof item.discount === 'string' ? parseFloat(item.discount) : Number(item.discount)) 
           : 0;
+
+        // Convert quantityReceived to number, ensure it's not undefined
+        const quantityReceivedValue = 
+          item.quantityReceived !== undefined && item.quantityReceived !== null
+            ? (typeof item.quantityReceived === 'string' 
+                ? parseFloat(item.quantityReceived) 
+                : Number(item.quantityReceived))
+            : 0;
           
         return {
           productId: item.productId ?? 0,
@@ -187,17 +195,24 @@ export default function PurchaseBillFormSplit({
           discount: discountValue,
           taxType: item.taxType ?? 'percentage', // Default to percentage for tax
           discountType: item.discountType ?? 'percentage', // Default to percentage for item discount
-          quantityReceived: item.quantityReceived ?? 0, // Add the saved quantityReceived value
+          quantityReceived: quantityReceivedValue, // Use the properly converted value
           amount: (item.amount ?? 0) / 100 // Convert from cents to dollars
         };
       }) : [],
       subtotal: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
       taxAmount: 0, // We'll calculate this
       discountAmount: 0, // We'll calculate this
-      // Set total discount properties - if editing a bill with a total discount, use its values
-      // otherwise default to a flat discount of 0
-      totalDiscount: editingBill.totalDiscount !== undefined ? (editingBill.totalDiscount / 100) : 0,
-      totalDiscountType: editingBill.totalDiscountType ?? 'flat', // Default to flat for total discount
+      // Get total discount from metadata if available, or from direct property
+      totalDiscount: 
+        editingBill.metadata?.totalDiscount !== undefined 
+          ? Number(editingBill.metadata.totalDiscount) / 100
+          : editingBill.totalDiscount !== undefined 
+            ? Number(editingBill.totalDiscount) / 100 
+            : 0,
+      totalDiscountType: 
+        editingBill.metadata?.totalDiscountType || 
+        editingBill.totalDiscountType || 
+        'flat', // Default to flat for total discount
       totalAmount: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
       paymentMade: (editingBill.paymentReceived ?? 0) / 100, // Convert from cents to dollars
       notes: editingBill.notes ?? "",
@@ -764,17 +779,24 @@ export default function PurchaseBillFormSplit({
         id: editingBill.id,
         createdAt: editingBill.createdAt 
       } : {}),
+      // Convert quantityReceived values to numbers and ensure they're included
       items: billItems.map(item => ({
         ...item,
-        // Make sure quantityReceived is included when saving
-        quantityReceived: item.quantityReceived !== undefined ? item.quantityReceived : 0
+        quantityReceived: item.quantityReceived !== undefined ? Number(item.quantityReceived) : 0
       })),
+      // Store bill-specific metadata in a separate field that will be serialized
+      metadata: {
+        totalDiscount: Number(data.totalDiscount || 0),
+        totalDiscountType: data.totalDiscountType || "flat",
+        // Store any other purchase bill specific data here
+      },
       // Use unitPrice instead of price to calculate the amount correctly
       amount: billItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
       status: data.status || "draft", // Use "draft" as default status
       paymentReceived: data.paymentMade || 0, // Use paymentMade from form data
-      totalDiscount: data.totalDiscount, // Explicitly include totalDiscount
-      totalDiscountType: data.totalDiscountType, // Explicitly include totalDiscountType
+      // We'll access these from metadata when loading
+      totalDiscount: Number(data.totalDiscount || 0), 
+      totalDiscountType: data.totalDiscountType || "flat",
       type: "purchase",
       category: "Bills"
     };
