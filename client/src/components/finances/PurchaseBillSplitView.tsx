@@ -355,26 +355,57 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                 
                 {/* Total Discount - Show only if total discount exists and is greater than 0 */}
                 {(() => {
-                  // Extract discount values with safer checking
-                  const discountValue = selectedBill.metadata?.totalDiscount || 0;
-                  const discountType = selectedBill.metadata?.totalDiscountType || 'flat';
+                  // Extract discount values with safer checking, using both legacy and new metadata paths
+                  console.log("Checking for discount in bill view:", {
+                    bill: selectedBill.documentNumber,
+                    metadata: selectedBill.metadata,
+                    directTotalDiscount: selectedBill.totalDiscount,
+                    metadataTotalDiscount: selectedBill.metadata?.totalDiscount
+                  });
+                  
+                  // Check both metadata and direct properties with fallbacks
+                  let discountValue = 0;
+                  if (selectedBill.metadata?.totalDiscount !== undefined) {
+                    discountValue = Number(selectedBill.metadata.totalDiscount);
+                  } else if (selectedBill.totalDiscount !== undefined) {
+                    discountValue = Number(selectedBill.totalDiscount);
+                  }
+                  
+                  const discountType = 
+                    selectedBill.metadata?.totalDiscountType || 
+                    selectedBill.totalDiscountType || 
+                    'flat';
+                  
+                  // Calculate the subtotal for percentage discounts
+                  const subtotal = Array.isArray(selectedBill.items) 
+                    ? selectedBill.items.reduce((sum: number, item: any) => 
+                        sum + (item.quantity * (item.unitPrice / 100)), 0) 
+                    : 0;
+                    
+                  // Calculate the actual discount amount based on type
+                  let actualDiscountAmount = 0;
+                  if (discountType === 'percentage') {
+                    actualDiscountAmount = subtotal * (discountValue / 100);
+                  } else {
+                    actualDiscountAmount = discountValue / 100;
+                  }
+                  
+                  console.log("Discount calculation:", {
+                    discountValue,
+                    discountType,
+                    subtotal,
+                    actualDiscountAmount
+                  });
                   
                   // Only show the discount row if there's actually a discount amount
                   if (discountValue > 0) {
                     return (
                       <div className="flex justify-between border-t pt-2">
                         <span className="text-gray-600">
-                          Total Discount{discountType === 'percentage' ? ` (${discountValue}%)` : ''}:
+                          Total Discount{discountType === 'percentage' ? ` (${discountValue/100}%)` : ''}:
                         </span>
                         <span className="font-medium text-red-500">
-                          -{formatCurrency(
-                            discountType === 'percentage'
-                              ? ((Array.isArray(selectedBill.items) 
-                                  ? selectedBill.items.reduce((sum: number, item: any) => 
-                                      sum + (item.quantity * (item.unitPrice / 100)), 0) 
-                                  : 0) * (discountValue / 100))
-                              : (discountValue / 100)
-                          )}
+                          -{formatCurrency(actualDiscountAmount)}
                         </span>
                       </div>
                     );
