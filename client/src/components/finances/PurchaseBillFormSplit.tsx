@@ -20,12 +20,11 @@ import {
 } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { InputProps } from "@/components/ui/input";
 
 // Create a safe number input component that always stays controlled
 const SafeNumberInput = forwardRef<
   HTMLInputElement, 
-  Omit<InputProps, 'onChange'> & { 
+  Omit<React.ComponentProps<"input">, 'onChange'> & { 
     onChange?: (value: number) => void,
     defaultValue?: number
   }
@@ -1013,19 +1012,19 @@ export default function PurchaseBillFormSplit({
                           </Select>
                         </td>
                         <td className="p-2">
-                          <Input
-                            type="number"
+                          <SafeNumberInput
+                            defaultValue={1}
                             value={item.quantity || 1} // Ensure it's never undefined
-                            onChange={(e) => updateItemQuantity(parseFloat(e.target.value) || 1, index)}
+                            onChange={(value) => updateItemQuantity(value || 1, index)}
                             min={1}
                             step={1}
                           />
                         </td>
                         <td className="p-2">
-                          <Input
-                            type="number"
+                          <SafeNumberInput
+                            defaultValue={0}
                             value={item.unitPrice || 0} // Ensure it's never undefined
-                            onChange={(e) => updateItemPrice(parseFloat(e.target.value) || 0, index)}
+                            onChange={(value) => updateItemPrice(value || 0, index)}
                             min={0}
                             step={0.01}
                           />
@@ -1098,10 +1097,10 @@ export default function PurchaseBillFormSplit({
                             <div>
                               <label className="text-xs text-gray-500 mb-1 block">Discount</label>
                               <div className="flex items-center space-x-1">
-                                <Input
-                                  type="number"
+                                <SafeNumberInput
+                                  defaultValue={0}
                                   value={item.discount ?? 0}
-                                  onChange={(e) => updateItemDiscount(parseFloat(e.target.value) || 0, index)}
+                                  onChange={(value) => updateItemDiscount(value || 0, index)}
                                   min={0}
                                   max={item.discountType === 'percentage' ? 100 : undefined}
                                   step={0.1}
@@ -1182,20 +1181,20 @@ export default function PurchaseBillFormSplit({
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Quantity</label>
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => updateItemQuantity(parseFloat(e.target.value), index)}
+                        <SafeNumberInput
+                          defaultValue={1}
+                          value={item.quantity || 1}
+                          onChange={(value) => updateItemQuantity(value || 1, index)}
                           min={1}
                           step={1}
                         />
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Unit Price</label>
-                        <Input
-                          type="number"
-                          value={item.unitPrice}
-                          onChange={(e) => updateItemPrice(parseFloat(e.target.value), index)}
+                        <SafeNumberInput
+                          defaultValue={0}
+                          value={item.unitPrice || 0}
+                          onChange={(value) => updateItemPrice(value || 0, index)}
                           min={0}
                           step={0.01}
                         />
