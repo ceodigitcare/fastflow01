@@ -89,6 +89,7 @@ export default function PurchaseBillFormSplit({
         productId: item.productId || 0,
         description: item.description || "",
         quantity: item.quantity || 1,
+        quantityReceived: item.quantityReceived || 0, // Add quantityReceived field
         unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
         taxRate: taxRateValue,
         discount: discountValue,
@@ -327,6 +328,13 @@ export default function PurchaseBillFormSplit({
   // Function to update item quantities
   const updateItemQuantity = (quantity: number, index: number) => {
     const newItems = [...billItems];
+    
+    // Ensure quantity received doesn't exceed new quantity
+    const currentQuantityReceived = newItems[index].quantityReceived || 0;
+    if (currentQuantityReceived > quantity) {
+      newItems[index].quantityReceived = quantity;
+    }
+    
     newItems[index] = {
       ...newItems[index],
       quantity,
@@ -335,6 +343,22 @@ export default function PurchaseBillFormSplit({
     
     setBillItems(newItems);
     updateTotals(newItems);
+  };
+  
+  // Function to update quantity received
+  const updateItemQuantityReceived = (quantityReceived: number, index: number) => {
+    const newItems = [...billItems];
+    const maxReceivable = newItems[index].quantity;
+    
+    // Ensure quantity received doesn't exceed ordered quantity
+    const safeQuantityReceived = Math.min(quantityReceived, maxReceivable);
+    
+    newItems[index] = {
+      ...newItems[index],
+      quantityReceived: safeQuantityReceived
+    };
+    
+    setBillItems(newItems);
   };
   
   // Function to update item unit prices
