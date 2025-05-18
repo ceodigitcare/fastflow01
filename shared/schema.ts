@@ -171,7 +171,18 @@ export const transactions = pgTable("transactions", {
   items: jsonb("items").default([]), // Line items for invoice/bill details
   status: text("status").default('draft'), // 'draft', 'final', 'paid', 'cancelled'
   paymentReceived: integer("payment_received").default(0), // Amount paid so far in cents
+  metadata: jsonb("metadata").default({}), // For document-specific custom fields (totalDiscount, etc.)
 });
+
+// Define metadata types for transaction documents
+export const PurchaseBillMetadataSchema = z.object({
+  totalDiscount: z.number().optional().default(0),
+  totalDiscountType: z.enum(['flat', 'percentage']).optional().default('flat'),
+  dueDate: z.date().or(z.string().transform(str => new Date(str))).optional(),
+  contactId: z.number().optional(), // Vendor/customer ID for bills/invoices
+});
+
+export type PurchaseBillMetadata = z.infer<typeof PurchaseBillMetadataSchema>;
 
 export const insertTransactionSchema = createInsertSchema(transactions)
   .omit({
@@ -185,6 +196,8 @@ export const insertTransactionSchema = createInsertSchema(transactions)
     status: z.string().optional().default('draft'),
     // Make paymentReceived optional with a default of 0
     paymentReceived: z.number().optional().default(0),
+    // Add metadata with validation for document-specific fields
+    metadata: z.object({}).passthrough().optional().default({}),
   });
 
 // For transaction transfers between accounts
@@ -298,7 +311,15 @@ export type InsertAccountCategory = z.infer<typeof insertAccountCategorySchema>;
 export type Account = typeof accounts.$inferSelect;
 export type InsertAccount = z.infer<typeof insertAccountSchema>;
 
-export type Transaction = typeof transactions.$inferSelect;
+export type Transaction = typeof transactions.$inferSelect & {
+  metadata?: {
+    totalDiscount?: number;
+    totalDiscountType?: 'flat' | 'percentage';
+    dueDate?: Date;
+    contactId?: number;
+    [key: string]: any;
+  };
+};
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 
 export type Transfer = typeof transfers.$inferSelect;

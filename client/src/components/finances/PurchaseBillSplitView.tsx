@@ -302,23 +302,33 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                 )}
                 
                 {/* Total Discount - Show only if total discount exists and is greater than 0 */}
-                {selectedBill.totalDiscount && selectedBill.totalDiscount > 0 && (
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="text-gray-600">
-                      Total Discount{selectedBill.totalDiscountType === 'percentage' ? ` (${selectedBill.totalDiscount}%)` : ''}:
-                    </span>
-                    <span className="font-medium text-red-500">
-                      -{formatCurrency(
-                        selectedBill.totalDiscountType === 'percentage'
-                          ? ((Array.isArray(selectedBill.items) 
-                              ? selectedBill.items.reduce((sum: number, item: any) => 
-                                  sum + (item.quantity * (item.unitPrice / 100)), 0) 
-                              : 0) * (selectedBill.totalDiscount / 100))
-                          : (selectedBill.totalDiscount / 100)
-                      )}
-                    </span>
-                  </div>
-                )}
+                {(() => {
+                  // Extract discount values with safer checking
+                  const discountValue = selectedBill.metadata?.totalDiscount || 0;
+                  const discountType = selectedBill.metadata?.totalDiscountType || 'flat';
+                  
+                  // Only show the discount row if there's actually a discount amount
+                  if (discountValue > 0) {
+                    return (
+                      <div className="flex justify-between border-t pt-2">
+                        <span className="text-gray-600">
+                          Total Discount{discountType === 'percentage' ? ` (${discountValue}%)` : ''}:
+                        </span>
+                        <span className="font-medium text-red-500">
+                          -{formatCurrency(
+                            discountType === 'percentage'
+                              ? ((Array.isArray(selectedBill.items) 
+                                  ? selectedBill.items.reduce((sum: number, item: any) => 
+                                      sum + (item.quantity * (item.unitPrice / 100)), 0) 
+                                  : 0) * (discountValue / 100))
+                              : (discountValue / 100)
+                          )}
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 
                 {/* Total */}
                 <div className="flex justify-between border-t pt-2">
