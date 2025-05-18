@@ -231,12 +231,21 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                     };
                     
                     // Log the clean bill object we've created
-                    console.log("Clean bill object prepared for editing:", billToEdit);
-                    
-                    console.log("Prepared bill for editing:", billToEdit);
+                    // Log the prepared bill object for debugging
+                    console.log("Bill object prepared for editing:", billToEdit);
                     
                     // Only proceed when we have the data
                     if (billToEdit) {
+                      // Ensure metadata is properly formatted as a string for the form component
+                      // This is critical for the metadata to be correctly parsed
+                      if (billToEdit.metadata && typeof billToEdit.metadata !== 'string') {
+                        try {
+                          billToEdit.metadata = JSON.stringify(billToEdit.metadata);
+                        } catch (e) {
+                          console.error("Error stringifying metadata:", e);
+                        }
+                      }
+                      
                       // Cast to any to avoid TypeScript errors related to the Transaction type
                       // This is necessary because we've added custom fields to handle editing properly
                       setEditingBill(billToEdit as any);
