@@ -1588,27 +1588,32 @@ export default function PurchaseBillFormSplit({
                   <div className="flex items-center space-x-2">
                     <SafeNumberInput
                       defaultValue={0}
-                      value={form.watch('totalDiscount')}
+                      value={totalDiscountField !== "0" ? totalDiscountField : form.watch('totalDiscount')}
                       onChange={(value) => {
-                        form.setValue('totalDiscount', value);
+                        // Update both state variable and form field
+                        setTotalDiscountField(value?.toString() || "0");
+                        form.setValue('totalDiscount', value || 0);
                         updateTotalsWithTotalDiscount();
                       }}
                       min={0}
-                      max={form.watch('totalDiscountType') === 'percentage' ? 100 : undefined}
+                      max={totalDiscountType === 'percentage' ? 100 : undefined}
                       step={0.1}
                       className="w-20 h-8 text-right"
                     />
                     <Select 
-                      value={form.watch('totalDiscountType')} 
+                      value={totalDiscountType || "flat"} 
                       defaultValue="flat"
                       onValueChange={(value) => {
-                        form.setValue('totalDiscountType', value as 'percentage' | 'flat');
+                        // Update both state variable and form field
+                        const discountType = value as 'percentage' | 'flat';
+                        setTotalDiscountType(discountType);
+                        form.setValue('totalDiscountType', discountType);
                         updateTotalsWithTotalDiscount();
                       }}
                     >
                       <SelectTrigger className="w-[60px] h-8">
                         <SelectValue>
-                          {form.watch('totalDiscountType') === 'percentage' ? '%' : '$'}
+                          {totalDiscountType === 'percentage' ? '%' : '$'}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
