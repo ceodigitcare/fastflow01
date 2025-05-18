@@ -822,6 +822,38 @@ export default function PurchaseBillFormSplit({
       return;
     }
     
+    // Convert form values to the correct format for storage
+    // Always multiply money values by 100 to store as cents in the database
+    const totalDiscountValue = Number(data.totalDiscount || 0) * 100;
+    const paymentMadeValue = Number(data.paymentMade || 0) * 100;
+    
+    // Log what we're saving
+    console.log("Saving bill with data:", {
+      totalDiscount: totalDiscountValue,
+      totalDiscountType: data.totalDiscountType,
+      dueDate: data.dueDate
+    });
+    
+    // Process items to ensure all numeric values are correctly formatted
+    const processedItems = billItems.map(item => {
+      // Log each item's data for debugging
+      console.log(`Processing item ${item.description} for save:`, {
+        quantity: item.quantity,
+        quantityReceived: item.quantityReceived,
+        unitPrice: item.unitPrice
+      });
+      
+      return {
+        ...item,
+        // Ensure quantityReceived is a number and stored correctly
+        quantityReceived: item.quantityReceived !== undefined ? 
+          Number(item.quantityReceived) : 0,
+        // Convert dollars to cents for storage (if not already done)
+        unitPrice: Number(item.unitPrice) * 100,
+        amount: Number(item.amount) * 100
+      };
+    });
+    
     // Prepare transaction data for saving/updating
     const billData = {
       ...data,
@@ -830,24 +862,19 @@ export default function PurchaseBillFormSplit({
         id: editingBill.id,
         createdAt: editingBill.createdAt 
       } : {}),
-      // Convert quantityReceived values to numbers and ensure they're included
-      items: billItems.map(item => ({
-        ...item,
-        quantityReceived: item.quantityReceived !== undefined ? Number(item.quantityReceived) : 0
-      })),
-      // Store bill-specific metadata in a separate field that will be serialized
+      // Use the processed items array
+      items: processedItems,
+      // Store all custom fields in metadata
       metadata: {
-        totalDiscount: Number(data.totalDiscount || 0),
+        totalDiscount: totalDiscountValue,
         totalDiscountType: data.totalDiscountType || "flat",
-        // Store any other purchase bill specific data here
+        dueDate: data.dueDate, // Store due date in metadata
+        // Add any other purchase bill specific data here
       },
-      // Use unitPrice instead of price to calculate the amount correctly
-      amount: billItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
-      status: data.status || "draft", // Use "draft" as default status
-      paymentReceived: data.paymentMade || 0, // Use paymentMade from form data
-      // We'll access these from metadata when loading
-      totalDiscount: Number(data.totalDiscount || 0), 
-      totalDiscountType: data.totalDiscountType || "flat",
+      // Calculate the total amount correctly
+      amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
+      status: data.status || "draft",
+      paymentReceived: paymentMadeValue,
       type: "purchase",
       category: "Bills"
     };
