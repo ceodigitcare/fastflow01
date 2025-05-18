@@ -121,12 +121,24 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                   variant="outline" 
                   size="sm" 
                   onClick={() => {
-                    // When Edit is clicked, we switch to edit mode with the current bill
-                    setEditingBill(selectedBill);
-                    setIsCreatingNew(true);
+                    // When Edit is clicked, first get a complete copy of the bill
+                    // to ensure all data is loaded before showing the form
+                    const billToEdit = { ...selectedBill };
                     
-                    // Important: This is needed to show the edit form
-                    setSelectedBill(null);
+                    // Only proceed when we have the data
+                    if (billToEdit) {
+                      setEditingBill(billToEdit);
+                      setIsCreatingNew(true);
+                      
+                      // Important: This is needed to show the edit form
+                      setSelectedBill(null);
+                    } else {
+                      toast({
+                        title: "Error",
+                        description: "Failed to load bill data for editing",
+                        variant: "destructive",
+                      });
+                    }
                   }}
                 >
                   <span className="mr-1">✏️</span> Edit

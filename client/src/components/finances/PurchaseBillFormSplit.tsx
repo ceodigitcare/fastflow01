@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import React, { useState, useEffect, forwardRef } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -20,6 +20,32 @@ import {
 } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { InputProps } from "@/components/ui/input";
+
+// Create a safe number input component that always stays controlled
+const SafeNumberInput = forwardRef<
+  HTMLInputElement, 
+  Omit<InputProps, 'onChange'> & { 
+    onChange?: (value: number) => void,
+    defaultValue?: number
+  }
+>(({ onChange, defaultValue = 0, value, ...props }, ref) => {
+  // Always ensure the input has a valid value (never undefined)
+  const safeValue = value !== undefined && value !== null ? value : defaultValue;
+  
+  return (
+    <Input
+      {...props}
+      ref={ref}
+      type="number"
+      value={safeValue}
+      onChange={(e) => {
+        const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+        onChange?.(isNaN(val) ? 0 : val);
+      }}
+    />
+  );
+});
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -109,17 +135,40 @@ export default function PurchaseBillFormSplit({
     )
   });
   
+  // Define a complete set of default values to ensure no undefined values
+  const defaultEmptyBill: PurchaseBill = {
+    vendorId: 0,
+    accountId: 0,
+    billNumber: generateBillNumber(),
+    billDate: new Date(),
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    status: "draft",
+    items: [],
+    subtotal: 0,
+    taxAmount: 0,
+    discountAmount: 0,
+    totalDiscount: 0,
+    totalDiscountType: "flat", // Set to flat by default
+    totalAmount: 0,
+    paymentMade: 0,
+    notes: "",
+    termsAndConditions: "Payment is due within 30 days of the bill date.",
+    vendorNotes: "",
+  };
+
   // Set up form with defaults or pre-fill with editing data
   const form = useForm<PurchaseBill>({
     resolver: zodResolver(purchaseBillSchema),
+    // Always use defaultEmptyBill as base to avoid undefined fields
     defaultValues: editingBill ? {
+      ...defaultEmptyBill,
       // Pre-fill with existing bill data when editing
-      vendorId: editingBill.contactId || 0,
-      accountId: editingBill.accountId || 0,
-      billNumber: editingBill.documentNumber || generateBillNumber(),
+      vendorId: editingBill.contactId ?? 0,
+      accountId: editingBill.accountId ?? 0,
+      billNumber: editingBill.documentNumber ?? generateBillNumber(),
       billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
       dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      status: editingBill.status || "draft",
+      status: editingBill.status ?? "draft",
       items: Array.isArray(editingBill.items) ? editingBill.items.map(item => {
         const taxRateValue = item.taxRate !== undefined && item.taxRate !== null 
           ? (typeof item.taxRate === 'string' ? parseFloat(item.taxRate) : Number(item.taxRate)) 
@@ -130,50 +179,47 @@ export default function PurchaseBillFormSplit({
           : 0;
           
         return {
-          productId: item.productId || 0,
-          description: item.description || "",
-          quantity: item.quantity || 1,
-          unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
+          productId: item.productId ?? 0,
+          description: item.description ?? "",
+          quantity: item.quantity ?? 1,
+          unitPrice: (item.unitPrice ?? 0) / 100, // Convert from cents to dollars
           taxRate: taxRateValue,
           discount: discountValue,
-          taxType: item.taxType || 'percentage', // Default to percentage for tax
-          discountType: item.discountType || 'percentage', // Default to percentage for item discount
-          amount: (item.amount || 0) / 100 // Convert from cents to dollars
+          taxType: item.taxType ?? 'percentage', // Default to percentage for tax
+          discountType: item.discountType ?? 'percentage', // Default to percentage for item discount
+          amount: (item.amount ?? 0) / 100 // Convert from cents to dollars
         };
       }) : [],
-      subtotal: (editingBill.amount || 0) / 100, // Convert from cents to dollars
+      subtotal: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
       taxAmount: 0, // We'll calculate this
       discountAmount: 0, // We'll calculate this
       // Set total discount properties - if editing a bill with a total discount, use its values
       // otherwise default to a flat discount of 0
       totalDiscount: editingBill.totalDiscount !== undefined ? (editingBill.totalDiscount / 100) : 0,
-      totalDiscountType: editingBill.totalDiscountType || 'flat', // Default to flat for total discount
-      totalAmount: (editingBill.amount || 0) / 100, // Convert from cents to dollars
-      paymentMade: (editingBill.paymentReceived || 0) / 100, // Convert from cents to dollars
-      notes: editingBill.notes || "",
+      totalDiscountType: editingBill.totalDiscountType ?? 'flat', // Default to flat for total discount
+      totalAmount: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
+      paymentMade: (editingBill.paymentReceived ?? 0) / 100, // Convert from cents to dollars
+      notes: editingBill.notes ?? "",
       termsAndConditions: "Payment is due within 30 days of the bill date.",
-      vendorNotes: editingBill.description || "",
-    } : {
-      // Default values for new bill
-      vendorId: 0,
-      accountId: 0,
-      billNumber: generateBillNumber(),
-      billDate: new Date(),
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      status: "draft",
-      items: [],
-      subtotal: 0,
-      taxAmount: 0,
-      discountAmount: 0,
-      totalDiscount: 0,
-      totalDiscountType: "flat", // Set to flat by default
-      totalAmount: 0,
-      paymentMade: 0,
-      notes: "",
-      termsAndConditions: "Payment is due within 30 days of the bill date.",
-      vendorNotes: "",
-    }
+      vendorNotes: editingBill.description ?? "",
+    } : defaultEmptyBill
   });
+  
+  // Safety: Reset the form when the editingBill prop changes to ensure all values are properly set
+  useEffect(() => {
+    if (editingBill) {
+      form.reset({
+        ...defaultEmptyBill,
+        vendorId: editingBill.contactId ?? 0,
+        accountId: editingBill.accountId ?? 0,
+        billNumber: editingBill.documentNumber ?? generateBillNumber(),
+        billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
+        dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        status: editingBill.status ?? "draft",
+        // Include other fields from editingBill as needed
+      });
+    }
+  }, [editingBill]);
   
   // Mutation for creating a new vendor
   const createVendorMutation = useMutation({
