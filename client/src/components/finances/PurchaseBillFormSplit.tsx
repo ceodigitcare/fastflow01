@@ -699,17 +699,34 @@ export default function PurchaseBillFormSplit({
       // Extract items from the transaction
       let items = editingBill.items as any[] || [];
       
+      // Check if there are saved item quantities in metadata
+      const savedItemQuantities = editingBill.metadata?.itemQuantitiesReceived || [];
+      console.log("Found saved item quantities in metadata:", savedItemQuantities);
+      
       // Process and normalize all item fields, ensuring proper types
       items = items.map(item => {
-        // Safely get the quantityReceived value, ensuring it's a number
-        const quantityReceived = item.quantityReceived !== undefined ? 
-          Number(item.quantityReceived) : 0;
-          
-        // Log each item processing for debugging with detailed info
+        // First check if we have a stored quantity received for this item in metadata
+        const savedQuantity = savedItemQuantities.find(sq => sq.productId === item.productId);
+        
+        // Prioritize quantity from metadata, then from direct property, then default to 0
+        let quantityReceived = 0;
+        if (savedQuantity !== undefined) {
+          quantityReceived = Number(savedQuantity.quantityReceived);
+          console.log(`Found saved quantity for product ${item.productId} in metadata:`, quantityReceived);
+        } else if (item.quantityReceived !== undefined) {
+          quantityReceived = Number(item.quantityReceived);
+          console.log(`Using direct quantityReceived property for product ${item.productId}:`, quantityReceived);
+        }
+        
+        // Log comprehensive item processing information
         console.log(`Processing item: ${item.description}`, {
-          quantity: item.quantity,
+          productId: item.productId,
+          quantity: item.quantity, 
           quantityReceived: quantityReceived,
-          originalQuantityReceived: item.quantityReceived,
+          originalValues: {
+            directQuantityReceived: item.quantityReceived,
+            metadataQuantityReceived: savedQuantity?.quantityReceived
+          },
           fullItem: item
         });
         
@@ -718,7 +735,7 @@ export default function PurchaseBillFormSplit({
           // Ensure required properties have default values if missing
           taxType: item.taxType || 'percentage',
           discountType: item.discountType || 'percentage',
-          // Important: Explicitly set quantityReceived as a number
+          // Explicitly set quantityReceived using our prioritized value
           quantityReceived: quantityReceived,
           // Convert amounts from cents to dollars if needed
           amount: typeof item.amount === 'number' && item.amount > 100 ? item.amount / 100 : item.amount,
@@ -941,10 +958,17 @@ export default function PurchaseBillFormSplit({
       items: processedItems,
       // Store all custom fields in metadata
       metadata: {
+        // Preserve any existing metadata fields from the original bill
+        ...(editingBill?.metadata || {}),
+        // Add/update our metadata fields
         totalDiscount: totalDiscountValue,
         totalDiscountType: data.totalDiscountType || "flat",
-        dueDate: data.dueDate, // Store due date in metadata
-        // Add any other purchase bill specific data here
+        dueDate: data.dueDate,
+        // Add item level quantityReceived in metadata to ensure it persists
+        itemQuantitiesReceived: processedItems.map(item => ({
+          productId: item.productId,
+          quantityReceived: item.quantityReceived
+        }))
       },
       // Calculate the total amount correctly
       amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
