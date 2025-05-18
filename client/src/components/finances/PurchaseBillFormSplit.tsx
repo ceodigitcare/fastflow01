@@ -1231,10 +1231,10 @@ export default function PurchaseBillFormSplit({
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Tax</label>
                         <div className="flex items-center space-x-1">
-                          <Input
-                            type="number"
+                          <SafeNumberInput
+                            defaultValue={0}
                             value={item.taxRate ?? 0}
-                            onChange={(e) => updateItemTaxRate(parseFloat(e.target.value), index)}
+                            onChange={(value) => updateItemTaxRate(value || 0, index)}
                             min={0}
                             max={item.taxType === 'percentage' ? 100 : undefined}
                             step={0.1}
@@ -1262,10 +1262,10 @@ export default function PurchaseBillFormSplit({
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Discount</label>
                         <div className="flex items-center space-x-1">
-                          <Input
-                            type="number"
+                          <SafeNumberInput
+                            defaultValue={0}
                             value={item.discount ?? 0}
-                            onChange={(e) => updateItemDiscount(parseFloat(e.target.value), index)}
+                            onChange={(value) => updateItemDiscount(value || 0, index)}
                             min={0}
                             max={item.discountType === 'percentage' ? 100 : undefined}
                             step={0.1}
@@ -1326,11 +1326,10 @@ export default function PurchaseBillFormSplit({
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-medium">Total Discount:</span>
                   <div className="flex items-center space-x-2">
-                    <Input
-                      type="number"
+                    <SafeNumberInput
+                      defaultValue={0}
                       value={form.watch('totalDiscount')}
-                      onChange={(e) => {
-                        const value = parseFloat(e.target.value) || 0;
+                      onChange={(value) => {
                         form.setValue('totalDiscount', value);
                         updateTotalsWithTotalDiscount();
                       }}
@@ -1383,12 +1382,11 @@ export default function PurchaseBillFormSplit({
                     <FormItem>
                       <FormLabel>Payment Made</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
+                        <SafeNumberInput 
+                          defaultValue={0}
                           value={field.value ?? 0} // Ensure value is never undefined
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                            field.onChange(isNaN(value) ? 0 : value);
+                          onChange={(value) => {
+                            field.onChange(value);
                           }}
                           min={0}
                           step={0.01}
