@@ -301,8 +301,8 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                   </div>
                 )}
                 
-                {/* Total Discount - Show only if total discount exists */}
-                {selectedBill.totalDiscount > 0 && (
+                {/* Total Discount - Show only if total discount exists and is greater than 0 */}
+                {selectedBill.totalDiscount && selectedBill.totalDiscount > 0 && (
                   <div className="flex justify-between border-t pt-2">
                     <span className="text-gray-600">
                       Total Discount{selectedBill.totalDiscountType === 'percentage' ? ` (${selectedBill.totalDiscount}%)` : ''}:

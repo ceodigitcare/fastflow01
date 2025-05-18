@@ -1001,6 +1001,7 @@ export default function PurchaseBillFormSplit({
                   <tr>
                     <th className="text-left p-2">Product</th>
                     <th className="w-20 p-2">Qty</th>
+                    <th className="w-20 p-2">Received</th>
                     <th className="w-24 p-2">Unit Price</th>
                     <th className="w-24 p-2">Amount</th>
                     <th className="w-10 p-2"></th>
@@ -1041,6 +1042,16 @@ export default function PurchaseBillFormSplit({
                             value={item.quantity || 1} // Ensure it's never undefined
                             onChange={(value) => updateItemQuantity(value || 1, index)}
                             min={1}
+                            step={1}
+                          />
+                        </td>
+                        <td className="p-2">
+                          <SafeNumberInput
+                            defaultValue={0}
+                            value={item.quantityReceived || 0} // Ensure it's never undefined
+                            onChange={(value) => updateItemQuantityReceived(value || 0, index)}
+                            min={0}
+                            max={item.quantity || 1} // Can't receive more than ordered
                             step={1}
                           />
                         </td>
@@ -1201,8 +1212,8 @@ export default function PurchaseBillFormSplit({
                       </Button>
                     </div>
                     
-                    {/* Quantity and Price */}
-                    <div className="grid grid-cols-2 gap-3 mb-3">
+                    {/* Quantity, Received, and Price */}
+                    <div className="grid grid-cols-3 gap-3 mb-3">
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Quantity</label>
                         <SafeNumberInput
@@ -1210,6 +1221,17 @@ export default function PurchaseBillFormSplit({
                           value={item.quantity || 1}
                           onChange={(value) => updateItemQuantity(value || 1, index)}
                           min={1}
+                          step={1}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Received</label>
+                        <SafeNumberInput
+                          defaultValue={0}
+                          value={item.quantityReceived || 0}
+                          onChange={(value) => updateItemQuantityReceived(value || 0, index)}
+                          min={0}
+                          max={item.quantity || 1}
                           step={1}
                         />
                       </div>
