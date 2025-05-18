@@ -128,23 +128,23 @@ export const purchaseBillItemSchema = z.object({
   description: z.string().min(1, "Description is required"),
   quantity: z.number().min(1, "Quantity must be at least 1"),
   unitPrice: z.number().min(0.01, "Unit price must be greater than 0"),
-  quantityReceived: z.number().min(0, "Quantity received cannot be negative")
-    .optional()
-    .refine(
-      (val, ctx) => {
-        if (val === undefined || val === null) return true;
-        return val <= ctx.parent.quantity;
-      },
-      {
-        message: "Quantity received cannot exceed ordered quantity",
-        path: ["quantityReceived"]
-      }
-    ),
+  quantityReceived: z.number().min(0, "Quantity received cannot be negative").optional(),
   taxRate: z.number().default(0),
   discount: z.number().default(0),
   taxType: z.enum(["percentage", "flat"]).default("percentage"),
   discountType: z.enum(["percentage", "flat"]).default("percentage"),
   amount: z.number().min(0.01, "Amount must be greater than 0")
+}).superRefine((data, ctx) => {
+  // Check that quantityReceived doesn't exceed quantity
+  if (data.quantityReceived !== undefined && data.quantityReceived !== null) {
+    if (data.quantityReceived > data.quantity) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Quantity received cannot exceed ordered quantity",
+        path: ["quantityReceived"],
+      });
+    }
+  }
 });
 
 export const purchaseBillSchema = z.object({
@@ -161,21 +161,21 @@ export const purchaseBillSchema = z.object({
   totalDiscount: z.number().default(0), // Total discount amount
   totalDiscountType: z.enum(["percentage", "flat"]).default("flat"), // Total discount type (% or flat) - default to flat amount
   totalAmount: z.number().min(0.01, "Total amount must be greater than 0"),
-  paymentMade: z.number().min(0, "Payment amount cannot be negative")
-    .optional()
-    .refine(
-      (val, ctx) => {
-        if (val === undefined || val === null) return true;
-        return val <= ctx.parent.totalAmount;
-      },
-      {
-        message: "Payment cannot exceed total bill amount",
-        path: ["paymentMade"]
-      }
-    ),
+  paymentMade: z.number().min(0, "Payment amount cannot be negative").optional(),
   notes: z.string().optional(),
   termsAndConditions: z.string().optional(),
   vendorNotes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // Check that payment doesn't exceed total amount
+  if (data.paymentMade !== undefined && data.paymentMade !== null) {
+    if (data.paymentMade > data.totalAmount) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Payment cannot exceed total bill amount",
+        path: ["paymentMade"],
+      });
+    }
+  }
 });
 
 // Export types for all schemas
