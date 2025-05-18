@@ -132,7 +132,7 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                       totalDiscount: 0,
                       totalDiscountType: 'flat',
                       dueDate: selectedBill.date,
-                      itemQuantitiesReceived: []
+                      itemQuantitiesReceived: [] as {productId: number, quantityReceived: number}[]
                     };
                     
                     try {
@@ -156,15 +156,16 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                       ? selectedBill.items.map(item => {
                           // Find matching metadata for this item if it exists in itemQuantitiesReceived
                           const itemMetadata = metadata.itemQuantitiesReceived && Array.isArray(metadata.itemQuantitiesReceived) 
-                            ? metadata.itemQuantitiesReceived.find((m: any) => m.productId === item.productId)
+                            ? metadata.itemQuantitiesReceived.find((m: {productId: number, quantityReceived: number}) => 
+                                m.productId === item.productId)
                             : null;
                           
                           return {
                             ...item,
-                            // Use metadata value for quantityReceived if available, otherwise direct property
+                            // Get quantityReceived from appropriate source
                             quantityReceived: itemMetadata?.quantityReceived !== undefined 
                               ? Number(itemMetadata.quantityReceived) 
-                              : (item.quantityReceived !== undefined ? Number(item.quantityReceived) : 0),
+                              : (typeof item.quantityReceived === 'number' ? Number(item.quantityReceived) : 0),
                             // Ensure all numeric values are properly typed
                             quantity: Number(item.quantity),
                             unitPrice: Number(item.unitPrice),
@@ -176,9 +177,17 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                       : [];
                       
                     // Calculate contact ID from the selectedBill (vendor contact)
-                    const contactId = selectedBill.contactId || 
-                                     (selectedBill.contact?.id) || 
-                                     null;
+                    // First try standard properties that might hold the vendor ID
+                    let contactId = null;
+                    if (typeof selectedBill.contactId === 'number') {
+                      contactId = selectedBill.contactId;
+                    } else if (selectedBill.contact && typeof selectedBill.contact.id === 'number') {
+                      contactId = selectedBill.contact.id;
+                    } else if (selectedBill.vendorId) {
+                      contactId = selectedBill.vendorId;
+                    }
+                    
+                    console.log("Determined contact ID:", contactId);
                     
                     // Log processed items to verify they have all required data
                     console.log("Processed items:", processedItems);
@@ -228,7 +237,9 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                     
                     // Only proceed when we have the data
                     if (billToEdit) {
-                      setEditingBill(billToEdit);
+                      // Cast to any to avoid TypeScript errors related to the Transaction type
+                      // This is necessary because we've added custom fields to handle editing properly
+                      setEditingBill(billToEdit as any);
                       setIsCreatingNew(true);
                       
                       // Important: This is needed to show the edit form

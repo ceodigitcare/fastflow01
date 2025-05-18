@@ -202,17 +202,48 @@ export default function PurchaseBillFormSplit({
       subtotal: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
       taxAmount: 0, // We'll calculate this
       discountAmount: 0, // We'll calculate this
-      // Get total discount from metadata if available, or from direct property
-      totalDiscount: 
-        editingBill.metadata?.totalDiscount !== undefined 
-          ? Number(editingBill.metadata.totalDiscount) / 100
-          : editingBill.totalDiscount !== undefined 
-            ? Number(editingBill.totalDiscount) / 100 
-            : 0,
-      totalDiscountType: 
-        editingBill.metadata?.totalDiscountType || 
-        editingBill.totalDiscountType || 
-        'flat', // Default to flat for total discount
+      // Parse metadata JSON if it exists, or use direct properties
+      totalDiscount: (() => {
+        // Try to parse metadata if it's a string
+        let metadataObj = null;
+        if (typeof editingBill.metadata === 'string') {
+          try {
+            metadataObj = JSON.parse(editingBill.metadata);
+            console.log("Parsed metadata:", metadataObj);
+            if (metadataObj?.totalDiscount !== undefined) {
+              return Number(metadataObj.totalDiscount) / 100; // Convert from cents to dollars
+            }
+          } catch (e) {
+            console.error("Error parsing metadata:", e);
+          }
+        } 
+        
+        // If metadata parsing failed or totalDiscount wasn't in metadata, try direct property
+        if (editingBill.totalDiscount !== undefined) {
+          return Number(editingBill.totalDiscount);
+        }
+        
+        // Default to 0
+        return 0;
+      })(),
+      
+      // Parse metadata JSON for discount type
+      totalDiscountType: (() => {
+        // Try to parse metadata if it's a string
+        if (typeof editingBill.metadata === 'string') {
+          try {
+            const metadataObj = JSON.parse(editingBill.metadata);
+            if (metadataObj?.totalDiscountType) {
+              return metadataObj.totalDiscountType;
+            }
+          } catch (e) {
+            console.error("Error parsing metadata in discount type:", e);
+          }
+        }
+        
+        // Fallback to direct property or default
+        return editingBill.totalDiscountType || 'flat';
+      })(),
       totalAmount: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
       paymentMade: (editingBill.paymentReceived ?? 0) / 100, // Convert from cents to dollars
       notes: editingBill.notes ?? "",
