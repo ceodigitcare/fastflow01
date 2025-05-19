@@ -424,6 +424,7 @@ export default function PurchaseBillFormSplit({
       productId: 0,
       description: "",
       quantity: 1,
+      quantityReceived: 0, // Explicitly initialize quantityReceived
       unitPrice: 0,
       taxRate: 0,
       discount: 0,
@@ -433,6 +434,7 @@ export default function PurchaseBillFormSplit({
       amount: 0
     };
     
+    console.log("Adding new item with quantityReceived:", newItem.quantityReceived);
     setBillItems([...billItems, newItem]);
   };
   
