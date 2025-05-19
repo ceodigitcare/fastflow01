@@ -484,17 +484,25 @@ export default function PurchaseBillFormSplit({
     
     // Ensure quantity received doesn't exceed new quantity
     const currentQuantityReceived = newItems[index].quantityReceived || 0;
-    if (currentQuantityReceived > quantity) {
-      newItems[index].quantityReceived = quantity;
-    }
+    const newQuantityReceived = currentQuantityReceived > quantity ? quantity : currentQuantityReceived;
     
     newItems[index] = {
       ...newItems[index],
       quantity,
+      quantityReceived: newQuantityReceived, // Ensure quantityReceived is properly set
       amount: newItems[index].unitPrice * quantity
     };
     
+    // Debug log to verify the quantity update
+    console.log(`Updated item ${index} quantity to ${quantity}, quantityReceived: ${newQuantityReceived}`);
+    
+    // Update both the local state and form state to keep them in sync
     setBillItems(newItems);
+    
+    // Explicitly update the form values to ensure they're in sync with our state
+    form.setValue(`items.${index}.quantity`, quantity);
+    form.setValue(`items.${index}.quantityReceived`, newQuantityReceived);
+    
     updateTotals(newItems);
   };
   
@@ -511,7 +519,15 @@ export default function PurchaseBillFormSplit({
       quantityReceived: safeQuantityReceived
     };
     
+    // Debug log to verify the update
+    console.log(`Setting quantityReceived for item ${index} to:`, safeQuantityReceived);
+    
+    // Update both our local state and the form state to keep them in sync
     setBillItems(newItems);
+    
+    // Important: Update the form's value for this specific item's quantityReceived
+    // This ensures the value is properly included when the form is submitted
+    form.setValue(`items.${index}.quantityReceived`, safeQuantityReceived);
   };
   
   // Function to update item unit prices
@@ -1039,20 +1055,31 @@ export default function PurchaseBillFormSplit({
       // This is important for existing data that might already be in cents
       const isUnitPriceInCents = Number(item.unitPrice) > 100;
       
+      // Get form values for this item as they may be more up-to-date
+      // This is critical for ensuring quantityReceived is persisted correctly
+      const formItems = form.getValues('items') || [];
+      const formItem = formItems[billItems.indexOf(item)];
+      
+      // Use the form value for quantityReceived if available, otherwise use the state value
+      const quantityReceivedValue = formItem?.quantityReceived !== undefined ? 
+        Number(formItem.quantityReceived) : 
+        (item.quantityReceived !== undefined && item.quantityReceived !== null ? 
+          Number(item.quantityReceived) : 0);
+      
       // Log each item's data for debugging
       console.log(`Processing item ${item.description} for save:`, {
         quantity: item.quantity,
         quantityReceived: item.quantityReceived,
+        formQuantityReceived: formItem?.quantityReceived,
+        finalQuantityReceived: quantityReceivedValue,
         unitPrice: item.unitPrice,
         isAlreadyInCents: isUnitPriceInCents
       });
       
       return {
         ...item,
-        // Ensure quantityReceived is a number and stored correctly
-        // Converting to number and ensuring null/undefined values are treated as 0
-        quantityReceived: item.quantityReceived !== undefined && item.quantityReceived !== null ? 
-          Number(item.quantityReceived) : 0,
+        // Use the properly determined quantityReceived value
+        quantityReceived: quantityReceivedValue,
         // Keep unitPrice as is - do NOT multiply by 100! 
         // The backend already handles this amount as cents
         unitPrice: Number(item.unitPrice),
