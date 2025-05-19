@@ -1172,8 +1172,18 @@ export default function PurchaseBillFormSplit({
         })), null, 2)
       );
       
-      // Update both the billItems state and form values
+      // Update both the billItems state and explicit form values
       setBillItems(itemsWithQuantities);
+      
+      // CRITICAL: For each item, also explicitly set the form value for quantityReceived
+      // This ensures the form state has the correct values - THE KEY FIX
+      itemsWithQuantities.forEach((item, index) => {
+        // This direct form setValue is what makes the fix work
+        form.setValue(`items.${index}.quantityReceived`, item.quantityReceived);
+        
+        // Log to verify we're setting the right value
+        console.log(`🔧 EXPLICITLY set form item ${index} (${item.productId}) quantityReceived to: ${item.quantityReceived}`);
+      });
       
       // Before form reset, ensure our state values are updated
       setTotalDiscountField(discountValue.toString());
