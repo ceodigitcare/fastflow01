@@ -178,13 +178,36 @@ export default function PurchaseBillFormSplit({
           ? (typeof item.discount === 'string' ? parseFloat(item.discount) : Number(item.discount)) 
           : 0;
 
-        // Convert quantityReceived to number, ensure it's not undefined
-        const quantityReceivedValue = 
-          item.quantityReceived !== undefined && item.quantityReceived !== null
-            ? (typeof item.quantityReceived === 'string' 
-                ? parseFloat(item.quantityReceived) 
-                : Number(item.quantityReceived))
-            : 0;
+        // Get quantityReceived from metadata if available, otherwise from the item itself
+        let quantityReceivedValue = 0;
+        
+        // First try to extract it from metadata
+        try {
+          if (typeof editingBill.metadata === 'string') {
+            const metadataObj = JSON.parse(editingBill.metadata);
+            
+            // Look for matching item in itemQuantitiesReceived array
+            if (metadataObj?.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
+              const matchingItem = metadataObj.itemQuantitiesReceived.find(
+                (metaItem: any) => metaItem.productId === item.productId
+              );
+              
+              if (matchingItem && matchingItem.quantityReceived !== undefined) {
+                quantityReceivedValue = Number(matchingItem.quantityReceived);
+                console.log(`Found quantity received in metadata for product ${item.productId}:`, quantityReceivedValue);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing metadata for quantityReceived:", e);
+        }
+        
+        // If not found in metadata, try direct property on the item
+        if (quantityReceivedValue === 0 && item.quantityReceived !== undefined && item.quantityReceived !== null) {
+          quantityReceivedValue = typeof item.quantityReceived === 'string' 
+            ? parseFloat(item.quantityReceived) 
+            : Number(item.quantityReceived);
+        }
           
         return {
           productId: item.productId ?? 0,
@@ -976,7 +999,8 @@ export default function PurchaseBillFormSplit({
       return {
         ...item,
         // Ensure quantityReceived is a number and stored correctly
-        quantityReceived: item.quantityReceived !== undefined ? 
+        // Converting to number and ensuring null/undefined values are treated as 0
+        quantityReceived: item.quantityReceived !== undefined && item.quantityReceived !== null ? 
           Number(item.quantityReceived) : 0,
         // Keep unitPrice as is - do NOT multiply by 100! 
         // The backend already handles this amount as cents
@@ -1003,9 +1027,12 @@ export default function PurchaseBillFormSplit({
         totalDiscountType: data.totalDiscountType || "flat",
         dueDate: data.dueDate ? data.dueDate.toISOString() : new Date().toISOString(),
         // Save item quantities in a simple array
+        // Store item quantities in a simple array with productId for later matching
+        // Ensuring quantityReceived is always stored as a number, not null or undefined
         itemQuantitiesReceived: processedItems.map(item => ({
           productId: item.productId,
-          quantityReceived: item.quantityReceived || 0
+          quantityReceived: typeof item.quantityReceived === 'number' ? item.quantityReceived : 
+                            item.quantityReceived ? Number(item.quantityReceived) : 0
         }))
       }),
       // Calculate the total amount correctly
