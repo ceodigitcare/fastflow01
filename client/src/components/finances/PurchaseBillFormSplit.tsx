@@ -854,23 +854,46 @@ export default function PurchaseBillFormSplit({
       // Extract items from the transaction
       let items = editingBill.items as any[] || [];
       
-      // Check if there are saved item quantities in metadata
-      const savedItemQuantities = editingBill.metadata?.itemQuantitiesReceived || [];
-      console.log("Found saved item quantities in metadata:", savedItemQuantities);
+      // Extract and parse metadata if it exists
+      let savedItemQuantities: {productId: number, quantityReceived: number}[] = [];
+      try {
+        if (editingBill.metadata && typeof editingBill.metadata === 'string') {
+          const parsedMetadata = JSON.parse(editingBill.metadata);
+          if (parsedMetadata.itemQuantitiesReceived && Array.isArray(parsedMetadata.itemQuantitiesReceived)) {
+            savedItemQuantities = parsedMetadata.itemQuantitiesReceived;
+            console.log("Found saved item quantities in metadata:", JSON.stringify(savedItemQuantities, null, 2));
+          } else {
+            console.log("No itemQuantitiesReceived array found in metadata");
+          }
+        } else {
+          console.log("No metadata or metadata is not a string:", editingBill.metadata);
+        }
+      } catch (error) {
+        console.error("Error parsing metadata:", error);
+      }
       
       // Process and normalize all item fields, ensuring proper types
       items = items.map(item => {
+        // Get product ID as a number for consistent comparisons
+        const productId = Number(item.productId);
+        
         // First check if we have a stored quantity received for this item in metadata
-        const savedQuantity = savedItemQuantities.find(sq => sq.productId === item.productId);
+        // We need to properly convert both productIds to numbers for accurate comparison
+        const savedQuantity = savedItemQuantities.find(sq => Number(sq.productId) === productId);
         
         // Prioritize quantity from metadata, then from direct property, then default to 0
         let quantityReceived = 0;
-        if (savedQuantity !== undefined) {
+        if (savedQuantity !== undefined && savedQuantity.quantityReceived !== undefined) {
           quantityReceived = Number(savedQuantity.quantityReceived);
-          console.log(`Found saved quantity for product ${item.productId} in metadata:`, quantityReceived);
+          console.log(`Found saved quantity for product ${productId} in metadata:`, quantityReceived);
         } else if (item.quantityReceived !== undefined) {
           quantityReceived = Number(item.quantityReceived);
-          console.log(`Using direct quantityReceived property for product ${item.productId}:`, quantityReceived);
+          console.log(`Using direct quantityReceived property for product ${productId}:`, quantityReceived);
+        }
+        
+        // CRITICAL: Ensure we preserve the non-zero value if it exists
+        if (quantityReceived > 0) {
+          console.log(`IMPORTANT: Using non-zero quantity value ${quantityReceived} for product ${productId}`);
         }
         
         // Log comprehensive item processing information
