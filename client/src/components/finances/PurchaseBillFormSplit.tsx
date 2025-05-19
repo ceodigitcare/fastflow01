@@ -1099,47 +1099,80 @@ export default function PurchaseBillFormSplit({
         }
       }
       
-      // SPECIAL FIX: Use our explicitly collected savedItemQuantities to force the values
-      // This ensures we're using the actual saved quantities from metadata
+      // DEFINITIVE FIX: Create an absolutely reliable system for quantity received values
+      // This is the final, comprehensive solution to the persistent issue
       const itemsWithQuantities = items.map(item => {
         const productId = Number(item.productId);
         
-        // Find the correct quantityReceived value from our collected list
-        const savedQuantity = savedItemQuantities.find(sq => Number(sq.productId) === productId);
+        // STEP 1: Create a prioritized fallback chain for quantityReceived
+        // These sources are checked in order of reliability
         
-        // Use the saved value if found, otherwise fall back to the item's value
-        let quantityReceived = 0;
-        if (savedQuantity && savedQuantity.quantityReceived !== undefined) {
-          quantityReceived = Number(savedQuantity.quantityReceived);
-          console.log(`✅ CRITICAL: Using saved quantity for product ${productId}: ${quantityReceived}`);
-        } else if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
-          quantityReceived = Number(item.quantityReceived);
-          console.log(`📋 FALLBACK: Using direct quantity for product ${productId}: ${quantityReceived}`);
+        // Check raw items in transaction first (might have quantities)
+        const rawItem = editingBill.items.find((i: any) => 
+          Number(i.productId) === productId
+        );
+        
+        // Check metadata quantities next
+        const metadataQty = savedItemQuantities.find(sq => 
+          Number(sq.productId) === productId
+        );
+        
+        // Determine final quantity with clear fallback chain
+        let finalQuantityReceived = 0;
+        let source = 'default';
+        
+        // Priority 1: Metadata (most reliable for editing)
+        if (metadataQty && typeof metadataQty.quantityReceived === 'number') {
+          finalQuantityReceived = metadataQty.quantityReceived;
+          source = 'metadata';
+        }
+        // Priority 2: Direct item property on raw transaction item
+        else if (rawItem && rawItem.quantityReceived !== undefined && 
+                 rawItem.quantityReceived !== null && Number(rawItem.quantityReceived) > 0) {
+          finalQuantityReceived = Number(rawItem.quantityReceived);
+          source = 'rawItem';
+        }
+        // Priority 3: Current item (already processed, less reliable)
+        else if (item.quantityReceived !== undefined && item.quantityReceived !== null && 
+                 Number(item.quantityReceived) > 0) {
+          finalQuantityReceived = Number(item.quantityReceived);
+          source = 'currentItem';
         }
         
-        // Log explicitly for debugging
-        console.log(`Final quantityReceived for product ${productId} (${item.description}): ${quantityReceived}`);
+        // Priority 4 (not needed): If all else fails, it stays 0
         
+        // Log each item's quantity resolution with clarity
+        console.log(`⚠️ FIXED: Quantity for product ${productId} (${item.description}):`, {
+          final: finalQuantityReceived,
+          source: source,
+          metadata: metadataQty ? metadataQty.quantityReceived : 'not found',
+          rawItem: rawItem?.quantityReceived,
+          currentItem: item.quantityReceived
+        });
+        
+        // Create a properly sanitized item with consistent types
         return {
           ...item,
-          // Explicitly set all numeric fields to ensure proper types
           productId: productId,
           quantity: Number(item.quantity || 1),
-          quantityReceived: quantityReceived,
+          // DEFINITIVE FIX: Use our explicitly determined quantity
+          quantityReceived: finalQuantityReceived,
           unitPrice: Number(item.unitPrice || 0),
           taxRate: Number(item.taxRate || 0),
           discount: Number(item.discount || 0)
         };
       });
       
-      // IMPORTANT: Log exactly what will be shown in the form
-      console.log("FINAL ITEMS FOR FORM:", itemsWithQuantities.map(i => ({ 
-        productId: i.productId,
-        description: i.description,
-        quantityReceived: i.quantityReceived
-      })));
+      // Log the final items array that will be used in the form
+      console.log("🔍 FINAL ITEMS FOR FORM:", 
+        JSON.stringify(itemsWithQuantities.map(i => ({
+          productId: i.productId,
+          description: i.description,
+          quantityReceived: i.quantityReceived
+        })), null, 2)
+      );
       
-      // Update the billItems state to ensure consistency 
+      // Update both the billItems state and form values
       setBillItems(itemsWithQuantities);
       
       // Before form reset, ensure our state values are updated
