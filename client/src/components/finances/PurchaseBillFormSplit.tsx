@@ -78,8 +78,19 @@ export default function PurchaseBillFormSplit({
     // Only process if we're editing a bill with items
     if (editingBill?.items) {
       console.log("Initializing bill items from editing bill:", editingBill);
+      console.log("Items data to initialize from:", JSON.stringify(editingBill.items, null, 2));
       
-      // Extract quantity received values from metadata if available
+      // CRITICAL: First check if items directly contain quantityReceived values
+      // This will handle the case when we're receiving freshly edited data from the view component
+      const directQuantitiesExist = editingBill.items.some(item => 
+        item.quantityReceived !== undefined && Number(item.quantityReceived) > 0
+      );
+      
+      if (directQuantitiesExist) {
+        console.log("FOUND DIRECT QUANTITY VALUES IN ITEMS - using these primarily");
+      }
+      
+      // Additionally extract quantity received values from metadata if available
       let quantityReceivedMap: Record<number, number> = {};
       
       try {
@@ -92,8 +103,9 @@ export default function PurchaseBillFormSplit({
           if (metadataObj?.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
             metadataObj.itemQuantitiesReceived.forEach((metaItem: any) => {
               if (metaItem.productId !== undefined && metaItem.quantityReceived !== undefined) {
-                quantityReceivedMap[metaItem.productId] = Number(metaItem.quantityReceived);
-                console.log(`Found quantity in metadata for product ${metaItem.productId}: ${metaItem.quantityReceived}`);
+                const productId = Number(metaItem.productId);
+                quantityReceivedMap[productId] = Number(metaItem.quantityReceived);
+                console.log(`Found quantity in metadata for product ${productId}: ${metaItem.quantityReceived}`);
               }
             });
           }
@@ -116,19 +128,30 @@ export default function PurchaseBillFormSplit({
         // Get product ID as a number
         const productId = Number(item.productId) || 0;
         
-        // Determine quantity received from metadata or direct property
+        // Determine quantity received with priority order:
+        // 1. Direct item property (if we're sure it contains valid data)
+        // 2. Metadata map
+        // 3. Default to 0
         let quantityReceived = 0;
         
-        // First try to get from metadata map (highest priority)
-        if (quantityReceivedMap[productId] !== undefined) {
+        // First priority: When we know the items have valid data
+        if (directQuantitiesExist && item.quantityReceived !== undefined) {
+          quantityReceived = Number(item.quantityReceived);
+          console.log(`Using DIRECT quantity for product ${productId}: ${quantityReceived}`);
+        }
+        // Second priority: Try metadata map
+        else if (quantityReceivedMap[productId] !== undefined) {
           quantityReceived = quantityReceivedMap[productId];
           console.log(`Using quantity from metadata map for product ${productId}: ${quantityReceived}`);
         } 
-        // Then try direct property on the item
+        // Last resort: Try direct property as fallback
         else if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
           quantityReceived = Number(item.quantityReceived);
-          console.log(`Using direct quantity for product ${productId}: ${quantityReceived}`);
+          console.log(`Using fallback direct quantity for product ${productId}: ${quantityReceived}`);
         }
+        
+        // Log the final value
+        console.log(`FINAL quantityReceived for product ${productId}: ${quantityReceived}`);
         
         return {
           productId: productId,

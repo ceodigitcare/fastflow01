@@ -154,22 +154,38 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                     // Process items to ensure they have the right structure and type conversions
                     const processedItems = Array.isArray(selectedBill.items) 
                       ? selectedBill.items.map(item => {
+                          const productId = Number(item.productId);
+                          
                           // Find matching metadata for this item if it exists in itemQuantitiesReceived
                           const itemMetadata = metadata.itemQuantitiesReceived && Array.isArray(metadata.itemQuantitiesReceived) 
                             ? metadata.itemQuantitiesReceived.find((m: {productId: number, quantityReceived: number}) => 
-                                m.productId === item.productId)
+                                Number(m.productId) === productId)
                             : null;
+                          
+                          // Get quantityReceived with robust prioritization
+                          let quantityReceived = 0;
+                          
+                          // First priority: Get from matching metadata
+                          if (itemMetadata && itemMetadata.quantityReceived !== undefined) {
+                            quantityReceived = Number(itemMetadata.quantityReceived);
+                            console.log(`Found quantity in metadata for product ${productId}: ${quantityReceived}`);
+                          } 
+                          // Second priority: Get from direct item property
+                          else if (item.quantityReceived !== undefined) {
+                            quantityReceived = Number(item.quantityReceived);
+                            console.log(`Found direct quantity for product ${productId}: ${quantityReceived}`);
+                          }
+                          
+                          console.log(`Final quantityReceived for product ${productId}: ${quantityReceived}`);
                           
                           return {
                             ...item,
-                            // Get quantityReceived from appropriate source
-                            quantityReceived: itemMetadata?.quantityReceived !== undefined 
-                              ? Number(itemMetadata.quantityReceived) 
-                              : (typeof item.quantityReceived === 'number' ? Number(item.quantityReceived) : 0),
-                            // Ensure all numeric values are properly typed
-                            quantity: Number(item.quantity),
-                            unitPrice: Number(item.unitPrice),
-                            // Ensure all required fields are present
+                            productId: productId,
+                            quantityReceived: quantityReceived, // Use properly extracted value
+                            quantity: Number(item.quantity || 1),
+                            unitPrice: Number(item.unitPrice || 0),
+                            taxRate: Number(item.taxRate || 0),
+                            discount: Number(item.discount || 0),
                             taxType: item.taxType || 'percentage',
                             discountType: item.discountType || 'percentage'
                           };
