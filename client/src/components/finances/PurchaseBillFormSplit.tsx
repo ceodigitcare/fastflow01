@@ -73,33 +73,82 @@ export default function PurchaseBillFormSplit({
   const { toast } = useToast();
   
   // Local state for line items and dialogs
-  const [billItems, setBillItems] = useState<PurchaseBillItem[]>(
-    // Initialize with existing items if editing a bill
-    editingBill?.items ? editingBill.items.map(item => {
-      // Safely parse numeric values with fallbacks to avoid NaN
-      const taxRateValue = typeof item.taxRate === 'string' 
-        ? parseFloat(item.taxRate) || 0 
-        : Number(item.taxRate || 0);
+  // Initialize bill items with a function to properly handle complex logic
+  const [billItems, setBillItems] = useState<PurchaseBillItem[]>(() => {
+    // Only process if we're editing a bill with items
+    if (editingBill?.items) {
+      console.log("Initializing bill items from editing bill:", editingBill);
       
-      const discountValue = typeof item.discount === 'string' 
-        ? parseFloat(item.discount) || 0 
-        : Number(item.discount || 0);
+      // Extract quantity received values from metadata if available
+      let quantityReceivedMap: Record<number, number> = {};
       
-      return {
-        productId: item.productId || 0,
-        description: item.description || "",
-        quantity: item.quantity || 1,
-        quantityReceived: item.quantityReceived || 0, // Add quantityReceived field
-        unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
-        taxRate: taxRateValue,
-        discount: discountValue,
-        // Add type flags for tax and discount
-        taxType: 'percentage', // Default to percentage
-        discountType: 'percentage', // Default to percentage
-        amount: (item.amount || 0) / 100 // Convert from cents to dollars
-      };
-    }) : []
-  );
+      try {
+        // Parse metadata if it's a string
+        if (editingBill.metadata && typeof editingBill.metadata === 'string') {
+          const metadataObj = JSON.parse(editingBill.metadata);
+          console.log("Parsed metadata for quantities:", metadataObj);
+          
+          // Extract item quantities from metadata
+          if (metadataObj?.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
+            metadataObj.itemQuantitiesReceived.forEach((metaItem: any) => {
+              if (metaItem.productId !== undefined && metaItem.quantityReceived !== undefined) {
+                quantityReceivedMap[metaItem.productId] = Number(metaItem.quantityReceived);
+                console.log(`Found quantity in metadata for product ${metaItem.productId}: ${metaItem.quantityReceived}`);
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing metadata for quantities:", error);
+      }
+      
+      // Map items with the correct data
+      return editingBill.items.map(item => {
+        // Safely parse numeric values with fallbacks to avoid NaN
+        const taxRateValue = typeof item.taxRate === 'string' 
+          ? parseFloat(item.taxRate) || 0 
+          : Number(item.taxRate || 0);
+        
+        const discountValue = typeof item.discount === 'string' 
+          ? parseFloat(item.discount) || 0 
+          : Number(item.discount || 0);
+        
+        // Get product ID as a number
+        const productId = Number(item.productId) || 0;
+        
+        // Determine quantity received from metadata or direct property
+        let quantityReceived = 0;
+        
+        // First try to get from metadata map (highest priority)
+        if (quantityReceivedMap[productId] !== undefined) {
+          quantityReceived = quantityReceivedMap[productId];
+          console.log(`Using quantity from metadata map for product ${productId}: ${quantityReceived}`);
+        } 
+        // Then try direct property on the item
+        else if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
+          quantityReceived = Number(item.quantityReceived);
+          console.log(`Using direct quantity for product ${productId}: ${quantityReceived}`);
+        }
+        
+        return {
+          productId: productId,
+          description: item.description || "",
+          quantity: Number(item.quantity) || 1,
+          quantityReceived: quantityReceived, // Use the extracted quantity received
+          unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
+          taxRate: taxRateValue,
+          discount: discountValue,
+          // Add type flags for tax and discount
+          taxType: item.taxType || 'percentage', // Default to percentage
+          discountType: item.discountType || 'percentage', // Default to percentage
+          amount: (item.amount || 0) / 100 // Convert from cents to dollars
+        };
+      });
+    }
+    
+    // Default to empty array if not editing
+    return [];
+  });
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
   
   // Get vendors (users of type "vendor")
