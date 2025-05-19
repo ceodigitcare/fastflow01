@@ -77,44 +77,72 @@ export default function PurchaseBillFormSplit({
   const [billItems, setBillItems] = useState<PurchaseBillItem[]>(() => {
     // Only process if we're editing a bill with items
     if (editingBill?.items) {
-      console.log("Initializing bill items from editing bill:", editingBill);
-      console.log("Items data to initialize from:", JSON.stringify(editingBill.items, null, 2));
+      console.log("INIT - Initializing bill items from editing bill:", editingBill);
+      console.log("INIT - Items data to initialize from:", JSON.stringify(editingBill.items, null, 2));
       
-      // CRITICAL: First check if items directly contain quantityReceived values
-      // This will handle the case when we're receiving freshly edited data from the view component
-      const directQuantitiesExist = editingBill.items.some(item => 
-        item.quantityReceived !== undefined && Number(item.quantityReceived) > 0
-      );
-      
-      if (directQuantitiesExist) {
-        console.log("FOUND DIRECT QUANTITY VALUES IN ITEMS - using these primarily");
-      }
-      
-      // Additionally extract quantity received values from metadata if available
+      // Extract all possible quantity received values from the metadata first
+      // This is the most reliable source for these values
       let quantityReceivedMap: Record<number, number> = {};
       
+      // Step 1: First attempt to read from metadata (most reliable source)
       try {
-        // Parse metadata if it's a string
         if (editingBill.metadata && typeof editingBill.metadata === 'string') {
           const metadataObj = JSON.parse(editingBill.metadata);
-          console.log("Parsed metadata for quantities:", metadataObj);
+          console.log("INIT - Parsed metadata:", metadataObj);
           
-          // Extract item quantities from metadata
+          // Extract item quantities from metadata if they exist
           if (metadataObj?.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
-            metadataObj.itemQuantitiesReceived.forEach((metaItem: any) => {
-              if (metaItem.productId !== undefined && metaItem.quantityReceived !== undefined) {
-                const productId = Number(metaItem.productId);
-                quantityReceivedMap[productId] = Number(metaItem.quantityReceived);
-                console.log(`Found quantity in metadata for product ${productId}: ${metaItem.quantityReceived}`);
+            // Log the entire itemQuantitiesReceived array for debugging
+            console.log("INIT - Found itemQuantitiesReceived in metadata:", 
+              JSON.stringify(metadataObj.itemQuantitiesReceived, null, 2));
+            
+            metadataObj.itemQuantitiesReceived.forEach((metaItem: {productId: number, quantityReceived: number}) => {
+              // Ensure we're working with numbers
+              const productId = Number(metaItem.productId);
+              const quantityValue = Number(metaItem.quantityReceived);
+              
+              // Store the value if it's valid
+              if (!isNaN(productId) && !isNaN(quantityValue)) {
+                quantityReceivedMap[productId] = quantityValue;
+                console.log(`INIT - Found quantity in metadata for product ${productId}: ${quantityValue}`);
               }
             });
+          } else {
+            console.log("INIT - No itemQuantitiesReceived found in metadata or it's not an array");
           }
+        } else {
+          console.log("INIT - No metadata found or it's not a string");
         }
       } catch (error) {
-        console.error("Error parsing metadata for quantities:", error);
+        console.error("INIT - Error parsing metadata:", error);
       }
       
-      // Map items with the correct data
+      // Step 2: Check if any items directly contain valid quantityReceived values
+      const directQuantityItems = editingBill.items
+        .filter(item => item.quantityReceived !== undefined && item.quantityReceived !== null)
+        .map(item => ({
+          productId: Number(item.productId),
+          quantityReceived: Number(item.quantityReceived)
+        }))
+        .filter(item => !isNaN(item.productId) && !isNaN(item.quantityReceived));
+      
+      // Log the direct quantities found
+      if (directQuantityItems.length > 0) {
+        console.log("INIT - Found direct quantities in items:", directQuantityItems);
+        
+        // Supplement metadata quantities with direct values if they don't exist in metadata
+        directQuantityItems.forEach(item => {
+          if (quantityReceivedMap[item.productId] === undefined) {
+            quantityReceivedMap[item.productId] = item.quantityReceived;
+            console.log(`INIT - Adding direct quantity for product ${item.productId}: ${item.quantityReceived}`);
+          }
+        });
+      }
+      
+      // Log the final quantity map for debugging
+      console.log("INIT - Final quantityReceivedMap:", quantityReceivedMap);
+      
+      // Map items with the correct data 
       return editingBill.items.map(item => {
         // Safely parse numeric values with fallbacks to avoid NaN
         const taxRateValue = typeof item.taxRate === 'string' 
@@ -128,30 +156,14 @@ export default function PurchaseBillFormSplit({
         // Get product ID as a number
         const productId = Number(item.productId) || 0;
         
-        // Determine quantity received with priority order:
-        // 1. Direct item property (if we're sure it contains valid data)
-        // 2. Metadata map
-        // 3. Default to 0
-        let quantityReceived = 0;
+        // Determine quantity received - PRIORITIZE the map we created above
+        // which combines both metadata and direct values
+        let quantityReceived = quantityReceivedMap[productId] !== undefined 
+          ? quantityReceivedMap[productId] 
+          : 0;
         
-        // First priority: When we know the items have valid data
-        if (directQuantitiesExist && item.quantityReceived !== undefined) {
-          quantityReceived = Number(item.quantityReceived);
-          console.log(`Using DIRECT quantity for product ${productId}: ${quantityReceived}`);
-        }
-        // Second priority: Try metadata map
-        else if (quantityReceivedMap[productId] !== undefined) {
-          quantityReceived = quantityReceivedMap[productId];
-          console.log(`Using quantity from metadata map for product ${productId}: ${quantityReceived}`);
-        } 
-        // Last resort: Try direct property as fallback
-        else if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
-          quantityReceived = Number(item.quantityReceived);
-          console.log(`Using fallback direct quantity for product ${productId}: ${quantityReceived}`);
-        }
-        
-        // Log the final value
-        console.log(`FINAL quantityReceived for product ${productId}: ${quantityReceived}`);
+        // Log the final quantity value used for this product
+        console.log(`INIT - FINAL quantityReceived for product ${productId} (${item.description}): ${quantityReceived}`);
         
         return {
           productId: productId,
@@ -161,7 +173,6 @@ export default function PurchaseBillFormSplit({
           unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
           taxRate: taxRateValue,
           discount: discountValue,
-          // Add type flags for tax and discount
           taxType: item.taxType || 'percentage', // Default to percentage
           discountType: item.discountType || 'percentage', // Default to percentage
           amount: (item.amount || 0) / 100 // Convert from cents to dollars
@@ -1127,14 +1138,51 @@ export default function PurchaseBillFormSplit({
         totalDiscount: totalDiscountValue,
         totalDiscountType: data.totalDiscountType || "flat",
         dueDate: data.dueDate ? data.dueDate.toISOString() : new Date().toISOString(),
-        // Save item quantities in a simple array
-        // Store item quantities in a simple array with productId for later matching
-        // Ensuring quantityReceived is always stored as a number, not null or undefined
-        itemQuantitiesReceived: processedItems.map(item => ({
-          productId: item.productId,
-          quantityReceived: typeof item.quantityReceived === 'number' ? item.quantityReceived : 
-                            item.quantityReceived ? Number(item.quantityReceived) : 0
-        }))
+        // CRITICAL FIX: First collect ALL quantities from form values
+        // Form values are more up-to-date than local state
+        itemQuantitiesReceived: (() => {
+          const formItems = form.getValues('items') || [];
+          
+          // Create a map of product IDs to their quantities from form values
+          const formQuantities = formItems.reduce((acc: Record<number, any>, item: any, index: number) => {
+            if (item && item.productId && (item.quantityReceived !== undefined)) {
+              acc[Number(item.productId)] = {
+                productId: Number(item.productId),
+                quantityReceived: Number(item.quantityReceived),
+                description: item.description || `Item ${index + 1}`
+              };
+            }
+            return acc;
+          }, {});
+          
+          // Log all form quantities for debugging
+          console.log("SAVE - Form quantities:", formQuantities);
+          
+          // Map all processed items, prioritizing form values
+          return processedItems
+            .filter(item => item && item.productId)
+            .map(item => {
+              const productId = Number(item.productId);
+              let qtyValue = 0;
+              
+              // First try to get from form values (most up-to-date)
+              if (formQuantities[productId]) {
+                qtyValue = formQuantities[productId].quantityReceived;
+                console.log(`SAVE - Using form quantity for ${productId}: ${qtyValue}`);
+              } 
+              // Fall back to processed item values
+              else if (item.quantityReceived !== undefined) {
+                qtyValue = Number(item.quantityReceived);
+                console.log(`SAVE - Using processed quantity for ${productId}: ${qtyValue}`);
+              }
+              
+              return {
+                productId: productId,
+                quantityReceived: qtyValue,
+                description: item.description // Include for debugging
+              };
+            })
+        })()
       }),
       // Calculate the total amount correctly
       amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),

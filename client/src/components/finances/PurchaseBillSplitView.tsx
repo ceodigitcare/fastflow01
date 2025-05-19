@@ -139,11 +139,19 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                       // Try to parse metadata if it exists
                       if (selectedBill.metadata && typeof selectedBill.metadata === 'string') {
                         const parsedMetadata = JSON.parse(selectedBill.metadata);
-                        metadata = {
+                        
+                        // Ensure all array structures are preserved (don't overwrite arrays with undefined)
+                        const mergedMetadata = {
                           ...metadata,
-                          ...parsedMetadata
+                          ...parsedMetadata,
+                          // Explicitly preserve itemQuantitiesReceived if it exists
+                          itemQuantitiesReceived: parsedMetadata.itemQuantitiesReceived || metadata.itemQuantitiesReceived
                         };
-                        console.log("Successfully parsed metadata:", metadata);
+                        
+                        metadata = mergedMetadata;
+                        console.log("Successfully parsed metadata with itemQuantitiesReceived:", 
+                          metadata.itemQuantitiesReceived,
+                          "Full metadata:", metadata);
                       }
                     } catch (error) {
                       console.error("Error parsing metadata:", error);
