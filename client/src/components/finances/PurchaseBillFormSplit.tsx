@@ -854,22 +854,84 @@ export default function PurchaseBillFormSplit({
       // Extract items from the transaction
       let items = editingBill.items as any[] || [];
       
-      // Extract and parse metadata if it exists
+      // CRITICAL DEBUGGING: Log the entire bill first to understand what we're working with
+      console.log("BILL EDIT DEBUG - Full bill being edited:", JSON.stringify(editingBill, null, 2));
+      
+      // Extract and parse metadata if it exists - but let's be much more thorough
       let savedItemQuantities: {productId: number, quantityReceived: number}[] = [];
+      let rawMetadata: any = null;
+      
       try {
-        if (editingBill.metadata && typeof editingBill.metadata === 'string') {
-          const parsedMetadata = JSON.parse(editingBill.metadata);
-          if (parsedMetadata.itemQuantitiesReceived && Array.isArray(parsedMetadata.itemQuantitiesReceived)) {
-            savedItemQuantities = parsedMetadata.itemQuantitiesReceived;
-            console.log("Found saved item quantities in metadata:", JSON.stringify(savedItemQuantities, null, 2));
-          } else {
-            console.log("No itemQuantitiesReceived array found in metadata");
+        // Depending on how the editingBill is provided, metadata could be a string or already parsed
+        if (editingBill.metadata) {
+          if (typeof editingBill.metadata === 'string') {
+            try {
+              rawMetadata = JSON.parse(editingBill.metadata);
+              console.log("DEBUG: Successfully parsed metadata from string");
+            } catch (e) {
+              console.error("DEBUG: Failed to parse metadata string:", e);
+              rawMetadata = null;
+            }
+          } else if (typeof editingBill.metadata === 'object') {
+            // It's already an object
+            rawMetadata = editingBill.metadata;
+            console.log("DEBUG: Metadata was already an object");
+          }
+          
+          // Now extract the quantities if we have valid metadata
+          if (rawMetadata) {
+            console.log("DEBUG: Raw metadata content:", rawMetadata);
+            
+            if (rawMetadata.itemQuantitiesReceived && Array.isArray(rawMetadata.itemQuantitiesReceived)) {
+              // Found quantities array, validate each entry and convert to proper numbers
+              savedItemQuantities = rawMetadata.itemQuantitiesReceived
+                .filter((item: any) => item && typeof item === 'object' && item.productId !== undefined)
+                .map((item: any) => ({
+                  productId: Number(item.productId),
+                  quantityReceived: Number(item.quantityReceived || 0)
+                }));
+              
+              console.log("DEBUG: Properly validated quantities from metadata:", 
+                JSON.stringify(savedItemQuantities, null, 2));
+            } else {
+              console.log("DEBUG: No valid itemQuantitiesReceived array in metadata");
+            }
           }
         } else {
-          console.log("No metadata or metadata is not a string:", editingBill.metadata);
+          console.log("DEBUG: No metadata found in bill");
         }
       } catch (error) {
-        console.error("Error parsing metadata:", error);
+        console.error("DEBUG: Critical error in metadata processing:", error);
+      }
+      
+      // Extract quantities directly from the items array as a fallback
+      // Sometimes the quantities might be stored directly on items rather than in metadata
+      if (editingBill.items && Array.isArray(editingBill.items)) {
+        const directQuantities = editingBill.items
+          .filter((item: any) => 
+            item && item.productId !== undefined && item.quantityReceived !== undefined && 
+            item.quantityReceived !== null && Number(item.quantityReceived) > 0
+          )
+          .map((item: any) => ({
+            productId: Number(item.productId),
+            quantityReceived: Number(item.quantityReceived),
+            source: 'direct'
+          }));
+          
+        if (directQuantities.length > 0) {
+          console.log("DEBUG: Found direct quantities in items:", directQuantities);
+          
+          // Add these to our quantities if they don't already exist in the metadata
+          directQuantities.forEach((dq: any) => {
+            if (!savedItemQuantities.some(sq => Number(sq.productId) === Number(dq.productId))) {
+              savedItemQuantities.push({
+                productId: dq.productId,
+                quantityReceived: dq.quantityReceived
+              });
+              console.log(`DEBUG: Added direct quantity for product ${dq.productId}: ${dq.quantityReceived}`);
+            }
+          });
+        }
       }
       
       // Process and normalize all item fields, ensuring proper types
@@ -1037,38 +1099,48 @@ export default function PurchaseBillFormSplit({
         }
       }
       
-      // FINAL FIX: Add explicit logging to confirm quantityReceived values
-      console.log("IMPORTANT: Final items with quantities before form reset:", 
-        items.map(i => ({
-          productId: i.productId,
-          description: i.description,
-          quantity: i.quantity,
-          quantityReceived: i.quantityReceived
-        }))
-      );
-      
-      // Critical: Ensure item quantities are valid before setting form values
-      // This ensures quantityReceived values are truly included in the form state
-      const validatedItems = items.map(item => {
-        // Ensure quantityReceived is preserved exactly as we want it
-        const qtyReceived = typeof item.quantityReceived === 'number' 
-          ? item.quantityReceived 
-          : (item.quantityReceived ? Number(item.quantityReceived) : 0);
-          
+      // SPECIAL FIX: Use our explicitly collected savedItemQuantities to force the values
+      // This ensures we're using the actual saved quantities from metadata
+      const itemsWithQuantities = items.map(item => {
+        const productId = Number(item.productId);
+        
+        // Find the correct quantityReceived value from our collected list
+        const savedQuantity = savedItemQuantities.find(sq => Number(sq.productId) === productId);
+        
+        // Use the saved value if found, otherwise fall back to the item's value
+        let quantityReceived = 0;
+        if (savedQuantity && savedQuantity.quantityReceived !== undefined) {
+          quantityReceived = Number(savedQuantity.quantityReceived);
+          console.log(`✅ CRITICAL: Using saved quantity for product ${productId}: ${quantityReceived}`);
+        } else if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
+          quantityReceived = Number(item.quantityReceived);
+          console.log(`📋 FALLBACK: Using direct quantity for product ${productId}: ${quantityReceived}`);
+        }
+        
+        // Log explicitly for debugging
+        console.log(`Final quantityReceived for product ${productId} (${item.description}): ${quantityReceived}`);
+        
         return {
           ...item,
-          // Force specific values to be the correct types
-          productId: Number(item.productId),
-          quantity: Number(item.quantity),
-          quantityReceived: qtyReceived, // Explicitly use our validated value
-          unitPrice: Number(item.unitPrice),
-          taxRate: Number(item.taxRate),
-          discount: Number(item.discount)
+          // Explicitly set all numeric fields to ensure proper types
+          productId: productId,
+          quantity: Number(item.quantity || 1),
+          quantityReceived: quantityReceived,
+          unitPrice: Number(item.unitPrice || 0),
+          taxRate: Number(item.taxRate || 0),
+          discount: Number(item.discount || 0)
         };
       });
       
-      // Update the billItems state to ensure consistency
-      setBillItems(validatedItems);
+      // IMPORTANT: Log exactly what will be shown in the form
+      console.log("FINAL ITEMS FOR FORM:", itemsWithQuantities.map(i => ({ 
+        productId: i.productId,
+        description: i.description,
+        quantityReceived: i.quantityReceived
+      })));
+      
+      // Update the billItems state to ensure consistency 
+      setBillItems(itemsWithQuantities);
       
       // Before form reset, ensure our state values are updated
       setTotalDiscountField(discountValue.toString());
@@ -1082,8 +1154,8 @@ export default function PurchaseBillFormSplit({
         billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
         dueDate: dueDate,
         status: editingBill.status as any || "draft",
-        // CRITICAL: Use our explicitly validated items array with preserved quantityReceived values
-        items: validatedItems,
+        // CRITICAL: Use our explicit items array with properly preserved quantityReceived values
+        items: itemsWithQuantities,
         subtotal,
         taxAmount,
         discountAmount,
