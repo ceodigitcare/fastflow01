@@ -1037,18 +1037,38 @@ export default function PurchaseBillFormSplit({
         }
       }
       
-      // Log the form values we're setting with detailed breakdowns
-      console.log("Form values being set:", {
-        totalDiscount: discountValue,
-        totalDiscountType: discountType,
-        totalDiscountSource: discountSource,
-        items: items.map(i => ({
-          description: i.description,
+      // FINAL FIX: Add explicit logging to confirm quantityReceived values
+      console.log("IMPORTANT: Final items with quantities before form reset:", 
+        items.map(i => ({
           productId: i.productId,
+          description: i.description,
           quantity: i.quantity,
           quantityReceived: i.quantityReceived
         }))
+      );
+      
+      // Critical: Ensure item quantities are valid before setting form values
+      // This ensures quantityReceived values are truly included in the form state
+      const validatedItems = items.map(item => {
+        // Ensure quantityReceived is preserved exactly as we want it
+        const qtyReceived = typeof item.quantityReceived === 'number' 
+          ? item.quantityReceived 
+          : (item.quantityReceived ? Number(item.quantityReceived) : 0);
+          
+        return {
+          ...item,
+          // Force specific values to be the correct types
+          productId: Number(item.productId),
+          quantity: Number(item.quantity),
+          quantityReceived: qtyReceived, // Explicitly use our validated value
+          unitPrice: Number(item.unitPrice),
+          taxRate: Number(item.taxRate),
+          discount: Number(item.discount)
+        };
       });
+      
+      // Update the billItems state to ensure consistency
+      setBillItems(validatedItems);
       
       // Before form reset, ensure our state values are updated
       setTotalDiscountField(discountValue.toString());
@@ -1062,11 +1082,12 @@ export default function PurchaseBillFormSplit({
         billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
         dueDate: dueDate,
         status: editingBill.status as any || "draft",
-        items,
+        // CRITICAL: Use our explicitly validated items array with preserved quantityReceived values
+        items: validatedItems,
         subtotal,
         taxAmount,
         discountAmount,
-        // Important: Use our explicitly processed discount values
+        // Use our explicitly processed discount values
         totalDiscount: discountValue, 
         totalDiscountType: discountType as "flat" | "percentage",
         totalAmount: totalAmount,
