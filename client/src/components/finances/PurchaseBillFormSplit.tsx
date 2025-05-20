@@ -961,40 +961,22 @@ export default function PurchaseBillFormSplit({
         }
       }
       
-      // Process and normalize all item fields, ensuring proper types
+      // REBUILT: Process items with direct quantity received handling
       items = items.map(item => {
-        // Get product ID as a number for consistent comparisons
+        // Always ensure product ID is a number for consistent operations
         const productId = Number(item.productId);
         
-        // First check if we have a stored quantity received for this item in metadata
-        // We need to properly convert both productIds to numbers for accurate comparison
-        const savedQuantity = savedItemQuantities.find(sq => Number(sq.productId) === productId);
-        
-        // Prioritize quantity from metadata, then from direct property, then default to 0
-        let quantityReceived = 0;
-        if (savedQuantity !== undefined && savedQuantity.quantityReceived !== undefined) {
-          quantityReceived = Number(savedQuantity.quantityReceived);
-          console.log(`Found saved quantity for product ${productId} in metadata:`, quantityReceived);
-        } else if (item.quantityReceived !== undefined) {
-          quantityReceived = Number(item.quantityReceived);
-          console.log(`Using direct quantityReceived property for product ${productId}:`, quantityReceived);
-        }
-        
-        // CRITICAL: Ensure we preserve the non-zero value if it exists
-        if (quantityReceived > 0) {
-          console.log(`IMPORTANT: Using non-zero quantity value ${quantityReceived} for product ${productId}`);
-        }
-        
-        // Log comprehensive item processing information
-        console.log(`Processing item: ${item.description}`, {
-          productId: item.productId,
-          quantity: item.quantity, 
-          quantityReceived: quantityReceived,
-          originalValues: {
-            directQuantityReceived: item.quantityReceived,
-            metadataQuantityReceived: savedQuantity?.quantityReceived
-          },
-          fullItem: item
+        // SIMPLIFIED APPROACH: For rebuilding the Purchase Bill Receiving functionality,
+        // we directly use the item's quantityReceived property, making it the single source of truth
+        let quantityReceived = item.quantityReceived !== undefined && item.quantityReceived !== null
+          ? Number(item.quantityReceived)
+          : 0;
+          
+        // Add debug logging
+        console.log(`REBUILD - Processing item ${item.description || 'Unknown item'} (ID: ${productId})`, {
+          quantityReceived,
+          originalValue: item.quantityReceived,
+          orderedQuantity: item.quantity
         });
         
         return {
@@ -1231,7 +1213,31 @@ export default function PurchaseBillFormSplit({
         };
       });
       
-      // Now reset the form with PRESERVED quantities guaranteed
+      // COMPLETELY REBUILT: Form initialization with reliable received quantity handling
+      console.log('REBUILD - Initializing form with complete bill data and quantities');
+      
+      // First, guarantee that all quantities are properly normalized
+      const guaranteedItems = preservedItems.map(item => {
+        // Ensure quantityReceived is explicitly a number value - convert any nullish value to zero
+        const safeQuantityReceived = item.quantityReceived !== undefined && item.quantityReceived !== null 
+          ? Number(item.quantityReceived) 
+          : 0;
+          
+        return {
+          ...item,
+          quantityReceived: safeQuantityReceived
+        };
+      });
+      
+      // Log the prepared items for verification
+      guaranteedItems.forEach((item, idx) => {
+        console.log(`INIT ITEM ${idx}: ${item.description || 'Unknown'} (ID: ${item.productId})`, {
+          quantityReceived: item.quantityReceived,
+          ordered: item.quantity
+        });
+      });
+      
+      // Reset form with complete data
       form.reset({
         vendorId,
         accountId: editingBill.accountId,
@@ -1239,12 +1245,11 @@ export default function PurchaseBillFormSplit({
         billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
         dueDate: dueDate,
         status: editingBill.status as any || "draft",
-        // Use our specially preserved items array with guaranteed quantities
-        items: preservedItems,
+        // Use guaranteed items with normalized quantities
+        items: guaranteedItems,
         subtotal,
         taxAmount,
         discountAmount,
-        // Use our explicitly processed discount values
         totalDiscount: discountValue, 
         totalDiscountType: discountType as "flat" | "percentage",
         totalAmount: totalAmount,
@@ -1254,20 +1259,43 @@ export default function PurchaseBillFormSplit({
         vendorNotes: editingBill.description || "",
       });
       
-      // FINAL FIX: After form reset, explicitly set quantity values in the form again to be sure
-      // This guarantees the form state has the right quantities even if the reset didn't maintain them
+      // Apply a DUAL-PHASE QUANTITY CONFIRMATION to ensure 100% reliable quantity preservation
+      // Phase 1: Immediate form value updates
+      guaranteedItems.forEach((item, index) => {
+        form.setValue(`items.${index}.quantityReceived`, item.quantityReceived, {
+          shouldValidate: true,
+          shouldDirty: true,
+          shouldTouch: true
+        });
+      });
+      
+      // Phase 2: Delayed confirmation after form stabilization
       setTimeout(() => {
-        preservedItems.forEach((item, index) => {
-          if (item.quantityReceived > 0) {
-            form.setValue(`items.${index}.quantityReceived`, item.quantityReceived, {
-              shouldDirty: true,
-              shouldTouch: true,
-              shouldValidate: true
+        // Get current form values for comparison
+        const currentValues = form.getValues();
+        
+        // Verify and correct each item's quantity if needed
+        guaranteedItems.forEach((item, index) => {
+          const currentFormValue = currentValues.items?.[index]?.quantityReceived;
+          
+          // Check if the form value matches the expected value
+          if (currentFormValue !== item.quantityReceived) {
+            console.log(`CORRECTION NEEDED: Item ${index} (${item.productId}) quantity mismatch:`, {
+              expected: item.quantityReceived,
+              current: currentFormValue
             });
-            console.log(`Post-reset correction: Set item ${index} (${item.productId}) quantity to ${item.quantityReceived}`);
+            
+            // Apply correction
+            form.setValue(`items.${index}.quantityReceived`, item.quantityReceived, {
+              shouldValidate: true,
+              shouldDirty: true,
+              shouldTouch: true
+            });
           }
         });
-      }, 100); // Small timeout to ensure the form is fully reset first
+        
+        console.log('REBUILD - Quantity confirmation complete');
+      }, 200);
     } else {
       // Add an empty item if creating a new bill
       if (billItems.length === 0) {
@@ -1348,57 +1376,13 @@ export default function PurchaseBillFormSplit({
       } : {}),
       // Use the processed items array
       items: processedItems,
-      // Store metadata as a simple object
+      // REBUILT: Store metadata with simple structure
       metadata: JSON.stringify({
-        // Only include the essential fields we need to preserve
+        // Basic bill metadata - kept simple and focused
         totalDiscount: totalDiscountValue,
         totalDiscountType: data.totalDiscountType || "flat",
         dueDate: data.dueDate ? data.dueDate.toISOString() : new Date().toISOString(),
-        // CRITICAL FIX: First collect ALL quantities from form values
-        // Form values are more up-to-date than local state
-        itemQuantitiesReceived: (() => {
-          const formItems = form.getValues('items') || [];
-          
-          // Create a map of product IDs to their quantities from form values
-          const formQuantities = formItems.reduce((acc: Record<number, any>, item: any, index: number) => {
-            if (item && item.productId && (item.quantityReceived !== undefined)) {
-              acc[Number(item.productId)] = {
-                productId: Number(item.productId),
-                quantityReceived: Number(item.quantityReceived),
-                description: item.description || `Item ${index + 1}`
-              };
-            }
-            return acc;
-          }, {});
-          
-          // Log all form quantities for debugging
-          console.log("SAVE - Form quantities:", formQuantities);
-          
-          // Map all processed items, prioritizing form values
-          return processedItems
-            .filter(item => item && item.productId)
-            .map(item => {
-              const productId = Number(item.productId);
-              let qtyValue = 0;
-              
-              // First try to get from form values (most up-to-date)
-              if (formQuantities[productId]) {
-                qtyValue = formQuantities[productId].quantityReceived;
-                console.log(`SAVE - Using form quantity for ${productId}: ${qtyValue}`);
-              } 
-              // Fall back to processed item values
-              else if (item.quantityReceived !== undefined) {
-                qtyValue = Number(item.quantityReceived);
-                console.log(`SAVE - Using processed quantity for ${productId}: ${qtyValue}`);
-              }
-              
-              return {
-                productId: productId,
-                quantityReceived: qtyValue,
-                description: item.description // Include for debugging
-              };
-            })
-        })()
+        contactId: data.vendorId
       }),
       // Calculate the total amount correctly
       amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
