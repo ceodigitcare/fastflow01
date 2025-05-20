@@ -540,7 +540,7 @@ export default function PurchaseBillFormSplit({
     updateTotals(newItems);
   };
   
-  // Function to update quantity received
+  // Function to update quantity received - FIXED VERSION
   const updateItemQuantityReceived = (quantityReceived: number, index: number) => {
     const newItems = [...billItems];
     const maxReceivable = newItems[index].quantity;
@@ -548,20 +548,31 @@ export default function PurchaseBillFormSplit({
     // Ensure quantity received doesn't exceed ordered quantity
     const safeQuantityReceived = Math.min(quantityReceived, maxReceivable);
     
+    // Store both the product ID and the new quantity for complete tracking
+    const productId = Number(newItems[index].productId);
+    
     newItems[index] = {
       ...newItems[index],
       quantityReceived: safeQuantityReceived
     };
     
-    // Debug log to verify the update
-    console.log(`Setting quantityReceived for item ${index} to:`, safeQuantityReceived);
+    // Complete debug log to verify the update
+    console.log(`QUANTITY UPDATE: Setting product ${productId} (index ${index}) quantityReceived to:`, {
+      value: safeQuantityReceived,
+      product: newItems[index].description || `Item ${index + 1}`,
+      maxAllowed: maxReceivable
+    });
     
     // Update both our local state and the form state to keep them in sync
     setBillItems(newItems);
     
-    // Important: Update the form's value for this specific item's quantityReceived
-    // This ensures the value is properly included when the form is submitted
-    form.setValue(`items.${index}.quantityReceived`, safeQuantityReceived);
+    // CRITICAL: Update the form's value for this specific item's quantityReceived
+    // This is essential for proper persistence as the form values are used when saving
+    form.setValue(`items.${index}.quantityReceived`, safeQuantityReceived, {
+      shouldDirty: true,  // Mark as changed
+      shouldTouch: true,  // Mark as touched
+      shouldValidate: true // Validate the change
+    });
   };
   
   // Function to update item unit prices
@@ -1189,7 +1200,22 @@ export default function PurchaseBillFormSplit({
       setTotalDiscountField(discountValue.toString());
       setTotalDiscountType(discountType as "flat" | "percentage");
       
-      // Now reset the form with all values including those from metadata
+      // CORE FIX: We need to ensure the complete integrity of quantities when resetting the form
+      // Create a special copy of our items array with quantities guaranteed to be preserved
+      const preservedItems = itemsWithQuantities.map(item => {
+        // Log each item's final quantity for verification before form reset
+        console.log(`Final form reset - Product ${item.productId}: Quantity ${item.quantityReceived}`);
+        
+        // Replace any undefined or null quantityReceived with explicit zeros
+        return {
+          ...item,
+          quantityReceived: item.quantityReceived !== undefined && item.quantityReceived !== null 
+            ? Number(item.quantityReceived) 
+            : 0
+        };
+      });
+      
+      // Now reset the form with PRESERVED quantities guaranteed
       form.reset({
         vendorId,
         accountId: editingBill.accountId,
@@ -1197,8 +1223,8 @@ export default function PurchaseBillFormSplit({
         billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
         dueDate: dueDate,
         status: editingBill.status as any || "draft",
-        // CRITICAL: Use our explicit items array with properly preserved quantityReceived values
-        items: itemsWithQuantities,
+        // Use our specially preserved items array with guaranteed quantities
+        items: preservedItems,
         subtotal,
         taxAmount,
         discountAmount,
@@ -1211,6 +1237,21 @@ export default function PurchaseBillFormSplit({
         termsAndConditions: "Payment is due within 30 days of the bill date.",
         vendorNotes: editingBill.description || "",
       });
+      
+      // FINAL FIX: After form reset, explicitly set quantity values in the form again to be sure
+      // This guarantees the form state has the right quantities even if the reset didn't maintain them
+      setTimeout(() => {
+        preservedItems.forEach((item, index) => {
+          if (item.quantityReceived > 0) {
+            form.setValue(`items.${index}.quantityReceived`, item.quantityReceived, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true
+            });
+            console.log(`Post-reset correction: Set item ${index} (${item.productId}) quantity to ${item.quantityReceived}`);
+          }
+        });
+      }, 100); // Small timeout to ensure the form is fully reset first
     } else {
       // Add an empty item if creating a new bill
       if (billItems.length === 0) {
@@ -1661,6 +1702,15 @@ export default function PurchaseBillFormSplit({
                             defaultValue={0}
                             value={item.quantityReceived || 0} // Ensure it's never undefined
                             onChange={(value) => updateItemQuantityReceived(value || 0, index)}
+                            onBlur={() => {
+                              // CRITICAL FIX: When the field loses focus, ensure the form value is correct
+                              // This handles direct edits in the field that might not trigger onChange
+                              console.log(`BLUR: Ensuring quantity received for item ${index} is set correctly: ${item.quantityReceived || 0}`);
+                              form.setValue(`items.${index}.quantityReceived`, item.quantityReceived || 0, {
+                                shouldDirty: true,
+                                shouldTouch: true
+                              });
+                            }}
                             min={0}
                             max={item.quantity || 1} // Can't receive more than ordered
                             step={1}

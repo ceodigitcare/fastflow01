@@ -1,0 +1,76 @@
+Persistent Bug: "Received Quantity" Still Resets to Zero on Edit
+Despite several attempts and structural overhauls, the receivedQuantity values are still not retained when editing a saved purchase bill. Numerous fixes have been claimed, including:
+
+Multi-level data retrieval from metadata, items, and processed states
+
+Logging at each data extraction and population step
+
+Prioritization logic for quantity sources
+
+Manual form manipulation after state setting
+
+Explicit input field bindings
+
+However, the issue remains unresolved.
+
+📌 Clear Problem Summary:
+When I create and save a purchase bill with received quantities — the data is saved without errors.
+
+But when I reopen the bill for editing, all receivedQuantity values reset to zero instead of showing previously saved values.
+
+This behavior breaks inventory accuracy and creates serious inconsistency in business workflows.
+
+🛠️ Developer Instructions:
+Please review and debug the issue from the ground up, ensuring the following:
+
+1. Verify Data Persistence in the Database
+Ensure the correct receivedQuantity values are actually being saved (whether under items[], metadata, or a combined structure).
+
+Check for any overwrites or omissions in the backend before data is returned to the frontend on edit.
+
+2. Form Initialization Logic
+Inspect how the form is populated when entering "edit mode".
+
+Ensure that receivedQuantity is being:
+
+Correctly extracted
+
+Matched by item/product ID
+
+Bound properly to each input field
+
+3. Debug State Synchronization
+Ensure no intermediate state resets or overrides are zeroing out the quantities after they are set.
+
+Watch for useEffect or re-render side effects that may reset input values unexpectedly.
+
+4. Add Debug Logging (if missing)
+Log the values being:
+
+Fetched from backend
+
+Mapped to form state
+
+Assigned to each input field
+
+This will help trace exactly where the reset occurs.
+
+5. Test End-to-End
+Save a bill with received quantities.
+
+Reload it and confirm the correct data is:
+
+Returned from the backend
+
+Mapped to each product/item
+
+Populated in the input fields with no loss
+
+❗Final Note:
+This issue has been reported multiple times and cannot be considered fixed until:
+
+Previously saved received quantities are reliably shown during every edit session.
+
+The system maintains full data fidelity between save and edit operations.
+
+Please treat this as a critical functional bug and recheck all layers (backend, data mapping, form state, UI rendering) accordingly.
