@@ -285,11 +285,25 @@ export default function PurchaseBillFormSplit({
           console.error("Error parsing metadata for quantityReceived:", e);
         }
         
-        // If not found in metadata, try direct property on the item
-        if (quantityReceivedValue === 0 && item.quantityReceived !== undefined && item.quantityReceived !== null) {
+        // CRITICAL FIX: Ensure received quantities are properly extracted and preserved
+        // Log detailed item structure for debugging
+        console.log(`CRITICAL FIX - Item data for product ${item.productId || 'unknown'}:`, {
+          rawItem: JSON.stringify(item),
+          hasQuantityReceivedProp: 'quantityReceived' in item,
+          rawQuantityReceivedValue: item.quantityReceived,
+          rawQuantityReceivedType: typeof item.quantityReceived
+        });
+        
+        // ALWAYS use direct property with strong type conversion
+        if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
+          // Force to numeric value regardless of input type (string/number/etc)
           quantityReceivedValue = typeof item.quantityReceived === 'string' 
             ? parseFloat(item.quantityReceived) 
             : Number(item.quantityReceived);
+            
+          console.log(`CRITICAL FIX - Found quantityReceived=${quantityReceivedValue} directly on item for product ${item.productId}`);
+        } else {
+          console.log(`CRITICAL FIX - No quantityReceived on item, using default 0 for product ${item.productId}`);
         }
           
         return {
@@ -1372,13 +1386,14 @@ export default function PurchaseBillFormSplit({
         isAlreadyInCents: isUnitPriceInCents
       });
       
-      // LIFECYCLE TRACING: Create a new fully-constructed object with explicit properties
-      // This is critical to ensure all properties are passed correctly to the API
+      // FINAL FIX: Create explicit item object with strong type enforcement
+      // Each property is explicitly defined with proper type conversion
       const processedItem = {
         productId: Number(item.productId),
         description: item.description,
         quantity: Number(item.quantity),
-        // EXPLICIT TYPE ENFORCEMENT: Ensure quantityReceived is stored as a proper Number
+        // CRITICAL FIX: Explicitly set quantityReceived with proper numeric conversion
+        // This is the key field that needs to persist through the edit cycle
         quantityReceived: Number(quantityReceivedValue),
         unitPrice: Number(item.unitPrice),
         amount: Number(item.amount),
@@ -1402,7 +1417,7 @@ export default function PurchaseBillFormSplit({
       return processedItem;
     });
     
-    // Prepare transaction data for saving/updating
+    // CRITICAL FIX: Prepare transaction data with direct quantityReceived values
     const billData = {
       ...data,
       // Preserve original ID and created date when editing
@@ -1410,15 +1425,18 @@ export default function PurchaseBillFormSplit({
         id: editingBill.id,
         createdAt: editingBill.createdAt 
       } : {}),
-      // Use the processed items array
+      // Use the processed items array containing explicit quantityReceived values
       items: processedItems,
-      // REBUILT: Store metadata with simple structure
+      // Store simplified metadata - we're now storing quantityReceived directly on each item
       metadata: JSON.stringify({
-        // Basic bill metadata - kept simple and focused
+        // Essential bill metadata only
         totalDiscount: totalDiscountValue,
         totalDiscountType: data.totalDiscountType || "flat",
         dueDate: data.dueDate ? data.dueDate.toISOString() : new Date().toISOString(),
-        contactId: data.vendorId
+        contactId: data.vendorId,
+        // Store this tracing data for debugging
+        debugTimestamp: new Date().toISOString(),
+        debugInfo: 'Using direct quantityReceived on items'
       }),
       // Calculate the total amount correctly
       amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
