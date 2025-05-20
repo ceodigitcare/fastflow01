@@ -1,0 +1,67 @@
+Critical Instruction: Rebuild "Purchase Bill Receiving" Functionality from Scratch
+The existing implementation of the Purchase Bill Receiving system has repeatedly failed to work as expected — particularly in persisting and restoring receivedQuantity values during edit operations.
+
+Despite multiple patch attempts, the system still does not reliably retain or display previously saved "Received Quantity" values. This is unacceptable for inventory accuracy and business reliability.
+
+🧹 Clean-up Instruction:
+Please remove all existing code and database structures related to "Received Quantity" tracking under the purchase bill module, including:
+
+All frontend code that handles receivedQuantity inputs
+
+Any intermediate form state management logic tied to receiving
+
+Metadata or item-level data mappings related to quantity received
+
+All related database fields, mappings, and insert/update logic (including item arrays, metadata storage, etc.)
+
+Any helper or transformation functions handling quantity parsing
+
+✅ Rebuild Instructions (From Scratch):
+Database Structure
+
+Create a dedicated, normalized field for receivedQuantity under each item line of the purchase bill.
+
+Ensure this field is non-nullable and properly typed (e.g., integer/decimal depending on the use case).
+
+Backend API
+
+When saving a purchase bill, store each product’s receivedQuantity clearly and directly — avoid hiding it under ambiguous metadata.
+
+When fetching a bill for editing, return the stored receivedQuantity values exactly as saved.
+
+Frontend (Form Logic)
+
+During bill creation:
+
+Show receivedQuantity input fields next to each item.
+
+Validate non-negative numeric input.
+
+During editing:
+
+Populate each receivedQuantity field from backend data.
+
+Ensure the values remain intact unless explicitly edited.
+
+After submission:
+
+Send the correct values to the backend.
+
+Do not reset or discard values during re-renders.
+
+State Handling
+
+Ensure strong, two-way data binding between form fields and state.
+
+Prevent unintended overwrites or zero-resets due to reinitialization.
+
+Testing Requirement
+
+Create a bill → Set received quantities → Save it.
+
+Reopen the same bill → All received quantities must be visible exactly as saved.
+
+Edit the bill again → Modify quantities → Save → Reopen → Confirm persistence.
+
+🛠️ Final Note:
+This module should be treated as a fresh implementation. No part of the broken or patchy previous logic should be reused. Please ensure this rebuild is minimal, robust, and clean, following reliable CRUD and form state management patterns.

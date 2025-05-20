@@ -122,28 +122,27 @@ export const invoicePdfConfigSchema = z.object({
   fontFamily: z.string().default("Arial"),
 });
 
-// Purchase Bill schema
+// Purchase Bill schema with reliable quantity tracking
 export const purchaseBillItemSchema = z.object({
   productId: z.number().min(1, "Please select a product"),
   description: z.string().min(1, "Description is required"),
   quantity: z.number().min(1, "Quantity must be at least 1"),
   unitPrice: z.number().min(0.01, "Unit price must be greater than 0"),
-  quantityReceived: z.number().min(0, "Quantity received cannot be negative").optional(),
+  // Make quantityReceived required with a default of 0 to ensure consistent data handling
+  quantityReceived: z.number().min(0, "Quantity received cannot be negative").default(0),
   taxRate: z.number().default(0),
   discount: z.number().default(0),
   taxType: z.enum(["percentage", "flat"]).default("percentage"),
   discountType: z.enum(["percentage", "flat"]).default("percentage"),
   amount: z.number().min(0.01, "Amount must be greater than 0")
 }).superRefine((data, ctx) => {
-  // Check that quantityReceived doesn't exceed quantity
-  if (data.quantityReceived !== undefined && data.quantityReceived !== null) {
-    if (data.quantityReceived > data.quantity) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Quantity received cannot exceed ordered quantity",
-        path: ["quantityReceived"],
-      });
-    }
+  // Validate that quantityReceived doesn't exceed ordered quantity
+  if (data.quantityReceived > data.quantity) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Quantity received cannot exceed ordered quantity",
+      path: ["quantityReceived"],
+    });
   }
 });
 

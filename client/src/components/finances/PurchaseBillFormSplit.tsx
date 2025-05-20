@@ -540,39 +540,55 @@ export default function PurchaseBillFormSplit({
     updateTotals(newItems);
   };
   
-  // Function to update quantity received - FIXED VERSION
+  // REBUILT: Quantity received handler - completely redesigned for reliability 
   const updateItemQuantityReceived = (quantityReceived: number, index: number) => {
-    const newItems = [...billItems];
-    const maxReceivable = newItems[index].quantity;
+    // Ensure value is a valid number 
+    const numericValue = Number(quantityReceived) || 0;
     
-    // Ensure quantity received doesn't exceed ordered quantity
-    const safeQuantityReceived = Math.min(quantityReceived, maxReceivable);
+    // Get the current item and its maximum receivable quantity
+    const currentItems = [...billItems];
+    const maxReceivable = currentItems[index]?.quantity || 0;
     
-    // Store both the product ID and the new quantity for complete tracking
-    const productId = Number(newItems[index].productId);
+    // Apply validation - quantity received cannot exceed ordered quantity
+    const safeQuantityReceived = Math.min(numericValue, maxReceivable);
     
-    newItems[index] = {
-      ...newItems[index],
+    // Get product information for tracking
+    const productId = Number(currentItems[index]?.productId);
+    const productName = currentItems[index]?.description || `Item ${index + 1}`;
+    
+    // Create a completely new item object to avoid references
+    const updatedItem = {
+      ...currentItems[index],
       quantityReceived: safeQuantityReceived
     };
     
-    // Complete debug log to verify the update
-    console.log(`QUANTITY UPDATE: Setting product ${productId} (index ${index}) quantityReceived to:`, {
-      value: safeQuantityReceived,
-      product: newItems[index].description || `Item ${index + 1}`,
-      maxAllowed: maxReceivable
+    // Create a new array with the updated item
+    const updatedItems = [...currentItems];
+    updatedItems[index] = updatedItem;
+    
+    // Log the exact values being set
+    console.log(`RECEIVE QUANTITY - Product: ${productName} (ID: ${productId})`, {
+      receivedQuantity: safeQuantityReceived,
+      orderedQuantity: maxReceivable,
+      index
     });
     
-    // Update both our local state and the form state to keep them in sync
-    setBillItems(newItems);
+    // Update component state
+    setBillItems(updatedItems);
     
-    // CRITICAL: Update the form's value for this specific item's quantityReceived
-    // This is essential for proper persistence as the form values are used when saving
+    // Update form state with special options to ensure the change is recognized
     form.setValue(`items.${index}.quantityReceived`, safeQuantityReceived, {
-      shouldDirty: true,  // Mark as changed
-      shouldTouch: true,  // Mark as touched
-      shouldValidate: true // Validate the change
+      shouldDirty: true,    // Mark the field as modified
+      shouldTouch: true,    // Mark the field as touched
+      shouldValidate: true  // Trigger validation
     });
+    
+    // Force the form to recognize the change
+    const currentValues = form.getValues();
+    
+    // Log the form state after update
+    console.log('FORM STATE - After quantity received update:', 
+      form.getValues(`items.${index}.quantityReceived`));
   };
   
   // Function to update item unit prices
@@ -1698,22 +1714,27 @@ export default function PurchaseBillFormSplit({
                           />
                         </td>
                         <td className="p-2">
+                          {/* REBUILT: Quantity Received Input with explicit handling */}
                           <SafeNumberInput
                             defaultValue={0}
-                            value={item.quantityReceived || 0} // Ensure it's never undefined
-                            onChange={(value) => updateItemQuantityReceived(value || 0, index)}
+                            value={item.quantityReceived}
+                            onChange={(value) => updateItemQuantityReceived(value, index)}
                             onBlur={() => {
-                              // CRITICAL FIX: When the field loses focus, ensure the form value is correct
-                              // This handles direct edits in the field that might not trigger onChange
-                              console.log(`BLUR: Ensuring quantity received for item ${index} is set correctly: ${item.quantityReceived || 0}`);
-                              form.setValue(`items.${index}.quantityReceived`, item.quantityReceived || 0, {
+                              // Ensure form value is explicitly set on blur
+                              const currentValue = item.quantityReceived || 0;
+                              console.log(`BLUR EVENT: Setting quantity received for ${item.description} (index ${index}) to ${currentValue}`);
+                              
+                              // Update form value with full validation options
+                              form.setValue(`items.${index}.quantityReceived`, currentValue, {
                                 shouldDirty: true,
-                                shouldTouch: true
+                                shouldTouch: true,
+                                shouldValidate: true
                               });
                             }}
                             min={0}
-                            max={item.quantity || 1} // Can't receive more than ordered
+                            max={item.quantity || 1}
                             step={1}
+                            className="w-full"
                           />
                         </td>
                         <td className="p-2">

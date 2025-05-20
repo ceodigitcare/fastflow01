@@ -174,6 +174,23 @@ export const transactions = pgTable("transactions", {
   metadata: jsonb("metadata").default({}), // For document-specific custom fields (totalDiscount, etc.)
 });
 
+// Purchase Bill Item for strong typing and validation
+export const PurchaseBillItemSchema = z.object({
+  productId: z.number(),
+  description: z.string(),
+  quantity: z.number().min(0),
+  unitPrice: z.number(),
+  taxRate: z.number().default(0),
+  discount: z.number().default(0),
+  taxType: z.enum(['flat', 'percentage']).default('flat'),
+  discountType: z.enum(['flat', 'percentage']).default('flat'),
+  amount: z.number(),
+  // Explicitly define quantityReceived as a required field with a default value
+  quantityReceived: z.number().min(0).default(0)
+});
+
+export type PurchaseBillItem = z.infer<typeof PurchaseBillItemSchema>;
+
 // Define metadata types for transaction documents
 export const PurchaseBillMetadataSchema = z.object({
   totalDiscount: z.number().optional().default(0),
