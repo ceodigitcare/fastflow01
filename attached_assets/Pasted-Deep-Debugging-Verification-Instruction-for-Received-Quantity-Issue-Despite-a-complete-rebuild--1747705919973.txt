@@ -1,0 +1,58 @@
+Deep Debugging & Verification Instruction for “Received Quantity” Issue
+Despite a complete rebuild, the issue with receivedQuantity values not persisting or displaying properly still exists. This indicates there may be a deeper problem across multiple layers (form binding, API mapping, database, or conditional rendering).
+
+✅ Please follow this structured debugging and resolution plan:
+1. Trace the Full Lifecycle of receivedQuantity
+Add console logs and/or debugger checkpoints at every step of the data flow:
+
+During purchase bill creation (input and save)
+
+During bill fetch/edit (API response, form load)
+
+During form state binding (component state or form library)
+
+During form submit (check payload)
+
+On API save (check backend log)
+
+On database insert/update (log raw SQL or ORM statements)
+
+✅ Confirm the value exists and is correct at each checkpoint — note where it breaks or resets.
+
+2. Verify Backend Handling
+Confirm if receivedQuantity is correctly parsed, validated, and saved in the database.
+
+Check whether it's being stored under a field or hidden in nested metadata that might not get parsed properly.
+
+Make sure the DB schema includes this field and it’s not defaulting to zero or null.
+
+3. Test API Response Consistency
+Fetch an edited purchase bill via API (e.g., Postman or browser dev tools).
+
+Confirm if receivedQuantity is being returned from backend.
+
+If not returned, the issue is in backend serialization or data fetch logic.
+
+4. Check Frontend Rendering & State Binding
+Ensure the form receives and renders the value received from backend.
+
+Use controlled components or reactive bindings to show receivedQuantity fields properly.
+
+Watch out for places where values may be reset by default form re-initialization.
+
+5. Unit & Integration Tests
+Write explicit test cases:
+
+Save a bill with custom received quantities.
+
+Reopen and ensure the same values appear.
+
+Modify values and check if changes persist correctly.
+
+Cover edge cases: 0, null, decimal, large numbers.
+
+⚠️ Final Note:
+This is now a critical integrity issue. Patch fixes or UI hacks won't solve it. You must use testable, observable, and traceable methods to pinpoint and fix the data loss or misbinding.
+
+Let me know if you'd like me to draft test case templates, sample payloads, or code snippets to assist with this debugging.
+

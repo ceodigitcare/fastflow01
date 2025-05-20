@@ -961,22 +961,40 @@ export default function PurchaseBillFormSplit({
         }
       }
       
-      // REBUILT: Process items with direct quantity received handling
+      // DEEP DEBUGGING: Process items with extensive tracing for quantity received
+      console.log("DEEP DEBUG - Raw transaction items before processing:", JSON.stringify(editingBill.items));
+      console.log("DEEP DEBUG - Full transaction object:", JSON.stringify(editingBill));
+      
       items = items.map(item => {
         // Always ensure product ID is a number for consistent operations
         const productId = Number(item.productId);
         
-        // SIMPLIFIED APPROACH: For rebuilding the Purchase Bill Receiving functionality,
-        // we directly use the item's quantityReceived property, making it the single source of truth
-        let quantityReceived = item.quantityReceived !== undefined && item.quantityReceived !== null
-          ? Number(item.quantityReceived)
-          : 0;
+        // DEEP DEBUGGING TRACE: Capture the exact state of this item before processing
+        console.log(`DEEP DEBUG - Raw item data for product ${productId}:`, JSON.stringify(item));
+        
+        // Extract quantity received with comprehensive validation
+        let quantityReceived = 0;
+        
+        // Check each possible location for the quantity received value
+        if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
+          quantityReceived = Number(item.quantityReceived);
+          console.log(`DEEP DEBUG - Found direct quantityReceived=${quantityReceived} on item for product ${productId}`);
+        } 
+        
+        // DEEP DEBUGGING: Log the exact nested path and value
+        if (typeof item === 'object') {
+          Object.keys(item).forEach(key => {
+            console.log(`DEEP DEBUG - Item property [${key}] =`, item[key]);
+          });
+        }
           
-        // Add debug logging
-        console.log(`REBUILD - Processing item ${item.description || 'Unknown item'} (ID: ${productId})`, {
-          quantityReceived,
-          originalValue: item.quantityReceived,
-          orderedQuantity: item.quantity
+        // Add exhaustive debugging
+        console.log(`DEEP DEBUG - Final processing decision for ${item.description || 'Unknown item'} (ID: ${productId})`, {
+          finalQuantityReceived: quantityReceived,
+          itemRawValue: item.quantityReceived,
+          rawItemType: typeof item.quantityReceived,
+          itemKeys: Object.keys(item),
+          fullItemData: item
         });
         
         return {
@@ -1354,16 +1372,34 @@ export default function PurchaseBillFormSplit({
         isAlreadyInCents: isUnitPriceInCents
       });
       
-      return {
-        ...item,
-        // Use the properly determined quantityReceived value
-        quantityReceived: quantityReceivedValue,
-        // Keep unitPrice as is - do NOT multiply by 100! 
-        // The backend already handles this amount as cents
+      // LIFECYCLE TRACING: Create a new fully-constructed object with explicit properties
+      // This is critical to ensure all properties are passed correctly to the API
+      const processedItem = {
+        productId: Number(item.productId),
+        description: item.description,
+        quantity: Number(item.quantity),
+        // EXPLICIT TYPE ENFORCEMENT: Ensure quantityReceived is stored as a proper Number
+        quantityReceived: Number(quantityReceivedValue),
         unitPrice: Number(item.unitPrice),
-        // Same for amount - don't do the cents conversion here
-        amount: Number(item.amount)
+        amount: Number(item.amount),
+        taxRate: Number(item.taxRate || 0),
+        discount: Number(item.discount || 0),
+        taxType: item.taxType || "flat",
+        discountType: item.discountType || "flat"
       };
+      
+      // CRITICAL TRACING: Log the processed item to verify its structure
+      console.log(`LIFECYCLE TRACE - Final processed item for product ${processedItem.productId}:`, {
+        quantityReceived: processedItem.quantityReceived,
+        quantity: processedItem.quantity,
+        sources: {
+          formValue: formItem?.quantityReceived,
+          itemDirectValue: item.quantityReceived
+        },
+        fullItem: processedItem
+      });
+      
+      return processedItem;
     });
     
     // Prepare transaction data for saving/updating
