@@ -5,7 +5,19 @@ import { PurchaseBill, PurchaseBillItem } from "@/lib/validation";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
-import { PlusCircle, Search, Printer, Clock, CheckCircle, AlertTriangle, MessageCircle } from "lucide-react";
+import { 
+  PlusCircle, 
+  Search, 
+  Printer, 
+  Clock, 
+  CheckCircle, 
+  AlertTriangle, 
+  MessageCircle,
+  ChevronLeft,
+  ChevronRight,
+  List,
+  X
+} from "lucide-react";
 import PurchaseBillFormSplit from "./PurchaseBillFormSplit";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -32,6 +44,34 @@ export default function PurchaseBillSplitView({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBill, setSelectedBill] = useState<Transaction | null>(initialBill);
   const [isCreatingNew, setIsCreatingNew] = useState(externalCreatingNew);
+  
+  // State for the bill list panel visibility
+  const [billPanelVisible, setBillPanelVisible] = useState(() => {
+    // On desktop (lg and above), default to visible
+    // On mobile/tablet (below lg), default to hidden
+    return window.innerWidth >= 1024;
+  });
+  
+  // Update bill panel visibility based on screen size
+  useEffect(() => {
+    const handleResize = () => {
+      // Auto-show panel on desktop, auto-hide on mobile
+      setBillPanelVisible(window.innerWidth >= 1024);
+    };
+    
+    // Add event listener
+    window.addEventListener("resize", handleResize);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+  
+  // Toggle bill panel visibility
+  const toggleBillPanel = () => {
+    setBillPanelVisible(!billPanelVisible);
+  };
   
   // Update state when props change to ensure synchronization with parent
   useEffect(() => {
@@ -136,9 +176,35 @@ export default function PurchaseBillSplitView({
   };
   
   return (
-    <div className="flex flex-col lg:flex-row lg:space-x-6 h-full">
+    <div className="flex flex-col lg:flex-row h-full relative">
+      {/* Toggle button for bill list panel on mobile/tablet */}
+      <div className={`fixed bottom-6 right-6 z-20 lg:hidden ${billPanelVisible ? 'translate-x-64' : 'translate-x-0'} transition-transform duration-300`}>
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="rounded-full shadow-md bg-white"
+          onClick={toggleBillPanel}
+          aria-label={billPanelVisible ? "Hide bill list" : "Show bill list"}
+        >
+          {billPanelVisible ? <ChevronRight className="h-5 w-5" /> : <List className="h-5 w-5" />}
+        </Button>
+      </div>
+      
+      {/* Toggle button for bill list panel on desktop (right aligned in header area) */}
+      <div className="hidden lg:block absolute top-0 right-0 z-10">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="mr-2"
+          onClick={toggleBillPanel}
+        >
+          {billPanelVisible ? <ChevronRight className="h-4 w-4 mr-1" /> : <ChevronLeft className="h-4 w-4 mr-1" />}
+          {billPanelVisible ? "Hide Bills" : "Show Bills"}
+        </Button>
+      </div>
+      
       {/* Left panel for bill view/form */}
-      <div className="lg:flex-1 mb-6 lg:mb-0">
+      <div className={`lg:flex-1 mb-6 lg:mb-0 ${billPanelVisible ? 'lg:mr-80' : ''} transition-all duration-300`}>
         {selectedBill ? (
           <div className="space-y-6 bg-white p-6 border rounded-lg shadow-sm">
             <div className="flex justify-between items-start">
