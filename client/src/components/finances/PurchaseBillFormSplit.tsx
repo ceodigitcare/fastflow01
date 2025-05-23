@@ -1421,61 +1421,47 @@ export default function PurchaseBillFormSplit({
       const formIndex = billItems.indexOf(item);
       const formItem = formItems[formIndex];
       
-      // IMPROVED: Prioritize form values over state values for reliability
-      // Form values represent the most recent user input
-      let quantityReceivedValue = 0;
-      let source = "default";
+      // COMPLETE REBUILD: Get received quantity from latest form data
+      // Form data is the source of truth for user input
+      let receivedQty = 0;
       
-      // First check form values (most reliable and recent)
-      if (formItem && formItem.quantityReceived !== undefined && formItem.quantityReceived !== null) {
+      // First priority: Get value from current form state
+      if (formItem && formItem.quantityReceived !== undefined) {
         const formValue = Number(formItem.quantityReceived);
         if (!isNaN(formValue)) {
-          quantityReceivedValue = formValue;
-          source = "form-value";
+          receivedQty = formValue;
+          console.log(`SUBMIT: Using form value ${receivedQty} for product ${item.productId}`);
         }
       }
       
-      // Fallback to item state if needed
-      if (quantityReceivedValue === 0 && 
-          item.quantityReceived !== undefined && 
-          item.quantityReceived !== null) {
+      // Second priority: Fall back to component state if needed
+      if (receivedQty === 0 && item.quantityReceived !== undefined) {
         const stateValue = Number(item.quantityReceived);
         if (!isNaN(stateValue)) {
-          quantityReceivedValue = stateValue;
-          source = "state-value";
+          receivedQty = stateValue;
+          console.log(`SUBMIT: Using state value ${receivedQty} for product ${item.productId}`);
         }
       }
       
-      // Ensure we have a valid number, never undefined or NaN
-      if (isNaN(quantityReceivedValue)) {
-        quantityReceivedValue = 0;
-        source = "fallback";
+      // Always ensure we have a valid number (0 is valid)
+      if (isNaN(receivedQty)) {
+        receivedQty = 0;
+        console.log(`SUBMIT: Value was NaN, defaulting to 0 for product ${item.productId}`);
       }
       
-      // Log clear details for debugging
-      console.log(`SUBMIT: Processing item ${item.description}:`, {
-        productId: item.productId,
-        receivedQty: quantityReceivedValue,
-        source: source,
-        formValue: formItem?.quantityReceived,
-        stateValue: item.quantityReceived
-      });
-      
-      // FINAL FIX: Create explicit item object with strong type enforcement
-      // Each property is explicitly defined with proper type conversion
+      // Create a clean, explicitly typed item object
       const processedItem = {
         productId: Number(item.productId),
-        description: item.description,
-        quantity: Number(item.quantity),
-        // CRITICAL FIX: Explicitly set quantityReceived with proper numeric conversion
-        // This is the key field that needs to persist through the edit cycle
-        quantityReceived: Number(quantityReceivedValue),
-        unitPrice: Number(item.unitPrice),
-        amount: Number(item.amount),
+        description: String(item.description || ""),
+        quantity: Number(item.quantity || 0),
+        // This is the critical field we're fixing
+        quantityReceived: receivedQty,
+        unitPrice: Number(item.unitPrice || 0),
+        amount: Number(item.amount || 0),
         taxRate: Number(item.taxRate || 0),
         discount: Number(item.discount || 0),
-        taxType: item.taxType || "flat",
-        discountType: item.discountType || "flat"
+        taxType: String(item.taxType || "flat"),
+        discountType: String(item.discountType || "flat")
       };
       
       // CRITICAL TRACING: Log the processed item to verify its structure
@@ -1510,23 +1496,32 @@ export default function PurchaseBillFormSplit({
         dueDate: data.dueDate ? data.dueDate.toISOString() : new Date().toISOString(),
         contactId: data.vendorId,
         
-        // REDESIGNED STORAGE: Store received quantities in two different ways for redundancy
-        // 1. In a dedicated array for direct lookup
-        itemQuantitiesReceived: processedItems.map(item => ({
-          productId: Number(item.productId),
-          quantityReceived: Number(item.quantityReceived || 0),
-          orderedQuantity: Number(item.quantity || 0),
-          productName: item.description || 'Unknown Product'
-        })),
+        // NEW IMPLEMENTATION: Ultra reliable storage of received quantities
+        // We store in both formats for maximum reliability and backward compatibility
         
-        // 2. As a simple map for faster access and redundancy
+        // Format 1: Map for fast lookup - Primary storage method
         receivedQuantityMap: processedItems.reduce((map: Record<string, number>, item) => {
-          map[`product_${item.productId}`] = Number(item.quantityReceived || 0);
+          // Enforce number type and use explicit keys for product IDs
+          map[`product_${item.productId}`] = Number(item.quantityReceived);
           return map;
         }, {}),
         
-        // Version info to help with future migrations if needed
-        version: "received-quantity-fix-2.0",
+        // Format 2: Array with complete item details - Secondary storage method
+        itemQuantitiesReceived: processedItems.map(item => ({
+          productId: Number(item.productId),
+          quantityReceived: Number(item.quantityReceived),
+          orderedQuantity: Number(item.quantity),
+          description: String(item.description || ""),
+          lastUpdated: new Date().toISOString()
+        })),
+        
+        // Add direct property for quick access to total received
+        totalQuantityReceived: processedItems.reduce((sum, item) => 
+          sum + Number(item.quantityReceived || 0), 0),
+          
+        // Version tracking for debugging and future compatibility
+        version: "purchase-bill-v3.0",
+        receivedQtyImplementation: "complete-rebuild-2023",
         saveTimestamp: new Date().toISOString(),
       }),
       // Calculate the total amount correctly

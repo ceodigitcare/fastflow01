@@ -455,10 +455,33 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                         {/* Conditionally render Received Quantity cell based on toggle state */}
                         {showReceivedQuantity && (
                           <td className="px-4 py-3 text-sm text-center">
-                            {/* SIMPLIFIED: Just display the value that's already processed during item mapping */}
-                            {item.quantityReceived !== undefined && item.quantityReceived !== null 
-                              ? Number(item.quantityReceived) 
-                              : 0}
+                            {/* COMPLETELY REBUILT: Clean display with visual indicators */}
+                            <div className="flex justify-center items-center">
+                              {/* Always show a numeric value, never empty or undefined */}
+                              <span className={`inline-block ${
+                                // Highlight fully received items in green
+                                Number(item.quantityReceived) >= Number(item.quantity) 
+                                  ? 'text-green-600 font-medium' 
+                                  // Highlight partially received items in blue
+                                  : Number(item.quantityReceived) > 0 
+                                    ? 'text-blue-600' 
+                                    // Show zeros in normal gray
+                                    : 'text-gray-500'
+                              }`}>
+                                {/* Explicit number conversion and validity check */}
+                                {Number(item.quantityReceived || 0).toFixed(
+                                  // Show decimals only if needed
+                                  Number.isInteger(Number(item.quantityReceived || 0)) ? 0 : 2
+                                )}
+                              </span>
+                              
+                              {/* Show received/total ratio for quick reference */}
+                              {Number(item.quantityReceived) > 0 && (
+                                <span className="text-xs text-gray-500 ml-1">
+                                  /{item.quantity}
+                                </span>
+                              )}
+                            </div>
                           </td>
                         )}
                         
