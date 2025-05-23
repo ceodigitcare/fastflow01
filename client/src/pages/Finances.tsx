@@ -87,11 +87,11 @@ export default function Finances() {
   });
   
   // Get accounts and categories for the transaction form
-  const { data: accounts, isLoading: accountsLoading } = useQuery({
+  const { data: accounts, isLoading: accountsLoading } = useQuery<any[]>({
     queryKey: ["/api/accounts"],
   });
   
-  const { data: categories, isLoading: categoriesLoading } = useQuery({
+  const { data: categories, isLoading: categoriesLoading } = useQuery<any[]>({
     queryKey: ["/api/account-categories"],
   });
   
@@ -130,21 +130,26 @@ export default function Finances() {
     setTransactionDialogOpen(true);
   };
   
-  // Get the current path to determine which tab is active
+  // Get the current path and navigation function
   const [location, setLocation] = useLocation();
   
   // Extract path segment to determine which tab to show
-  const pathSegments = location.split('/');
-  const subPath = pathSegments.length > 2 ? pathSegments[2] : 'overview';
+  const getActiveTabFromPath = () => {
+    const pathSegments = location.split('/');
+    // If we're at /finances with no additional segments, use "overview"
+    if (pathSegments.length <= 2 || (pathSegments.length > 2 && !pathSegments[2])) {
+      return "overview";
+    }
+    // Otherwise use the segment as tab name
+    return pathSegments[2];
+  };
   
-  // State to track which tab is currently active, initialize from current path
-  const [activeTab, setActiveTab] = useState(subPath || "overview");
+  // State to track which tab is currently active
+  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   
   // Update active tab when location changes
   useEffect(() => {
-    const segments = location.split('/');
-    const newSubPath = segments.length > 2 ? segments[2] : 'overview';
-    setActiveTab(newSubPath);
+    setActiveTab(getActiveTabFromPath());
   }, [location]);
   
   // Check if summary cards should be hidden (for Transactions, Sales Invoice, Purchase Bill)
@@ -246,8 +251,6 @@ export default function Finances() {
         defaultValue="overview" 
         className="mb-8"
         onValueChange={(value) => {
-          setActiveTab(value);
-          
           // Navigate to the correct subpage
           if (value === 'overview') {
             setLocation('/finances');
