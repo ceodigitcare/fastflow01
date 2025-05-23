@@ -818,7 +818,12 @@ export default function PurchaseBillSplitView({
                 <div 
                   key={bill.id}
                   className={`p-3 cursor-pointer hover:bg-muted transition-colors ${selectedBill?.id === bill.id ? 'bg-muted' : ''}`}
-                  onClick={() => setSelectedBill(bill)}
+                  onClick={() => {
+                    setSelectedBill(bill);
+                    setIsCreatingNew(false);
+                    setEditingBill(null);
+                    if (onSelectBill) onSelectBill(bill);
+                  }}
                 >
                   <div className="flex justify-between items-start">
                     <div>

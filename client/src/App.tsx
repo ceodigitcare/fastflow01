@@ -11,6 +11,7 @@ import WebsiteBuilder from "@/pages/WebsiteBuilder";
 import AIChat from "@/pages/AIChat";
 import Products from "@/pages/Products";
 import Finances from "@/pages/Finances";
+import PurchaseBill from "@/pages/PurchaseBill";
 import Settings from "@/pages/Settings";
 import AuthPage from "@/pages/auth-page";
 import ChatWidget from "@/pages/ChatWidget";
@@ -32,7 +33,7 @@ function Router() {
       {/* Add all Finances submenu paths */}
       <ProtectedRoute path="/finances/transactions" component={Finances} />
       <ProtectedRoute path="/finances/sales-invoice" component={Finances} />
-      <ProtectedRoute path="/finances/purchase-bill" component={Finances} />
+      <ProtectedRoute path="/finances/purchase-bill" component={PurchaseBill} />
       <ProtectedRoute path="/finances/user" component={Finances} />
       <ProtectedRoute path="/finances/accounts" component={Finances} />
       <ProtectedRoute path="/finances/chart-of-accounts" component={Finances} />
