@@ -18,11 +18,19 @@ export default function MainLayout({ children, onRightPanelToggle }: MainLayoutP
   // Get authentication state from our useAuth hook
   const { user, isLoading, error } = useAuth();
   
-  // Initialize sidebarOpen based on screen size
+  // Initialize sidebarOpen based on screen size and store user preference
   useEffect(() => {
+    // Check if we have a stored preference for desktop sidebar
+    const storedPreference = localStorage.getItem('desktopSidebarOpen');
+    
     const handleResize = () => {
       if (window.innerWidth >= 1024) { // lg breakpoint
-        setSidebarOpen(true);
+        // Only use default (true) if no preference is stored
+        if (storedPreference === null) {
+          setSidebarOpen(true);
+        } else {
+          setSidebarOpen(storedPreference === 'true');
+        }
       } else {
         setSidebarOpen(false);
       }
@@ -59,7 +67,13 @@ export default function MainLayout({ children, onRightPanelToggle }: MainLayoutP
   }, [useLocation()[0]]);
   
   const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+    const newState = !sidebarOpen;
+    setSidebarOpen(newState);
+    
+    // Only store preference when on desktop
+    if (window.innerWidth >= 1024) {
+      localStorage.setItem('desktopSidebarOpen', String(newState));
+    }
   };
   
   if (isLoading) {
@@ -81,9 +95,11 @@ export default function MainLayout({ children, onRightPanelToggle }: MainLayoutP
         ></div>
       )}
       
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} />
+      {/* Sidebar with improved positioning */}
+      <Sidebar isOpen={sidebarOpen} onClose={toggleSidebar} user={user} />
       
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main content that expands when sidebar is hidden */}
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'ml-0'}`}>
         <Header 
           onSidebarToggle={toggleSidebar} 
           user={user}

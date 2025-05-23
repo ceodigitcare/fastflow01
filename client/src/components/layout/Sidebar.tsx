@@ -108,10 +108,10 @@ export default function Sidebar({ isOpen, onClose, user }: SidebarProps) {
     { path: "/documentation", label: "Documentation", icon: <BookOpen className="w-5 h-5" /> },
   ];
   
-  // Mobile-friendly sidebar styling with a fully hidden sidebar on small screens
-  const sidebarClasses = `bg-white w-64 min-h-screen shadow-md transform transition-transform duration-300 ease-in-out z-20 lg:translate-x-0 ${
+  // Updated sidebar styling with smooth transitions for both mobile and desktop
+  const sidebarClasses = `bg-white w-64 min-h-screen shadow-md transform transition-transform duration-300 ease-in-out z-20 ${
     isOpen ? "translate-x-0" : "-translate-x-full"
-  } fixed lg:relative`;
+  } fixed`;
   
   return (
     <aside className={sidebarClasses} data-expanded={isOpen}>
@@ -122,10 +122,16 @@ export default function Sidebar({ isOpen, onClose, user }: SidebarProps) {
           </div>
           <span className="ml-3 font-semibold text-lg">StoreFront</span>
         </Link>
-        {/* Cross icon only visible on desktop when sidebar is open */}
+        {/* Cross icon always visible when sidebar is open regardless of screen size */}
         <button 
-          onClick={onClose} 
-          className="text-foreground hover:text-gray-600 transition-colors hidden lg:block"
+          onClick={() => {
+            onClose();
+            // Store preference on desktop view
+            if (window.innerWidth >= 1024) {
+              localStorage.setItem('desktopSidebarOpen', 'false');
+            }
+          }} 
+          className="text-foreground hover:text-gray-600 transition-colors"
           aria-label="Hide sidebar"
         >
           <X size={18} />
