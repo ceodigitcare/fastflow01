@@ -907,13 +907,35 @@ export default function PurchaseBillFormSplit({
           productId: item.productId,
           description: item.description,
           quantity: item.quantity,
+          // CRITICAL FIX #1: Explicitly include quantityReceived in item data
+          quantityReceived: item.quantityReceived || 0,
           unitPrice: Math.round(item.unitPrice * 100), // Convert to cents
           taxRate: item.taxRate || 0,
           discount: item.discount || 0,
           taxType: item.taxType || 'percentage',
           discountType: item.discountType || 'percentage',
           amount: Math.round(item.amount * 100) // Convert to cents
-        }))
+        })),
+        // CRITICAL FIX #2: Store received quantities in metadata for redundancy
+        metadata: JSON.stringify({
+          // Keep existing metadata if present
+          ...(editingBill && editingBill.metadata ? 
+              (typeof editingBill.metadata === 'string' ? 
+                JSON.parse(editingBill.metadata) : editingBill.metadata) 
+              : {}),
+          // Add a map of product IDs to received quantities for reliable storage
+          receivedQuantityMap: data.items.reduce((map, item) => {
+            if (item.productId) {
+              map[`product_${item.productId}`] = item.quantityReceived || 0;
+            }
+            return map;
+          }, {} as Record<string, number>),
+          // Also store as array for backward compatibility
+          itemQuantitiesReceived: data.items.map(item => ({
+            productId: item.productId,
+            quantityReceived: item.quantityReceived || 0
+          }))
+        })
       };
       
       // Include ID property if editing an existing bill
@@ -943,13 +965,35 @@ export default function PurchaseBillFormSplit({
             productId: item.productId,
             description: item.description,
             quantity: item.quantity,
+            // CRITICAL FIX #3: Also include quantityReceived in updates to existing bills
+            quantityReceived: item.quantityReceived || 0,
             unitPrice: Math.round(item.unitPrice * 100),
             taxRate: Number(parseFloat(String(item.taxRate || 0))),
             discount: Number(parseFloat(String(item.discount || 0))),
             taxType: item.taxType || 'percentage',
             discountType: item.discountType || 'percentage',
             amount: Math.round(item.amount * 100)
-          }))
+          })),
+          // CRITICAL FIX #4: Also update metadata for existing bills
+          metadata: JSON.stringify({
+            // Keep existing metadata if present
+            ...(editingBill && editingBill.metadata ? 
+                (typeof editingBill.metadata === 'string' ? 
+                  JSON.parse(editingBill.metadata) : editingBill.metadata) 
+                : {}),
+            // Add a map of product IDs to received quantities
+            receivedQuantityMap: data.items.reduce((map, item) => {
+              if (item.productId) {
+                map[`product_${item.productId}`] = item.quantityReceived || 0;
+              }
+              return map;
+            }, {} as Record<string, number>),
+            // Also store as array
+            itemQuantitiesReceived: data.items.map(item => ({
+              productId: item.productId,
+              quantityReceived: item.quantityReceived || 0
+            }))
+          })
         };
         
         const response = await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, updateData);
