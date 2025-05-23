@@ -406,6 +406,14 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-center">{item.quantity}</td>
+                        
+                        {/* Conditionally render Received Quantity cell based on toggle state */}
+                        {showReceivedQuantity && (
+                          <td className="px-4 py-3 text-sm text-center">
+                            {item.quantityReceived !== undefined ? item.quantityReceived : '-'}
+                          </td>
+                        )}
+                        
                         <td className="px-4 py-3 text-sm text-right">{formatCurrency(item.unitPrice / 100)}</td>
                         <td className="px-4 py-3 text-sm text-right font-medium">{formatCurrency(item.amount / 100)}</td>
                       </tr>
