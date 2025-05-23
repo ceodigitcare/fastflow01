@@ -3,7 +3,8 @@ import {
   Bell, 
   User,
   ChevronDown,
-  Menu
+  Menu,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -20,9 +21,10 @@ import { useAuth } from "@/hooks/use-auth";
 interface HeaderProps {
   onSidebarToggle: () => void;
   user: any;
+  isSidebarOpen?: boolean;
 }
 
-export default function Header({ onSidebarToggle, user }: HeaderProps) {
+export default function Header({ onSidebarToggle, user, isSidebarOpen }: HeaderProps) {
   const [, setLocation] = useLocation();
   const { logout } = useAuth();
   
@@ -35,8 +37,12 @@ export default function Header({ onSidebarToggle, user }: HeaderProps) {
     <header className="bg-white shadow-sm z-10">
       <div className="flex items-center justify-between h-16 px-6">
         <div className="flex items-center lg:hidden">
-          <Button variant="ghost" size="icon" onClick={onSidebarToggle}>
-            <Menu className="h-5 w-5" />
+          <Button variant="ghost" size="icon" onClick={onSidebarToggle} aria-label="Toggle menu">
+            {isSidebarOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </Button>
         </div>
         

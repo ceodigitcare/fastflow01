@@ -129,6 +129,12 @@ export default function Finances() {
     setTransactionDialogOpen(true);
   };
   
+  // State to track which tab is currently active
+  const [activeTab, setActiveTab] = useState("overview");
+  
+  // Check if summary cards should be hidden (for Transactions, Sales Invoice, Purchase Bill)
+  const shouldHideSummaryCards = ["transactions", "sales-invoice", "purchase-bill"].includes(activeTab);
+  
   return (
     <MainLayout>
       <div className="mb-6 flex justify-between items-center">
@@ -141,90 +147,94 @@ export default function Finances() {
         </Button>
       </div>
       
-      {/* Financial Insight Bubble will be added inside the Overview tab */}
+      {/* Only show summary cards when not in restricted sections */}
+      {!shouldHideSummaryCards && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Total Revenue</p>
+                  <p className="text-2xl font-semibold mt-1">
+                    {transactionsLoading 
+                      ? "Loading..." 
+                      : formatCurrency(financialSummary?.totalRevenue || 0)}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-primary">
+                  <DollarSign size={20} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Monthly Revenue</p>
+                  <p className="text-2xl font-semibold mt-1">
+                    {transactionsLoading 
+                      ? "Loading..." 
+                      : formatCurrency(financialSummary?.monthlyRevenue || 0)}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-success">
+                  <TrendingUp size={20} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Total Orders</p>
+                  <p className="text-2xl font-semibold mt-1">
+                    {ordersLoading ? "Loading..." : orders?.length || 0}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-secondary bg-opacity-10 flex items-center justify-center text-secondary">
+                  <FileText size={20} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Profit Margin</p>
+                  <p className="text-2xl font-semibold mt-1">
+                    {transactionsLoading 
+                      ? "Loading..." 
+                      : `${Math.round(financialSummary?.profitMargin || 0)}%`}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                  <CreditCard size={20} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-                <p className="text-2xl font-semibold mt-1">
-                  {transactionsLoading 
-                    ? "Loading..." 
-                    : formatCurrency(financialSummary?.totalRevenue || 0)}
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-primary">
-                <DollarSign size={20} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Monthly Revenue</p>
-                <p className="text-2xl font-semibold mt-1">
-                  {transactionsLoading 
-                    ? "Loading..." 
-                    : formatCurrency(financialSummary?.monthlyRevenue || 0)}
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-success">
-                <TrendingUp size={20} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Total Orders</p>
-                <p className="text-2xl font-semibold mt-1">
-                  {ordersLoading ? "Loading..." : orders?.length || 0}
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-secondary bg-opacity-10 flex items-center justify-center text-secondary">
-                <FileText size={20} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Profit Margin</p>
-                <p className="text-2xl font-semibold mt-1">
-                  {transactionsLoading 
-                    ? "Loading..." 
-                    : `${Math.round(financialSummary?.profitMargin || 0)}%`}
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
-                <CreditCard size={20} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Tabs defaultValue="overview" className="mb-8">
+      <Tabs 
+        defaultValue="overview" 
+        className="mb-8"
+        onValueChange={(value) => setActiveTab(value)}
+      >
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="accounts">Accounts</TabsTrigger>
-          <TabsTrigger value="chart-of-accounts">Chart of Accounts</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="sales-invoice">Sales Invoice</TabsTrigger>
           <TabsTrigger value="purchase-bill">Purchase Bill</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="user">User</TabsTrigger>
+          <TabsTrigger value="accounts">Accounts</TabsTrigger>
+          <TabsTrigger value="chart-of-accounts">Chart of Accounts</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview" className="mt-6 relative">
