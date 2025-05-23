@@ -116,13 +116,18 @@ export default function Sidebar({ isOpen, onClose, user }: SidebarProps) {
   return (
     <aside className={sidebarClasses} data-expanded={isOpen}>
       <div className="p-6 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center">
+        <Link href="/dashboard" className="flex items-center flex-1">
           <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center text-white font-bold">
             S
           </div>
           <span className="ml-3 font-semibold text-lg">StoreFront</span>
         </Link>
-        <button onClick={onClose} className="text-foreground hover:text-gray-600 transition-colors">
+        {/* Cross icon only visible on desktop when sidebar is open */}
+        <button 
+          onClick={onClose} 
+          className="text-foreground hover:text-gray-600 transition-colors hidden lg:block"
+          aria-label="Hide sidebar"
+        >
           <X size={18} />
         </button>
       </div>

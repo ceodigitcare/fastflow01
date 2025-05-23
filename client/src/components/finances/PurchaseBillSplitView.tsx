@@ -30,6 +30,8 @@ interface PurchaseBillSplitViewProps {
   isCreatingNew?: boolean;
   onCreateCancel?: () => void;
   onSelectBill?: (bill: Transaction) => void;
+  billPanelVisible?: boolean;
+  onToggleBillPanel?: () => void;
 }
 
 export default function PurchaseBillSplitView({ 
@@ -37,7 +39,9 @@ export default function PurchaseBillSplitView({
   initialBill = null,
   isCreatingNew: externalCreatingNew = false,
   onCreateCancel,
-  onSelectBill
+  onSelectBill,
+  billPanelVisible = true,
+  onToggleBillPanel
 }: PurchaseBillSplitViewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -45,33 +49,7 @@ export default function PurchaseBillSplitView({
   const [selectedBill, setSelectedBill] = useState<Transaction | null>(initialBill);
   const [isCreatingNew, setIsCreatingNew] = useState(externalCreatingNew);
   
-  // State for the bill list panel visibility
-  const [billPanelVisible, setBillPanelVisible] = useState(() => {
-    // On desktop (lg and above), default to visible
-    // On mobile/tablet (below lg), default to hidden
-    return window.innerWidth >= 1024;
-  });
-  
-  // Update bill panel visibility based on screen size
-  useEffect(() => {
-    const handleResize = () => {
-      // Auto-show panel on desktop, auto-hide on mobile
-      setBillPanelVisible(window.innerWidth >= 1024);
-    };
-    
-    // Add event listener
-    window.addEventListener("resize", handleResize);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-  
-  // Toggle bill panel visibility
-  const toggleBillPanel = () => {
-    setBillPanelVisible(!billPanelVisible);
-  };
+  // Bill panel visibility is now controlled by parent component
   
   // Update state when props change to ensure synchronization with parent
   useEffect(() => {
@@ -856,7 +834,7 @@ export default function PurchaseBillSplitView({
         {/* Mobile panel header with close button */}
         <div className="flex justify-between items-center mb-4 lg:hidden">
           <h3 className="font-semibold text-lg">Purchase Bills</h3>
-          <Button variant="ghost" size="icon" onClick={toggleBillPanel} aria-label="Close panel">
+          <Button variant="ghost" size="icon" onClick={onToggleBillPanel} aria-label="Close panel">
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -899,7 +877,7 @@ export default function PurchaseBillSplitView({
                     
                     // On mobile, close the panel after selecting a bill
                     if (window.innerWidth < 1024) {
-                      setBillPanelVisible(false);
+                      onToggleBillPanel && onToggleBillPanel();
                     }
                   }}
                 >
