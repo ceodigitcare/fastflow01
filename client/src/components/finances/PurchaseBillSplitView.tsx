@@ -15,7 +15,7 @@ import {
   MessageCircle,
   ChevronLeft,
   ChevronRight,
-  List,
+  Menu,
   X
 } from "lucide-react";
 import PurchaseBillFormSplit from "./PurchaseBillFormSplit";
@@ -177,44 +177,18 @@ export default function PurchaseBillSplitView({
   
   return (
     <div className="flex flex-col lg:flex-row h-full relative">
-      {/* Mobile floating action button to show bill list */}
-      <div className={`fixed bottom-6 right-6 z-20 lg:hidden ${billPanelVisible ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'} transition-all duration-300`}>
-        <Button 
-          variant="default" 
-          size="icon" 
-          className="rounded-full shadow-lg h-12 w-12"
-          onClick={toggleBillPanel}
-          aria-label="Show bill list"
-        >
-          <List className="h-5 w-5" />
-        </Button>
-      </div>
-      
       {/* Left panel for bill view/form */}
       <div className={`lg:flex-1 mb-6 lg:mb-0 ${billPanelVisible ? 'lg:mr-80' : ''} transition-all duration-300 relative`}>
-        {/* Toggle button for bill list panel - appears when panel is hidden on desktop */}
-        <div className={`hidden lg:flex absolute top-0 right-0 z-10 ${billPanelVisible ? 'invisible opacity-0' : 'visible opacity-100'} transition-opacity duration-300`}>
+        {/* Three-line drawer icon to toggle bill list panel */}
+        <div className="absolute top-0 right-0 z-10">
           <Button 
             variant="ghost" 
-            size="sm" 
+            size="icon" 
             className="mr-2"
             onClick={toggleBillPanel}
+            aria-label={billPanelVisible ? "Hide bill list" : "Show bill list"}
           >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Show Bills
-          </Button>
-        </div>
-        
-        {/* Toggle button to hide bill list - shown when panel is visible on desktop */}
-        <div className={`hidden lg:flex absolute top-0 right-0 z-10 ${billPanelVisible ? 'visible opacity-100' : 'invisible opacity-0'} transition-opacity duration-300`}>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="mr-2"
-            onClick={toggleBillPanel}
-          >
-            <ChevronRight className="h-4 w-4 mr-1" />
-            Hide Bills
+            <Menu className="h-4 w-4" />
           </Button>
         </div>
         {selectedBill ? (

@@ -52,14 +52,19 @@ export default function PurchaseBill() {
   
   return (
     <MainLayout>
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold">Purchase Bill</h1>
-          <p className="text-sm text-gray-500">Manage and track your supplier invoices and bill payments</p>
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-semibold">Purchase Bill</h1>
+            <p className="text-sm text-gray-500">Manage and track your supplier invoices and bill payments</p>
+          </div>
         </div>
-        <Button onClick={handleNewBill}>
-          <Plus className="mr-2 h-4 w-4" /> New Purchase Bill
-        </Button>
+        
+        <div className="flex justify-end mb-4">
+          <Button onClick={handleNewBill}>
+            <Plus className="mr-2 h-4 w-4" /> New Purchase Bill
+          </Button>
+        </div>
       </div>
       
       <div className="flex-1">
