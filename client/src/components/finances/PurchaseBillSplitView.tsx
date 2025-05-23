@@ -25,6 +25,14 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<Transaction | null>(null);
   
+  // State for toggling received quantity column visibility
+  const [showReceivedQuantity, setShowReceivedQuantity] = useState(() => {
+    // Check if preference is stored in localStorage
+    const savedPreference = localStorage.getItem('showReceivedQuantity');
+    // Default to false (hidden) if no preference is saved
+    return savedPreference ? savedPreference === 'true' : false;
+  });
+  
   // Get bills from transactions
   const { data: bills, isLoading } = useQuery<Transaction[]>({
     queryKey: ["/api/transactions"],
@@ -333,13 +341,44 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
             
             {/* Bill Items */}
             <div>
-              <h3 className="font-semibold mb-3">Items</h3>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-semibold">Items</h3>
+                
+                {/* Toggle switch for showing/hiding Received Quantity */}
+                <div className="flex items-center">
+                  <label htmlFor="toggle-received-qty" className="mr-2 text-sm text-gray-600">
+                    {showReceivedQuantity ? "Hide Received Quantity" : "Show Received Quantity"}
+                  </label>
+                  <button 
+                    id="toggle-received-qty"
+                    onClick={() => {
+                      const newValue = !showReceivedQuantity;
+                      setShowReceivedQuantity(newValue);
+                      // Save preference to localStorage
+                      localStorage.setItem('showReceivedQuantity', newValue.toString());
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                      showReceivedQuantity ? 'bg-primary' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span 
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        showReceivedQuantity ? 'translate-x-6' : 'translate-x-1'
+                      }`} 
+                    />
+                  </button>
+                </div>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="text-xs uppercase bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left">Item</th>
                       <th className="px-4 py-3 text-center">Qty</th>
+                      {/* Conditionally render Received Qty column based on toggle state */}
+                      {showReceivedQuantity && (
+                        <th className="px-4 py-3 text-center">Received Qty</th>
+                      )}
                       <th className="px-4 py-3 text-right">Unit Price</th>
                       <th className="px-4 py-3 text-right">Amount</th>
                     </tr>
