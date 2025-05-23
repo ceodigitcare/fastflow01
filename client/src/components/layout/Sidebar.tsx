@@ -108,9 +108,9 @@ export default function Sidebar({ isOpen, onClose, user }: SidebarProps) {
     { path: "/documentation", label: "Documentation", icon: <BookOpen className="w-5 h-5" /> },
   ];
   
-  // Updated sidebar styling with smooth transitions for both mobile and desktop
-  const sidebarClasses = `bg-white w-64 min-h-screen shadow-md transform transition-transform duration-300 ease-in-out z-20 ${
-    isOpen ? "translate-x-0" : "-translate-x-full"
+  // Sidebar styling with true hiding behavior for both mobile and desktop
+  const sidebarClasses = `bg-white w-64 min-h-screen shadow-md transform transition-all duration-300 ease-in-out z-20 ${
+    isOpen ? "translate-x-0 opacity-100 visible" : "-translate-x-full opacity-0 invisible"
   } fixed`;
   
   return (

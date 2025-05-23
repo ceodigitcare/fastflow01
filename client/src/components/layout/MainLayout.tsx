@@ -95,11 +95,11 @@ export default function MainLayout({ children, onRightPanelToggle }: MainLayoutP
         ></div>
       )}
       
-      {/* Sidebar with improved positioning */}
+      {/* Sidebar with complete hide/show behavior for both mobile and desktop */}
       <Sidebar isOpen={sidebarOpen} onClose={toggleSidebar} user={user} />
       
-      {/* Main content that expands when sidebar is hidden */}
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'ml-0'}`}>
+      {/* Main content that fully expands when sidebar is hidden */}
+      <div className="flex-1 flex flex-col min-w-0 w-full transition-all duration-300">
         <Header 
           onSidebarToggle={toggleSidebar} 
           user={user}
