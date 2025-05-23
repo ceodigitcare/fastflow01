@@ -1427,16 +1427,22 @@ export default function PurchaseBillFormSplit({
       } : {}),
       // Use the processed items array containing explicit quantityReceived values
       items: processedItems,
-      // Store simplified metadata - we're now storing quantityReceived directly on each item
+      // Store metadata with essential bill info AND quantityReceived values
       metadata: JSON.stringify({
-        // Essential bill metadata only
+        // Essential bill metadata
         totalDiscount: totalDiscountValue,
         totalDiscountType: data.totalDiscountType || "flat",
         dueDate: data.dueDate ? data.dueDate.toISOString() : new Date().toISOString(),
         contactId: data.vendorId,
-        // Store this tracing data for debugging
+        // CRITICAL FIX: Store quantityReceived values in metadata to ensure persistence
+        // This is the key part that was missing - store received quantities in metadata
+        itemQuantitiesReceived: processedItems.map(item => ({
+          productId: item.productId,
+          quantityReceived: item.quantityReceived || 0
+        })),
+        // Debug information
         debugTimestamp: new Date().toISOString(),
-        debugInfo: 'Using direct quantityReceived on items'
+        debugSource: 'FormSubmit-FixedMetadataStorage'
       }),
       // Calculate the total amount correctly
       amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
