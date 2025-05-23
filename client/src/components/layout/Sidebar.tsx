@@ -122,7 +122,7 @@ export default function Sidebar({ isOpen, onClose, user }: SidebarProps) {
           </div>
           <span className="ml-3 font-semibold text-lg">StoreFront</span>
         </Link>
-        <button onClick={onClose} className="lg:hidden text-foreground">
+        <button onClick={onClose} className="text-foreground hover:text-gray-600 transition-colors">
           <X size={18} />
         </button>
       </div>

@@ -1,0 +1,38 @@
+Prompt: Desktop Sidebar and Purchase List Toggle UI with Responsive Layout Enhancement
+Hi! I need a refined layout behavior for the desktop view of the Purchase Bill section to maximize screen usage and create intuitive toggle controls for both the main sidebar and purchase bill list panel.
+
+Please follow the detailed updates below:
+
+✅ LEFT MENU (Main Sidebar) Behavior on Desktop
+By default, on desktop, the left main menu should be visible, just beside the Storefront label.
+
+Add a cross (×) icon next to the Storefront title. Clicking this will collapse/hide the left menu.
+
+When the left menu is hidden, replace the current placeholder at the top-left with a hamburger icon (≡) to bring the menu back when clicked.
+
+The Purchase Bill view should expand horizontally when the left menu is hidden, utilizing the extra space.
+
+This menu toggle behavior should be global across all pages and submenus.
+
+✅ RIGHT PANEL (Purchase Bill List) Behavior on Desktop
+At the top of the right-side purchase bill list, add a cross (×) icon next to the search input. Clicking this will hide the list.
+
+When hidden, the main Purchase Bill area should expand to take over the entire right space of the screen.
+
+When the list is hidden, a small button (icon-based) next to the search input or in the top-right should allow reopening the purchase bill list.
+
+Do not use an additional three-line icon above the purchase bill for toggling this list.
+
+❌ Remove Unnecessary UI Elements
+Remove any redundant or duplicate hamburger icons above the bill view.
+
+Also, remove the floating blue action button at the bottom-right.
+
+📐 Layout & Spacing Optimizations
+Ensure no large empty gaps between the main bill content and sidebars (left or right).
+
+When both menus (left and right) are hidden, the Purchase Bill section should be centered and full-width, fully utilizing the screen real estate.
+
+Adjust margins, paddings, and responsiveness so that the layout looks clean and compact without unnecessary white space.
+
+This prompt ensures a seamless toggle experience across devices and maximizes usability while preserving a neat layout. Let me know if you'd like a visual wireframe for this!

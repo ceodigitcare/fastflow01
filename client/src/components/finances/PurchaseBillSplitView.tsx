@@ -178,19 +178,7 @@ export default function PurchaseBillSplitView({
   return (
     <div className="flex flex-col lg:flex-row h-full relative">
       {/* Left panel for bill view/form */}
-      <div className={`lg:flex-1 mb-6 lg:mb-0 ${billPanelVisible ? 'lg:mr-80' : ''} transition-all duration-300 relative`}>
-        {/* Three-line drawer icon to toggle bill list panel */}
-        <div className="absolute top-0 right-0 z-10">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="mr-2"
-            onClick={toggleBillPanel}
-            aria-label={billPanelVisible ? "Hide bill list" : "Show bill list"}
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-        </div>
+      <div className={`lg:flex-1 mb-4 lg:mb-0 ${billPanelVisible ? 'lg:mr-4' : ''} transition-all duration-300`}>
         {selectedBill ? (
           <div className="space-y-6 bg-white p-6 border rounded-lg shadow-sm">
             <div className="flex justify-between items-start">

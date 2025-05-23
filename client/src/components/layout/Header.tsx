@@ -38,11 +38,7 @@ export default function Header({ onSidebarToggle, user, isSidebarOpen }: HeaderP
       <div className="flex items-center justify-between h-16 px-6">
         <div className="flex items-center">
           <Button variant="ghost" size="icon" onClick={onSidebarToggle} aria-label="Toggle menu">
-            {isSidebarOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            <Menu className="h-5 w-5" />
           </Button>
         </div>
         
