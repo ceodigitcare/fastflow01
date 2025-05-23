@@ -96,7 +96,7 @@ export default function Finances() {
   });
   
   // Get orders
-  const { data: orders, isLoading: ordersLoading } = useQuery({
+  const { data: orders, isLoading: ordersLoading } = useQuery<any[]>({
     queryKey: ["/api/orders"],
   });
 
