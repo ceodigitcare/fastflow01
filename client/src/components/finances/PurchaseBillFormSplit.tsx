@@ -305,50 +305,103 @@ export default function PurchaseBillFormSplit({
           ? (typeof item.discount === 'string' ? parseFloat(item.discount) : Number(item.discount)) 
           : 0;
 
-        // Get quantityReceived from metadata if available, otherwise from the item itself
+        // COMPLETE REBUILD: Extract quantityReceived values with multiple fallbacks
+        // This is the foundation of our fix - we're implementing a thorough retrieval system
         let quantityReceivedValue = 0;
+        let sourceLocation = "default";
         
-        // First try to extract it from metadata
+        // Define helper variables to track the source of the quantityReceived value
+        let directItemValue = undefined;
+        let metadataMapValue = undefined;
+        let metadataArrayValue = undefined;
+        
+        // STEP 1: Try to parse metadata JSON and extract received quantities
         try {
-          if (typeof editingBill.metadata === 'string') {
-            const metadataObj = JSON.parse(editingBill.metadata);
+          if (editingBill.metadata) {
+            // Handle both string and object metadata formats
+            const metadataObj = typeof editingBill.metadata === 'string' 
+              ? JSON.parse(editingBill.metadata) 
+              : editingBill.metadata;
             
-            // Look for matching item in itemQuantitiesReceived array
-            if (metadataObj?.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
+            // PRIORITY 1: Check for newest map format (fastest lookup)
+            if (metadataObj.receivedQuantityMap && 
+                typeof metadataObj.receivedQuantityMap === 'object' &&
+                metadataObj.receivedQuantityMap[`product_${item.productId}`] !== undefined) {
+              
+              metadataMapValue = Number(metadataObj.receivedQuantityMap[`product_${item.productId}`]);
+              
+              // Use this value if it's not NaN
+              if (!isNaN(metadataMapValue)) {
+                quantityReceivedValue = metadataMapValue;
+                sourceLocation = "metadata-map";
+                console.log(`REBUILD: Found quantity in metadata MAP for product ${item.productId}: ${quantityReceivedValue}`);
+              }
+            }
+            
+            // PRIORITY 2: Check for array format (legacy/backup)
+            if ((!metadataMapValue || isNaN(metadataMapValue)) && 
+                metadataObj.itemQuantitiesReceived && 
+                Array.isArray(metadataObj.itemQuantitiesReceived)) {
+              
               const matchingItem = metadataObj.itemQuantitiesReceived.find(
-                (metaItem: any) => metaItem.productId === item.productId
+                (metaItem: any) => Number(metaItem.productId) === Number(item.productId)
               );
               
               if (matchingItem && matchingItem.quantityReceived !== undefined) {
-                quantityReceivedValue = Number(matchingItem.quantityReceived);
-                console.log(`Found quantity received in metadata for product ${item.productId}:`, quantityReceivedValue);
+                metadataArrayValue = Number(matchingItem.quantityReceived);
+                
+                // Use this value if it's not NaN and we didn't already find a valid map value
+                if (!isNaN(metadataArrayValue) && 
+                    (isNaN(metadataMapValue) || metadataMapValue === undefined)) {
+                  quantityReceivedValue = metadataArrayValue;
+                  sourceLocation = "metadata-array";
+                  console.log(`REBUILD: Found quantity in metadata ARRAY for product ${item.productId}: ${quantityReceivedValue}`);
+                }
               }
             }
           }
         } catch (e) {
-          console.error("Error parsing metadata for quantityReceived:", e);
+          console.error("REBUILD: Error parsing metadata:", e);
         }
         
-        // CRITICAL FIX: Ensure received quantities are properly extracted and preserved
-        // Log detailed item structure for debugging
-        console.log(`CRITICAL FIX - Item data for product ${item.productId || 'unknown'}:`, {
-          rawItem: JSON.stringify(item),
-          hasQuantityReceivedProp: 'quantityReceived' in item,
-          rawQuantityReceivedValue: item.quantityReceived,
-          rawQuantityReceivedType: typeof item.quantityReceived
-        });
-        
-        // ALWAYS use direct property with strong type conversion
+        // PRIORITY 3: Check the direct item property
         if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
-          // Force to numeric value regardless of input type (string/number/etc)
-          quantityReceivedValue = typeof item.quantityReceived === 'string' 
+          directItemValue = typeof item.quantityReceived === 'string' 
             ? parseFloat(item.quantityReceived) 
             : Number(item.quantityReceived);
+          
+          // Use direct property if it's not NaN and is greater than our current value
+          // This ensures we capture the highest/latest value across sources
+          if (!isNaN(directItemValue) && 
+              (directItemValue > quantityReceivedValue || 
+               isNaN(quantityReceivedValue) || 
+               quantityReceivedValue === undefined)) {
             
-          console.log(`CRITICAL FIX - Found quantityReceived=${quantityReceivedValue} directly on item for product ${item.productId}`);
-        } else {
-          console.log(`CRITICAL FIX - No quantityReceived on item, using default 0 for product ${item.productId}`);
+            quantityReceivedValue = directItemValue;
+            sourceLocation = "direct-property";
+            console.log(`REBUILD: Using direct property value for product ${item.productId}: ${quantityReceivedValue}`);
+          }
         }
+        
+        // Final validation - ensure we have a number, not NaN
+        if (isNaN(quantityReceivedValue)) {
+          quantityReceivedValue = 0;
+          sourceLocation = "fallback-after-NaN";
+        }
+        
+        // Add comprehensive debug trace
+        console.log(`REBUILD DATA TRACE - Item ${item.productId}:`, {
+          finalValue: quantityReceivedValue,
+          sourceUsed: sourceLocation,
+          values: {
+            fromDirectProperty: directItemValue,
+            fromMetadataMap: metadataMapValue,
+            fromMetadataArray: metadataArrayValue
+          },
+          rawItemHasProperty: 'quantityReceived' in item,
+          rawValue: item.quantityReceived,
+          rawValueType: typeof item.quantityReceived
+        });
           
         return {
           productId: item.productId ?? 0,

@@ -183,46 +183,91 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                           // Get quantityReceived with robust prioritization
                           let quantityReceived = 0;
                           
-                          // COMPLETE REBUILD: Robust quantityReceived extraction with multiple fallbacks
+                          // VERIFIED REBUILD V2: Complete rebuild of received quantity handling
+                          // Using a systematic approach for extraction with predictable priority order
                           
-                          // Parse metadata safely to avoid errors
+                          // Initialize tracking variables to record where values come from
                           let parsedMetadata = null;
+                          let metadataMapValue = undefined;
+                          let metadataArrayValue = undefined;
+                          let directItemValue = undefined;
+                          let sourceUsed = "default";
+                          
+                          // STEP 1: Try to extract metadata safely
                           try {
                             if (selectedBill.metadata) {
+                              // Handle both string and object metadata formats
                               if (typeof selectedBill.metadata === 'string') {
                                 parsedMetadata = JSON.parse(selectedBill.metadata);
                               } else if (typeof selectedBill.metadata === 'object') {
                                 parsedMetadata = selectedBill.metadata;
                               }
+                              
+                              console.log(`VIEW MODE: Successfully parsed metadata for bill ${selectedBill.id}:`, 
+                                parsedMetadata ? 'metadata available' : 'no metadata found');
                             }
                           } catch (error) {
-                            console.error("Failed to parse metadata in edit mode:", error);
+                            console.error("VIEW MODE: Failed to parse metadata in view mode:", error);
                           }
                           
-                          // First: Check for updated format in receivedQuantityMap (most reliable)
+                          // STEP 2: Look up values in order of reliability
+                          // Priority 1: Check map format (fastest lookup)
                           if (parsedMetadata && 
                               parsedMetadata.receivedQuantityMap && 
-                              parsedMetadata.receivedQuantityMap[`product_${productId}`] !== undefined) {
-                            quantityReceived = Number(parsedMetadata.receivedQuantityMap[`product_${productId}`]);
-                            console.log(`✅ EDIT MODE - Found quantity in receivedQuantityMap for product ${productId}: ${quantityReceived}`);
+                              typeof parsedMetadata.receivedQuantityMap === 'object') {
+                            
+                            const mapKey = `product_${productId}`;
+                            if (parsedMetadata.receivedQuantityMap[mapKey] !== undefined) {
+                              metadataMapValue = Number(parsedMetadata.receivedQuantityMap[mapKey]);
+                              
+                              if (!isNaN(metadataMapValue)) {
+                                quantityReceived = metadataMapValue;
+                                sourceUsed = "metadata-map";
+                                console.log(`VIEW MODE: Using receivedQuantityMap value for product ${productId}: ${quantityReceived}`);
+                              }
+                            }
                           }
-                          // Second: Check legacy array format in metadata
-                          else if (itemMetadata && itemMetadata.quantityReceived !== undefined) {
-                            quantityReceived = Number(itemMetadata.quantityReceived);
-                            console.log(`✅ EDIT MODE - Found quantity in itemQuantitiesReceived for product ${productId}: ${quantityReceived}`);
-                          } 
-                          // Third: Try direct property on item object
-                          else if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
-                            quantityReceived = Number(item.quantityReceived);
-                            console.log(`✅ EDIT MODE - Found direct quantity on item for product ${productId}: ${quantityReceived}`);
+                          
+                          // Priority 2: Check array format (if map didn't provide a valid value)
+                          if ((metadataMapValue === undefined || isNaN(metadataMapValue)) && 
+                              itemMetadata && itemMetadata.quantityReceived !== undefined) {
+                            
+                            metadataArrayValue = Number(itemMetadata.quantityReceived);
+                            
+                            if (!isNaN(metadataArrayValue)) {
+                              quantityReceived = metadataArrayValue;
+                              sourceUsed = "metadata-array";
+                              console.log(`VIEW MODE: Using itemQuantitiesReceived value for product ${productId}: ${quantityReceived}`);
+                            }
                           }
-                          // Add comprehensive debug info
-                          console.log(`EDIT MODE - Data sources for product ${productId}:`, {
-                            fromReceivedQuantityMap: parsedMetadata?.receivedQuantityMap ? 
-                              parsedMetadata.receivedQuantityMap[`product_${productId}`] : 'map not found',
-                            fromItemQuantitiesReceived: itemMetadata?.quantityReceived,
-                            fromDirectProperty: item.quantityReceived,
-                            finalValue: quantityReceived
+                          
+                          // Priority 3: Check direct item property (if neither metadata source provided a valid value)
+                          if ((metadataMapValue === undefined || isNaN(metadataMapValue)) && 
+                              (metadataArrayValue === undefined || isNaN(metadataArrayValue)) &&
+                              item.quantityReceived !== undefined && item.quantityReceived !== null) {
+                            
+                            directItemValue = Number(item.quantityReceived);
+                            
+                            if (!isNaN(directItemValue)) {
+                              quantityReceived = directItemValue;
+                              sourceUsed = "direct-property";
+                              console.log(`VIEW MODE: Using direct property value for product ${productId}: ${quantityReceived}`);
+                            }
+                          }
+                          
+                          // STEP 3: Final validation - ensure we have a number, not NaN
+                          if (isNaN(quantityReceived)) {
+                            quantityReceived = 0;
+                            sourceUsed = "fallback-after-NaN";
+                          }
+                          
+                          // Comprehensive debug info
+                          console.log(`VIEW MODE - Data sources for product ${productId}:`, {
+                            finalQuantityReceived: quantityReceived,
+                            sourceUsed,
+                            fromReceivedQuantityMap: metadataMapValue,
+                            fromItemQuantitiesReceived: metadataArrayValue,
+                            fromDirectProperty: directItemValue
                           });
                           
                           console.log(`Final quantityReceived for product ${productId}: ${quantityReceived}`);
