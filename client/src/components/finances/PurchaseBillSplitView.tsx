@@ -14,14 +14,24 @@ import { BillPrintDialog } from "./BillPrint";
 
 interface PurchaseBillSplitViewProps {
   businessData?: any;
+  initialBill?: Transaction | null;
+  isCreatingNew?: boolean;
+  onCreateCancel?: () => void;
+  onSelectBill?: (bill: Transaction) => void;
 }
 
-export default function PurchaseBillSplitView({ businessData }: PurchaseBillSplitViewProps) {
+export default function PurchaseBillSplitView({ 
+  businessData, 
+  initialBill = null,
+  isCreatingNew: externalCreatingNew = false,
+  onCreateCancel,
+  onSelectBill
+}: PurchaseBillSplitViewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBill, setSelectedBill] = useState<Transaction | null>(null);
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [selectedBill, setSelectedBill] = useState<Transaction | null>(initialBill);
+  const [isCreatingNew, setIsCreatingNew] = useState(externalCreatingNew);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<Transaction | null>(null);
   
@@ -741,6 +751,7 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
               <Button variant="ghost" onClick={() => {
                 setIsCreatingNew(false);
                 setEditingBill(null);
+                if (onCreateCancel) onCreateCancel();
               }}>
                 Cancel
               </Button>
@@ -749,9 +760,11 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
               onCancel={() => {
                 setIsCreatingNew(false);
                 setEditingBill(null);
+                if (onCreateCancel) onCreateCancel();
               }}
               onSave={(bill) => {
                 setSelectedBill(bill);
+                if (onSelectBill) onSelectBill(bill);
                 setIsCreatingNew(false);
                 setEditingBill(null);
               }}
