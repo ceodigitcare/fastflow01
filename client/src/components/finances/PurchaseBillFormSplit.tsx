@@ -297,6 +297,8 @@ export default function PurchaseBillFormSplit({
       dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       status: editingBill.status ?? "draft",
       items: Array.isArray(editingBill.items) ? editingBill.items.map(item => {
+        console.log(`INITIALIZATION: Starting extraction for product ${item.productId} (${item.description || 'Unknown'})`);
+        
         // Convert tax rate and discount to numbers with safety checks
         const taxRateValue = item.taxRate !== undefined && item.taxRate !== null 
           ? (typeof item.taxRate === 'string' ? parseFloat(item.taxRate) : Number(item.taxRate)) 
@@ -306,57 +308,101 @@ export default function PurchaseBillFormSplit({
           ? (typeof item.discount === 'string' ? parseFloat(item.discount) : Number(item.discount)) 
           : 0;
           
-        // FRESH IMPLEMENTATION: Extract received quantity with simplified logic
-        let receivedQty = 0;
+        // ----- COMPLETE REBUILD -----
+        // INITIALIZATION PHASE: Extract received quantity with all possible sources
         
-        // Start by checking if metadata contains received quantities
-        if (editingBill.metadata) {
+        // Initialize tracking variables for debugging
+        let quantityTracker = {
+          directValue: null as number | null,
+          metadataMapValue: null as number | null,
+          metadataArrayValue: null as number | null,
+          finalValue: null as number | null,
+          source: "none"
+        };
+        
+        // ATTEMPT 1: Direct property extraction (highest priority)
+        if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
+          const directValue = Number(item.quantityReceived);
+          if (!isNaN(directValue)) {
+            quantityTracker.directValue = directValue;
+            quantityTracker.finalValue = directValue;
+            quantityTracker.source = "direct-property";
+            console.log(`EXTRACT: Direct property found with value ${directValue} for product ${item.productId}`);
+          }
+        }
+        
+        // ATTEMPT 2: Metadata map extraction
+        if (editingBill.metadata && (!quantityTracker.finalValue || quantityTracker.finalValue === 0)) {
           try {
+            // Parse metadata if needed
             const metaObj = typeof editingBill.metadata === 'string' 
               ? JSON.parse(editingBill.metadata) 
               : editingBill.metadata;
-              
-            // Check for received quantity in map format (primary storage)
+            
+            // Try the map format first (fast lookup by product ID)
             if (metaObj && metaObj.receivedQuantityMap) {
-              const mapValue = metaObj.receivedQuantityMap[`product_${item.productId}`];
-              if (mapValue !== undefined) {
-                const parsedValue = Number(mapValue);
-                if (!isNaN(parsedValue)) {
-                  receivedQty = parsedValue;
-                  console.log(`Found quantity in metadata map: ${receivedQty} for product ${item.productId}`);
+              const productKey = `product_${item.productId}`;
+              
+              if (metaObj.receivedQuantityMap[productKey] !== undefined) {
+                const mapValue = Number(metaObj.receivedQuantityMap[productKey]);
+                if (!isNaN(mapValue)) {
+                  quantityTracker.metadataMapValue = mapValue;
+                  
+                  // Only update final value if we haven't found one already
+                  if (!quantityTracker.finalValue || quantityTracker.finalValue === 0) {
+                    quantityTracker.finalValue = mapValue;
+                    quantityTracker.source = "metadata-map";
+                    console.log(`EXTRACT: Metadata map found with value ${mapValue} for product ${item.productId}`);
+                  }
                 }
               }
             }
             
-            // If not found in map, check array format (backup storage)
-            if (receivedQty === 0 && metaObj && metaObj.itemQuantitiesReceived) {
-              const foundItem = metaObj.itemQuantitiesReceived.find(
+            // Try the array format if we still need a value
+            if (metaObj && metaObj.itemQuantitiesReceived && 
+                (!quantityTracker.finalValue || quantityTracker.finalValue === 0)) {
+              
+              // Find by ID exact match
+              const matchedItem = metaObj.itemQuantitiesReceived.find(
                 (i: any) => i && Number(i.productId) === Number(item.productId)
               );
               
-              if (foundItem && foundItem.quantityReceived !== undefined) {
-                const parsedValue = Number(foundItem.quantityReceived);
-                if (!isNaN(parsedValue)) {
-                  receivedQty = parsedValue;
-                  console.log(`Found quantity in metadata array: ${receivedQty} for product ${item.productId}`);
+              if (matchedItem && matchedItem.quantityReceived !== undefined) {
+                const arrayValue = Number(matchedItem.quantityReceived);
+                if (!isNaN(arrayValue)) {
+                  quantityTracker.metadataArrayValue = arrayValue;
+                  
+                  // Only update if we don't have a value yet
+                  if (!quantityTracker.finalValue || quantityTracker.finalValue === 0) {
+                    quantityTracker.finalValue = arrayValue;
+                    quantityTracker.source = "metadata-array";
+                    console.log(`EXTRACT: Metadata array found with value ${arrayValue} for product ${item.productId}`);
+                  }
                 }
               }
             }
           } catch (error) {
-            console.error(`Error parsing metadata for received quantities:`, error);
+            console.error(`EXTRACT ERROR: Failed to parse metadata for product ${item.productId}:`, error);
           }
         }
         
-        // As a fallback, check if the item itself has a quantityReceived property
-        if (receivedQty === 0 && item.quantityReceived !== undefined && item.quantityReceived !== null) {
-          const parsedValue = Number(item.quantityReceived);
-          if (!isNaN(parsedValue)) {
-            receivedQty = parsedValue;
-            console.log(`Using direct item property for quantity: ${receivedQty} for product ${item.productId}`);
-          }
+        // FINAL DECISION: Ensure we have a valid numeric value
+        // If no value was found, default to 0
+        if (quantityTracker.finalValue === null || isNaN(quantityTracker.finalValue)) {
+          quantityTracker.finalValue = 0;
+          quantityTracker.source = "default-fallback";
         }
         
-        // Create a clean form item with all required properties
+        // Log the complete extraction process for debugging
+        console.log(`EXTRACTION COMPLETE for product ${item.productId}:`, {
+          directProperty: quantityTracker.directValue, 
+          metadataMap: quantityTracker.metadataMapValue,
+          metadataArray: quantityTracker.metadataArrayValue,
+          finalDecision: quantityTracker.finalValue,
+          source: quantityTracker.source
+        });
+        
+        // Create a clean form item with all required properties and explicit type conversions
         return {
           productId: Number(item.productId || 0),
           description: String(item.description || ""),
@@ -366,8 +412,8 @@ export default function PurchaseBillFormSplit({
           discount: discountValue,
           taxType: String(item.taxType || 'percentage'),
           discountType: String(item.discountType || 'percentage'),
-          // This is the critical field we need to preserve
-          quantityReceived: receivedQty,
+          // This is our critical field - use the final decision from our tracking
+          quantityReceived: quantityTracker.finalValue,
           amount: Number((item.amount || 0) / 100) // Convert from cents to dollars
         };
       }) : [],
@@ -1421,41 +1467,66 @@ export default function PurchaseBillFormSplit({
       const formIndex = billItems.indexOf(item);
       const formItem = formItems[formIndex];
       
-      // COMPLETE REBUILD: Get received quantity from latest form data
-      // Form data is the source of truth for user input
-      let receivedQty = 0;
+      // ----- CRITICAL DATA FLOW: SUBMISSION PHASE -----
+      // During form submission, we need to extract & validate received quantities
       
-      // First priority: Get value from current form state
+      // Track all values and sources for debugging
+      const qtySourceTracker = {
+        formValue: null as number | null,
+        stateValue: null as number | null,
+        finalValue: null as number | null,
+        source: "unknown"
+      };
+      
+      // ATTEMPT 1: Form state is most reliable source (direct user input)
       if (formItem && formItem.quantityReceived !== undefined) {
         const formValue = Number(formItem.quantityReceived);
         if (!isNaN(formValue)) {
-          receivedQty = formValue;
-          console.log(`SUBMIT: Using form value ${receivedQty} for product ${item.productId}`);
+          qtySourceTracker.formValue = formValue;
+          qtySourceTracker.finalValue = formValue;
+          qtySourceTracker.source = "form-value";
+          console.log(`SUBMIT EXTRACTION: Form value ${formValue} for product ${item.productId}`);
         }
       }
       
-      // Second priority: Fall back to component state if needed
-      if (receivedQty === 0 && item.quantityReceived !== undefined) {
+      // ATTEMPT 2: Item state is fallback if form state is unavailable
+      if ((!qtySourceTracker.finalValue || qtySourceTracker.finalValue === 0) && 
+          item.quantityReceived !== undefined) {
         const stateValue = Number(item.quantityReceived);
         if (!isNaN(stateValue)) {
-          receivedQty = stateValue;
-          console.log(`SUBMIT: Using state value ${receivedQty} for product ${item.productId}`);
+          qtySourceTracker.stateValue = stateValue;
+          
+          // Only use if we don't have a form value
+          if (!qtySourceTracker.finalValue || qtySourceTracker.finalValue === 0) {
+            qtySourceTracker.finalValue = stateValue;
+            qtySourceTracker.source = "state-value";
+            console.log(`SUBMIT EXTRACTION: State value ${stateValue} for product ${item.productId}`);
+          }
         }
       }
       
-      // Always ensure we have a valid number (0 is valid)
-      if (isNaN(receivedQty)) {
-        receivedQty = 0;
-        console.log(`SUBMIT: Value was NaN, defaulting to 0 for product ${item.productId}`);
+      // Ensure we have a valid number, default to 0 if nothing found
+      if (qtySourceTracker.finalValue === null || isNaN(qtySourceTracker.finalValue)) {
+        qtySourceTracker.finalValue = 0;
+        qtySourceTracker.source = "default-zero";
+        console.log(`SUBMIT EXTRACTION: Using default 0 for product ${item.productId} - no valid values found`);
       }
       
-      // Create a clean, explicitly typed item object
+      // Log all possible sources and the final decision for debugging
+      console.log(`SUBMIT DECISION for product ${item.productId}:`, { 
+        formValue: qtySourceTracker.formValue,
+        stateValue: qtySourceTracker.stateValue,
+        finalDecision: qtySourceTracker.finalValue,
+        source: qtySourceTracker.source
+      });
+      
+      // Create a clean, explicitly typed item object with guaranteed values
       const processedItem = {
         productId: Number(item.productId),
         description: String(item.description || ""),
         quantity: Number(item.quantity || 0),
-        // This is the critical field we're fixing
-        quantityReceived: receivedQty,
+        // CRITICAL FIELD: Always use a specific numeric value with explicit conversion
+        quantityReceived: Number(qtySourceTracker.finalValue),
         unitPrice: Number(item.unitPrice || 0),
         amount: Number(item.amount || 0),
         taxRate: Number(item.taxRate || 0),
