@@ -174,75 +174,97 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                       ? selectedBill.items.map(item => {
                           const productId = Number(item.productId);
                           
-                          // FRESH REIMPLEMENTATION: Complete rewrite of received quantity handling
-                          // Start with zero (default) and build up based on available data
-                          let receivedQty = 0;
-                          let source = "default";
+                          // ===== CRITICAL FIX: ULTRA-ROBUST RECEIVED QUANTITY EXTRACTION =====
+                          // Step 1: Set up tracking object with diagnostic info
+                          const extraction = {
+                            directValue: null as number | null,
+                            metadataMapValue: null as number | null,
+                            metadataArrayValue: null as number | null,
+                            finalValue: 0, // Default to 0, will be overwritten if values are found
+                            source: "default-zero"
+                          };
                           
+                          // Step 2: Extract from all possible data sources with full error handling
                           try {
-                            // STEP 1: Check direct item property (most reliable source)
+                            // SOURCE 1: Direct item property (HIGH PRIORITY)
                             if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
                               const directValue = Number(item.quantityReceived);
                               if (!isNaN(directValue)) {
-                                receivedQty = directValue;
-                                source = "direct-property";
-                                console.log(`VIEW: Using direct property: ${receivedQty} for product ${productId}`);
+                                extraction.directValue = directValue;
+                                extraction.finalValue = directValue;
+                                extraction.source = "direct-property";
+                                console.log(`🟢 EDIT PREP: Found direct property value ${directValue} for product ${productId}`);
                               }
                             }
                             
-                            // STEP 2: Check metadata if we still have zero
-                            if (receivedQty === 0 && selectedBill && selectedBill.metadata) {
-                              // Parse metadata if it's a string
-                              const metaObj = typeof selectedBill.metadata === 'string'
-                                ? JSON.parse(selectedBill.metadata)
-                                : selectedBill.metadata;
-                                
-                              // Check map format (newer, more reliable)
-                              if (metaObj && metaObj.receivedQuantityMap && 
-                                  typeof metaObj.receivedQuantityMap === 'object') {
-                                  
-                                const mapValue = Number(metaObj.receivedQuantityMap[`product_${productId}`]);
+                            // SOURCE 2: Metadata map (MEDIUM PRIORITY)
+                            // Only check if we didn't find a direct value or it was 0
+                            if (metadata && metadata.receivedQuantityMap && 
+                               (!extraction.directValue || extraction.directValue === 0)) {
+                              const mapKey = `product_${productId}`;
+                              if (metadata.receivedQuantityMap[mapKey] !== undefined) {
+                                const mapValue = Number(metadata.receivedQuantityMap[mapKey]);
                                 if (!isNaN(mapValue)) {
-                                  receivedQty = mapValue;
-                                  source = "metadata-map";
-                                  console.log(`VIEW: Using metadata map: ${receivedQty} for product ${productId}`);
-                                }
-                              }
-                              
-                              // Check array format as backup
-                              if (receivedQty === 0 && metaObj && metaObj.itemQuantitiesReceived && 
-                                  Array.isArray(metaObj.itemQuantitiesReceived)) {
+                                  extraction.metadataMapValue = mapValue;
                                   
-                                const metaItem = metaObj.itemQuantitiesReceived.find(
-                                  (m: any) => Number(m.productId) === productId
-                                );
-                                
-                                if (metaItem && metaItem.quantityReceived !== undefined) {
-                                  const arrayValue = Number(metaItem.quantityReceived);
-                                  if (!isNaN(arrayValue)) {
-                                    receivedQty = arrayValue;
-                                    source = "metadata-array";
-                                    console.log(`VIEW: Using metadata array: ${receivedQty} for product ${productId}`);
+                                  // Only overwrite the final value if we don't already have one
+                                  if (!extraction.directValue || extraction.directValue === 0) {
+                                    extraction.finalValue = mapValue;
+                                    extraction.source = "metadata-map";
+                                    console.log(`🟢 EDIT PREP: Using metadata map value ${mapValue} for product ${productId}`);
                                   }
                                 }
                               }
                             }
+                            
+                            // SOURCE 3: Metadata array (LOW PRIORITY)
+                            // Only check if we still don't have a value
+                            if (metadata && metadata.itemQuantitiesReceived && 
+                                Array.isArray(metadata.itemQuantitiesReceived) &&
+                                (extraction.finalValue === 0)) {
+                              
+                              // Find exact product ID match
+                              const arrayItem = metadata.itemQuantitiesReceived.find(
+                                (m: any) => m && Number(m.productId) === productId
+                              );
+                              
+                              if (arrayItem && arrayItem.quantityReceived !== undefined) {
+                                const arrayValue = Number(arrayItem.quantityReceived);
+                                if (!isNaN(arrayValue)) {
+                                  extraction.metadataArrayValue = arrayValue;
+                                  extraction.finalValue = arrayValue;
+                                  extraction.source = "metadata-array";
+                                  console.log(`🟢 EDIT PREP: Using metadata array value ${arrayValue} for product ${productId}`);
+                                }
+                              }
+                            }
                           } catch (error) {
-                            console.error(`VIEW: Error in received quantity extraction for product ${productId}:`, error);
+                            console.error(`🔴 EDIT PREP ERROR: Failed to extract quantity for product ${productId}:`, error);
                           }
                           
-                          // Final validation to ensure we have a valid number
-                          if (isNaN(receivedQty)) {
-                            receivedQty = 0;
-                            source = "fallback-after-error";
+                          // Step 3: Final validation to guarantee we have a valid number
+                          // This ensures we never pass undefined/null/NaN to the form
+                          if (extraction.finalValue === null || isNaN(extraction.finalValue)) {
+                            extraction.finalValue = 0;
+                            extraction.source = "fallback-after-error";
+                            console.log(`🟠 EDIT PREP: Using fallback value 0 for product ${productId} after errors`);
                           }
                           
-                          console.log(`VIEW FINAL: Product ${productId} received qty = ${receivedQty} (${source})`);
+                          // Step 4: Log the complete extraction process for debugging
+                          console.log(`📊 EDIT PREP SUMMARY for product ${productId}:`, {
+                            directValue: extraction.directValue,
+                            metadataMapValue: extraction.metadataMapValue,
+                            metadataArrayValue: extraction.metadataArrayValue,
+                            finalDecision: extraction.finalValue,
+                            source: extraction.source
+                          });
+                          
+                          console.log(`VIEW FINAL: Product ${productId} received qty = ${extraction.finalValue} (${extraction.source})`);
                           
                           return {
                             ...item,
                             productId: productId,
-                            quantityReceived: receivedQty, // Use our newly extracted value
+                            quantityReceived: extraction.finalValue, // Use our extracted and validated value
                             quantity: Number(item.quantity || 1),
                             unitPrice: Number(item.unitPrice || 0),
                             taxRate: Number(item.taxRate || 0),
