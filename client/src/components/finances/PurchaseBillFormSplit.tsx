@@ -1642,8 +1642,8 @@ export default function PurchaseBillFormSplit({
       } : {}),
       // Use the processed items array containing explicit quantityReceived values
       items: processedItems,
-      // COMPLETE REBUILD: More robust metadata storage with redundant storage for critical values
-      metadata: JSON.stringify({
+      // CRITICAL FIX: Metadata must be sent as an object, not a stringified JSON
+      metadata: {
         // Essential bill metadata
         totalDiscount: totalDiscountValue,
         totalDiscountType: data.totalDiscountType || "flat",
@@ -1677,7 +1677,7 @@ export default function PurchaseBillFormSplit({
         version: "purchase-bill-v3.0",
         receivedQtyImplementation: "complete-rebuild-2023",
         saveTimestamp: new Date().toISOString(),
-      }),
+      },
       // Calculate the total amount correctly
       amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
       status: data.status || "draft",
