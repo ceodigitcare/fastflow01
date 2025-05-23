@@ -455,57 +455,10 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                         {/* Conditionally render Received Quantity cell based on toggle state */}
                         {showReceivedQuantity && (
                           <td className="px-4 py-3 text-sm text-center">
-                            {/* Get received quantity from the item property directly */}
-                            {(() => {
-                              // First check direct item property
-                              if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
-                                return Number(item.quantityReceived);
-                              }
-                              
-                              // Try to access metadata from the transaction
-                              try {
-                                // Try to parse metadata if it exists as string
-                                if (selectedBill && selectedBill.metadata) {
-                                  let parsedMeta = null;
-                                  
-                                  // Handle different metadata formats
-                                  if (typeof selectedBill.metadata === 'string') {
-                                    try {
-                                      parsedMeta = JSON.parse(selectedBill.metadata);
-                                    } catch (e) {
-                                      console.error("Failed to parse metadata string:", e);
-                                    }
-                                  } else if (typeof selectedBill.metadata === 'object') {
-                                    parsedMeta = selectedBill.metadata;
-                                  }
-                                  
-                                  // If we have parsed metadata, try to find the quantityReceived
-                                  if (parsedMeta) {
-                                    // Check map-based storage (new format)
-                                    if (parsedMeta.receivedQuantityMap && 
-                                        typeof parsedMeta.receivedQuantityMap === 'object' &&
-                                        parsedMeta.receivedQuantityMap[`product_${item.productId}`] !== undefined) {
-                                      return Number(parsedMeta.receivedQuantityMap[`product_${item.productId}`]);
-                                    }
-                                    
-                                    // Check array-based storage (legacy format)
-                                    if (parsedMeta.itemQuantitiesReceived && Array.isArray(parsedMeta.itemQuantitiesReceived)) {
-                                      const metaItem = parsedMeta.itemQuantitiesReceived.find(
-                                        (m: any) => Number(m.productId) === Number(item.productId)
-                                      );
-                                      if (metaItem && metaItem.quantityReceived !== undefined) {
-                                        return Number(metaItem.quantityReceived);
-                                      }
-                                    }
-                                  }
-                                }
-                              } catch (error) {
-                                console.error(`Error accessing metadata for product ${item.productId}:`, error);
-                              }
-                              
-                              // Default to 0 if no received quantity found
-                              return 0;
-                            })()}
+                            {/* SIMPLIFIED: Just display the value that's already processed during item mapping */}
+                            {item.quantityReceived !== undefined && item.quantityReceived !== null 
+                              ? Number(item.quantityReceived) 
+                              : 0}
                           </td>
                         )}
                         
