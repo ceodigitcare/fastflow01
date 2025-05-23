@@ -25,11 +25,11 @@ export default function MainLayout({ children, onRightPanelToggle }: MainLayoutP
     
     const handleResize = () => {
       if (window.innerWidth >= 1024) { // lg breakpoint
-        // Only use default (true) if no preference is stored
-        if (storedPreference === null) {
-          setSidebarOpen(true);
+        // Always default to visible on desktop unless explicitly closed by user
+        if (storedPreference === 'false') {
+          setSidebarOpen(false);
         } else {
-          setSidebarOpen(storedPreference === 'true');
+          setSidebarOpen(true);
         }
       } else {
         setSidebarOpen(false);

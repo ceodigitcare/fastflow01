@@ -62,10 +62,7 @@ export default function PurchaseBill() {
             <h1 className="text-2xl font-semibold">Purchase Bill</h1>
             <p className="text-sm text-gray-500">Manage and track your supplier invoices and bill payments</p>
           </div>
-        </div>
-        
-        <div className="flex justify-end mb-4">
-          <Button onClick={handleNewBill}>
+          <Button onClick={handleNewBill} className="h-fit">
             <Plus className="mr-2 h-4 w-4" /> New Purchase Bill
           </Button>
         </div>
