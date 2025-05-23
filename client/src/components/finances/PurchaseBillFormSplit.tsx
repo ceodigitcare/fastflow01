@@ -84,37 +84,81 @@ export default function PurchaseBillFormSplit({
       // This is the most reliable source for these values
       let quantityReceivedMap: Record<number, number> = {};
       
-      // Step 1: First attempt to read from metadata (most reliable source)
+      // COMPLETE REDESIGN: Robust metadata extraction with detailed tracing
       try {
-        if (editingBill.metadata && typeof editingBill.metadata === 'string') {
-          const metadataObj = JSON.parse(editingBill.metadata);
-          console.log("INIT - Parsed metadata:", metadataObj);
+        // First, examine metadata structure in detail
+        if (editingBill.metadata) {
+          console.log("✅ INIT - Bill has metadata property");
+          let metadataObj: any = null;
           
-          // Extract item quantities from metadata if they exist
-          if (metadataObj?.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
-            // Log the entire itemQuantitiesReceived array for debugging
-            console.log("INIT - Found itemQuantitiesReceived in metadata:", 
-              JSON.stringify(metadataObj.itemQuantitiesReceived, null, 2));
-            
-            metadataObj.itemQuantitiesReceived.forEach((metaItem: {productId: number, quantityReceived: number}) => {
-              // Ensure we're working with numbers
-              const productId = Number(metaItem.productId);
-              const quantityValue = Number(metaItem.quantityReceived);
+          // Parse metadata with full error handling
+          if (typeof editingBill.metadata === 'string') {
+            try {
+              metadataObj = JSON.parse(editingBill.metadata);
+              console.log("✅ INIT - Successfully parsed metadata string:", JSON.stringify(metadataObj, null, 2));
+            } catch (parseError) {
+              console.error("❌ INIT - Error parsing metadata string:", parseError);
+            }
+          } else if (typeof editingBill.metadata === 'object') {
+            metadataObj = editingBill.metadata;
+            console.log("✅ INIT - Metadata is already an object:", JSON.stringify(metadataObj, null, 2));
+          }
+          
+          // Proceed if we have valid metadata
+          if (metadataObj) {
+            // Check for the new map-based storage (most reliable and fastest)
+            if (metadataObj.receivedQuantityMap && typeof metadataObj.receivedQuantityMap === 'object') {
+              console.log("✅ INIT - Found receivedQuantityMap in metadata:", metadataObj.receivedQuantityMap);
               
-              // Store the value if it's valid
-              if (!isNaN(productId) && !isNaN(quantityValue)) {
-                quantityReceivedMap[productId] = quantityValue;
-                console.log(`INIT - Found quantity in metadata for product ${productId}: ${quantityValue}`);
-              }
-            });
+              // Process the map entries directly
+              Object.entries(metadataObj.receivedQuantityMap).forEach(([key, value]) => {
+                // Extract product ID from the key (format: "product_123")
+                const productIdMatch = key.match(/product_(\d+)/);
+                if (productIdMatch && productIdMatch[1]) {
+                  const productId = Number(productIdMatch[1]);
+                  const quantityValue = Number(value);
+                  
+                  if (!isNaN(productId) && !isNaN(quantityValue)) {
+                    quantityReceivedMap[productId] = quantityValue;
+                    console.log(`✅ INIT - From map: product ${productId} received ${quantityValue} units`);
+                  }
+                }
+              });
+            }
+            
+            // Next check the array-based storage as backup
+            if (metadataObj.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
+              console.log("✅ INIT - Found itemQuantitiesReceived array in metadata:", 
+                JSON.stringify(metadataObj.itemQuantitiesReceived, null, 2));
+                
+              metadataObj.itemQuantitiesReceived.forEach((metaItem: any) => {
+                if (metaItem && typeof metaItem === 'object') {
+                  const productId = Number(metaItem.productId);
+                  const quantityValue = Number(metaItem.quantityReceived);
+                  
+                  // Only use this if we don't already have a value from the map
+                  if (!isNaN(productId) && !isNaN(quantityValue) && quantityReceivedMap[productId] === undefined) {
+                    quantityReceivedMap[productId] = quantityValue;
+                    console.log(`✅ INIT - From array: product ${productId} received ${quantityValue} units`);
+                  }
+                }
+              });
+            }
+            
+            // Check if we found any values in metadata
+            if (Object.keys(quantityReceivedMap).length > 0) {
+              console.log("✅ INIT - Successfully extracted received quantities from metadata:", quantityReceivedMap);
+            } else {
+              console.log("⚠️ INIT - No received quantities found in metadata");
+            }
           } else {
-            console.log("INIT - No itemQuantitiesReceived found in metadata or it's not an array");
+            console.log("❌ INIT - Failed to parse or access metadata");
           }
         } else {
-          console.log("INIT - No metadata found or it's not a string");
+          console.log("⚠️ INIT - Bill has no metadata property");
         }
       } catch (error) {
-        console.error("INIT - Error parsing metadata:", error);
+        console.error("❌ INIT - Unexpected error processing metadata:", error);
       }
       
       // Step 2: Check if any items directly contain valid quantityReceived values
@@ -1427,22 +1471,32 @@ export default function PurchaseBillFormSplit({
       } : {}),
       // Use the processed items array containing explicit quantityReceived values
       items: processedItems,
-      // Store metadata with essential bill info AND quantityReceived values
+      // COMPLETE REBUILD: More robust metadata storage with redundant storage for critical values
       metadata: JSON.stringify({
         // Essential bill metadata
         totalDiscount: totalDiscountValue,
         totalDiscountType: data.totalDiscountType || "flat",
         dueDate: data.dueDate ? data.dueDate.toISOString() : new Date().toISOString(),
         contactId: data.vendorId,
-        // CRITICAL FIX: Store quantityReceived values in metadata to ensure persistence
-        // This is the key part that was missing - store received quantities in metadata
+        
+        // REDESIGNED STORAGE: Store received quantities in two different ways for redundancy
+        // 1. In a dedicated array for direct lookup
         itemQuantitiesReceived: processedItems.map(item => ({
-          productId: item.productId,
-          quantityReceived: item.quantityReceived || 0
+          productId: Number(item.productId),
+          quantityReceived: Number(item.quantityReceived || 0),
+          orderedQuantity: Number(item.quantity || 0),
+          productName: item.description || 'Unknown Product'
         })),
-        // Debug information
-        debugTimestamp: new Date().toISOString(),
-        debugSource: 'FormSubmit-FixedMetadataStorage'
+        
+        // 2. As a simple map for faster access and redundancy
+        receivedQuantityMap: processedItems.reduce((map: Record<string, number>, item) => {
+          map[`product_${item.productId}`] = Number(item.quantityReceived || 0);
+          return map;
+        }, {}),
+        
+        // Version info to help with future migrations if needed
+        version: "received-quantity-fix-2.0",
+        saveTimestamp: new Date().toISOString(),
       }),
       // Calculate the total amount correctly
       amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),

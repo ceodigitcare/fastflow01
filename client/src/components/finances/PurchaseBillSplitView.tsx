@@ -181,16 +181,32 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                           // Get quantityReceived with robust prioritization
                           let quantityReceived = 0;
                           
-                          // First priority: Get from matching metadata
-                          if (itemMetadata && itemMetadata.quantityReceived !== undefined) {
-                            quantityReceived = Number(itemMetadata.quantityReceived);
-                            console.log(`Found quantity in metadata for product ${productId}: ${quantityReceived}`);
-                          } 
-                          // Second priority: Get from direct item property
-                          else if (item.quantityReceived !== undefined) {
-                            quantityReceived = Number(item.quantityReceived);
-                            console.log(`Found direct quantity for product ${productId}: ${quantityReceived}`);
+                          // COMPLETE REBUILD: Robust quantityReceived extraction with multiple fallbacks
+                          
+                          // First: Check for updated format in receivedQuantityMap (most reliable)
+                          if (metadata.receivedQuantityMap && 
+                              metadata.receivedQuantityMap[`product_${productId}`] !== undefined) {
+                            quantityReceived = Number(metadata.receivedQuantityMap[`product_${productId}`]);
+                            console.log(`✅ EDIT MODE - Found quantity in receivedQuantityMap for product ${productId}: ${quantityReceived}`);
                           }
+                          // Second: Check legacy array format in metadata
+                          else if (itemMetadata && itemMetadata.quantityReceived !== undefined) {
+                            quantityReceived = Number(itemMetadata.quantityReceived);
+                            console.log(`✅ EDIT MODE - Found quantity in itemQuantitiesReceived for product ${productId}: ${quantityReceived}`);
+                          } 
+                          // Third: Try direct property on item object
+                          else if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
+                            quantityReceived = Number(item.quantityReceived);
+                            console.log(`✅ EDIT MODE - Found direct quantity on item for product ${productId}: ${quantityReceived}`);
+                          }
+                          // Add comprehensive debug info
+                          console.log(`EDIT MODE - Data sources for product ${productId}:`, {
+                            fromReceivedQuantityMap: metadata.receivedQuantityMap ? 
+                              metadata.receivedQuantityMap[`product_${productId}`] : 'map not found',
+                            fromItemQuantitiesReceived: itemMetadata?.quantityReceived,
+                            fromDirectProperty: item.quantityReceived,
+                            finalValue: quantityReceived
+                          });
                           
                           console.log(`Final quantityReceived for product ${productId}: ${quantityReceived}`);
                           
@@ -410,10 +426,35 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                         {/* Conditionally render Received Quantity cell based on toggle state */}
                         {showReceivedQuantity && (
                           <td className="px-4 py-3 text-sm text-center">
-                            {/* Always show a number: either the actual quantity or 0 */}
-                            {item.quantityReceived !== undefined && item.quantityReceived !== null 
-                              ? Number(item.quantityReceived) 
-                              : 0}
+                            {/* Get received quantity from comprehensive sources */}
+                            {(() => {
+                              // First check direct item property
+                              if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
+                                return Number(item.quantityReceived);
+                              }
+                              
+                              // Next try to find in metadata (if parsed)
+                              if (metadata) {
+                                // Check map-based storage (new format)
+                                if (metadata.receivedQuantityMap && 
+                                    metadata.receivedQuantityMap[`product_${item.productId}`] !== undefined) {
+                                  return Number(metadata.receivedQuantityMap[`product_${item.productId}`]);
+                                }
+                                
+                                // Check array-based storage (legacy format)
+                                if (metadata.itemQuantitiesReceived && Array.isArray(metadata.itemQuantitiesReceived)) {
+                                  const metaItem = metadata.itemQuantitiesReceived.find(
+                                    (m: any) => Number(m.productId) === Number(item.productId)
+                                  );
+                                  if (metaItem && metaItem.quantityReceived !== undefined) {
+                                    return Number(metaItem.quantityReceived);
+                                  }
+                                }
+                              }
+                              
+                              // Default to 0 if no received quantity found
+                              return 0;
+                            })()}
                           </td>
                         )}
                         
