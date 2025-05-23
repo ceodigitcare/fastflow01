@@ -410,7 +410,10 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                         {/* Conditionally render Received Quantity cell based on toggle state */}
                         {showReceivedQuantity && (
                           <td className="px-4 py-3 text-sm text-center">
-                            {item.quantityReceived !== undefined ? item.quantityReceived : '-'}
+                            {/* Always show a number: either the actual quantity or 0 */}
+                            {item.quantityReceived !== undefined && item.quantityReceived !== null 
+                              ? Number(item.quantityReceived) 
+                              : 0}
                           </td>
                         )}
                         
