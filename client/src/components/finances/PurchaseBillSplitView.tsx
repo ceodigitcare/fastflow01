@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Transaction, User, Account, Product } from "@shared/schema";
 import { PurchaseBill, PurchaseBillItem } from "@/lib/validation";
@@ -32,6 +32,15 @@ export default function PurchaseBillSplitView({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBill, setSelectedBill] = useState<Transaction | null>(initialBill);
   const [isCreatingNew, setIsCreatingNew] = useState(externalCreatingNew);
+  
+  // Update state when props change to ensure synchronization with parent
+  useEffect(() => {
+    setSelectedBill(initialBill);
+  }, [initialBill]);
+  
+  useEffect(() => {
+    setIsCreatingNew(externalCreatingNew);
+  }, [externalCreatingNew]);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<Transaction | null>(null);
   

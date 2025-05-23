@@ -33,14 +33,21 @@ export default function PurchaseBill() {
   // Automatically select the most recent bill when loaded
   useEffect(() => {
     if (bills && bills.length > 0 && !selectedBill && !showNewForm) {
-      setSelectedBill(bills[0]);
+      // Set after a small timeout to ensure React has completed other rendering tasks
+      setTimeout(() => {
+        setSelectedBill(bills[0]);
+      }, 100);
     }
-  }, [bills, selectedBill, showNewForm]);
+  }, [bills]);
 
   // Handle new bill button click
   const handleNewBill = () => {
+    // First, reset the selected bill to null
     setSelectedBill(null);
-    setShowNewForm(true);
+    // Then, after a small delay to ensure state updates properly, set showNewForm to true
+    setTimeout(() => {
+      setShowNewForm(true);
+    }, 50);
   };
   
   return (
