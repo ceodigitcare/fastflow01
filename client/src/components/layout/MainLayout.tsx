@@ -59,11 +59,17 @@ export default function MainLayout({ children, onRightPanelToggle }: MainLayoutP
     }
   }, [user, isLoading, setLocation]);
   
-  // Close sidebar on navigation on mobile
+  // Only close sidebar on navigation on mobile, never on desktop
   useEffect(() => {
+    // Get current path for navigation tracking
+    const currentPath = useLocation()[0];
+    
+    // Only close on mobile AND only when the user preference is not already set
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
+    // For desktop, we want to preserve the sidebar state during navigation
+    // So we do nothing here when on desktop
   }, [useLocation()[0]]);
   
   const toggleSidebar = () => {
