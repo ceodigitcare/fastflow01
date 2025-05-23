@@ -955,8 +955,8 @@ export default function PurchaseBillFormSplit({
           discountType: item.discountType || 'percentage',
           amount: Math.round(item.amount * 100) // Convert to cents
         })),
-        // CRITICAL FIX #2: Store received quantities in metadata for redundancy
-        metadata: JSON.stringify({
+        // CRITICAL FIX #2: Store received quantities in metadata as an actual object, not a string
+        metadata: {
           // Keep existing metadata if present
           ...(editingBill && editingBill.metadata ? 
               (typeof editingBill.metadata === 'string' ? 
@@ -974,7 +974,7 @@ export default function PurchaseBillFormSplit({
             productId: item.productId,
             quantityReceived: item.quantityReceived || 0
           }))
-        })
+        }
       };
       
       // Include ID property if editing an existing bill
@@ -1013,8 +1013,8 @@ export default function PurchaseBillFormSplit({
             discountType: item.discountType || 'percentage',
             amount: Math.round(item.amount * 100)
           })),
-          // CRITICAL FIX #4: Also update metadata for existing bills
-          metadata: JSON.stringify({
+          // CRITICAL FIX #4: Also update metadata for existing bills - as an object, not a string
+          metadata: {
             // Keep existing metadata if present
             ...(editingBill && editingBill.metadata ? 
                 (typeof editingBill.metadata === 'string' ? 
@@ -1032,7 +1032,7 @@ export default function PurchaseBillFormSplit({
               productId: item.productId,
               quantityReceived: item.quantityReceived || 0
             }))
-          })
+          }
         };
         
         const response = await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, updateData);
