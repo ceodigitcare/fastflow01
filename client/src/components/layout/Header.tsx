@@ -22,9 +22,10 @@ interface HeaderProps {
   onSidebarToggle: () => void;
   user: any;
   isSidebarOpen?: boolean;
+  onRightPanelToggle?: () => void;
 }
 
-export default function Header({ onSidebarToggle, user, isSidebarOpen }: HeaderProps) {
+export default function Header({ onSidebarToggle, user, isSidebarOpen, onRightPanelToggle }: HeaderProps) {
   const [, setLocation] = useLocation();
   const { logout } = useAuth();
   
@@ -36,19 +37,32 @@ export default function Header({ onSidebarToggle, user, isSidebarOpen }: HeaderP
   return (
     <header className="bg-white shadow-sm z-10">
       <div className="flex items-center justify-between h-16 px-6">
-        <div className="flex items-center">
-          <Button variant="ghost" size="icon" onClick={onSidebarToggle} aria-label="Toggle menu">
-            <Menu className="h-5 w-5" />
-          </Button>
-        </div>
+        {/* Left side - only show hamburger when sidebar is hidden */}
+        {!isSidebarOpen && (
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={onSidebarToggle} aria-label="Show menu">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
         
-        <div className="flex items-center ml-auto">
+        {/* Center spacer when sidebar is open */}
+        {isSidebarOpen && <div></div>}
+        
+        <div className="flex items-center ml-auto space-x-2">
           <div className="relative mr-4">
             <Button variant="ghost" size="icon" className="relative">
               <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
               <Bell className="h-5 w-5" />
             </Button>
           </div>
+          
+          {/* Right panel toggle - only show on Purchase Bill page when onRightPanelToggle is provided */}
+          {onRightPanelToggle && (
+            <Button variant="ghost" size="icon" onClick={onRightPanelToggle} aria-label="Toggle bill list">
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

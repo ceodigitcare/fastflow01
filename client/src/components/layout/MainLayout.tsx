@@ -7,9 +7,10 @@ import { Loader2 } from "lucide-react";
 
 interface MainLayoutProps {
   children: ReactNode;
+  onRightPanelToggle?: () => void;
 }
 
-export default function MainLayout({ children }: MainLayoutProps) {
+export default function MainLayout({ children, onRightPanelToggle }: MainLayoutProps) {
   // Default sidebar state - closed on mobile, open on desktop
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [, setLocation] = useLocation();
@@ -87,6 +88,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           onSidebarToggle={toggleSidebar} 
           user={user}
           isSidebarOpen={sidebarOpen}
+          onRightPanelToggle={onRightPanelToggle}
         />
         
         <main className="flex-1 overflow-auto p-6">

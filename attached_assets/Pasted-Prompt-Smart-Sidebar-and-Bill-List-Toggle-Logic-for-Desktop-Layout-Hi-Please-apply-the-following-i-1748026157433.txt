@@ -1,0 +1,40 @@
+Prompt: Smart Sidebar and Bill List Toggle Logic for Desktop Layout
+Hi! Please apply the following intelligent behavior to the desktop version of the Purchase Bill UI to ensure intuitive control over both side panels (left sidebar and right bill list):
+
+✅ LEFT SIDEBAR (Main Menu)
+By default, on desktop, show the left sidebar with a cross (×) icon placed next to the Storefront label.
+
+Clicking the cross (×) should hide the sidebar completely.
+
+Once hidden, the cross should disappear and be replaced by a hamburger icon (≡) at the top-left.
+
+Clicking the hamburger icon should re-show the sidebar and replace the hamburger with the cross again.
+
+Ensure that both icons are never visible at the same time — only one should be visible depending on the menu state.
+
+When the sidebar is hidden, the main Purchase Bill view must auto-expand to use the freed-up space.
+
+✅ RIGHT SIDE (Purchase Bill List)
+Add a three-line (≡) toggle icon to the far-right of the top bar, next to the user profile photo.
+
+Clicking this icon should hide the right-side bill list panel.
+
+When the list panel is hidden, show a small unobtrusive button or icon (≡) to bring it back, placed on the far right of the top bar.
+
+When the list is hidden, the main Purchase Bill area should stretch to full width across the screen.
+
+❌ Avoid Redundancy
+Do not show both the cross and the hamburger icon together.
+
+Do not show the hamburger icon when the menu is already open.
+
+Remove any extra or floating toggle icons unrelated to this context (like the bottom-right FAB or middle-of-screen toggles).
+
+📐 Layout Responsiveness
+When both left sidebar and right bill list are hidden, the Purchase Bill section must expand to fill the full width of the screen for optimal readability.
+
+Avoid large gaps between UI sections. The layout should contract and expand fluidly depending on visible panels.
+
+This behavior should be global across all relevant screens using this layout structure.
+
+Let me know if you need visual references or want this behavior implemented in code as well.

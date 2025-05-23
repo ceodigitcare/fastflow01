@@ -9,6 +9,10 @@ import { Plus } from "lucide-react";
 export default function PurchaseBill() {
   const [showNewForm, setShowNewForm] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Transaction | null>(null);
+  const [rightPanelVisible, setRightPanelVisible] = useState(() => {
+    // On desktop (lg and above), default to visible
+    return window.innerWidth >= 1024;
+  });
   
   // Get bills from transactions
   const { data: bills, isLoading } = useQuery<Transaction[]>({
@@ -51,7 +55,7 @@ export default function PurchaseBill() {
   };
   
   return (
-    <MainLayout>
+    <MainLayout onRightPanelToggle={() => setRightPanelVisible(!rightPanelVisible)}>
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <div>
@@ -82,6 +86,8 @@ export default function PurchaseBill() {
             setSelectedBill(bill);
             setShowNewForm(false);
           }}
+          billPanelVisible={rightPanelVisible}
+          onToggleBillPanel={() => setRightPanelVisible(!rightPanelVisible)}
         />
       </div>
     </MainLayout>
