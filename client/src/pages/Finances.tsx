@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import MainLayout from "@/components/layout/MainLayout";
 import TransactionsTable from "@/components/finances/TransactionsTable";
 import FinancialSummary from "@/components/finances/FinancialSummary";
@@ -129,11 +130,29 @@ export default function Finances() {
     setTransactionDialogOpen(true);
   };
   
-  // State to track which tab is currently active
-  const [activeTab, setActiveTab] = useState("overview");
+  // Get the current path to determine which tab is active
+  const [location, setLocation] = useLocation();
+  
+  // Extract path segment to determine which tab to show
+  const pathSegments = location.split('/');
+  const subPath = pathSegments.length > 2 ? pathSegments[2] : 'overview';
+  
+  // State to track which tab is currently active, initialize from current path
+  const [activeTab, setActiveTab] = useState(subPath || "overview");
+  
+  // Update active tab when location changes
+  useEffect(() => {
+    const segments = location.split('/');
+    const newSubPath = segments.length > 2 ? segments[2] : 'overview';
+    setActiveTab(newSubPath);
+  }, [location]);
   
   // Check if summary cards should be hidden (for Transactions, Sales Invoice, Purchase Bill)
-  const shouldHideSummaryCards = ["transactions", "sales-invoice", "purchase-bill"].includes(activeTab);
+  const shouldHideSummaryCards = [
+    "transactions", 
+    "sales-invoice", 
+    "purchase-bill"
+  ].includes(activeTab);
   
   return (
     <MainLayout>
@@ -192,7 +211,7 @@ export default function Finances() {
                 <div>
                   <p className="text-sm font-medium text-gray-500">Total Orders</p>
                   <p className="text-2xl font-semibold mt-1">
-                    {ordersLoading ? "Loading..." : orders?.length || 0}
+                    {ordersLoading ? "Loading..." : Array.isArray(orders) ? orders.length : 0}
                   </p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-secondary bg-opacity-10 flex items-center justify-center text-secondary">
@@ -223,9 +242,19 @@ export default function Finances() {
       )}
       
       <Tabs 
+        value={activeTab} 
         defaultValue="overview" 
         className="mb-8"
-        onValueChange={(value) => setActiveTab(value)}
+        onValueChange={(value) => {
+          setActiveTab(value);
+          
+          // Navigate to the correct subpage
+          if (value === 'overview') {
+            setLocation('/finances');
+          } else {
+            setLocation(`/finances/${value}`);
+          }
+        }}
       >
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -365,11 +394,8 @@ export default function Finances() {
             transactions={transactions} 
             isLoading={transactionsLoading} 
             onNewTransaction={handleNewTransaction}
-            onEditTransaction={(transaction) => {
-              setEditingTransaction(transaction);
-              setTransactionDialogOpen(true);
-            }}
           />
+          {/* Transaction edit functionality will be handled via transaction detail view */}
         </TabsContent>
         
         <TabsContent value="sales-invoice" className="mt-6">

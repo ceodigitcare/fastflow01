@@ -29,6 +29,13 @@ function Router() {
       <ProtectedRoute path="/ai-chatbot" component={AIChat} />
       <ProtectedRoute path="/products" component={Products} />
       <ProtectedRoute path="/finances" component={Finances} />
+      {/* Add all Finances submenu paths */}
+      <ProtectedRoute path="/finances/transactions" component={Finances} />
+      <ProtectedRoute path="/finances/sales-invoice" component={Finances} />
+      <ProtectedRoute path="/finances/purchase-bill" component={Finances} />
+      <ProtectedRoute path="/finances/user" component={Finances} />
+      <ProtectedRoute path="/finances/accounts" component={Finances} />
+      <ProtectedRoute path="/finances/chart-of-accounts" component={Finances} />
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/help" component={Help} />
