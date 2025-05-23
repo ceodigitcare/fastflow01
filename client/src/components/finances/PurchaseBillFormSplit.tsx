@@ -652,55 +652,94 @@ export default function PurchaseBillFormSplit({
     updateTotals(newItems);
   };
   
-  // REBUILT: Quantity received handler - completely redesigned for reliability 
+  // ===== CRITICAL DATA INTEGRITY FIX: Complete rebuild of received quantity handling =====
   const updateItemQuantityReceived = (quantityReceived: number, index: number) => {
-    // Ensure value is a valid number 
-    const numericValue = Number(quantityReceived) || 0;
+    // Step 1: Robust value validation to guarantee a clean numeric value
+    // Handle all edge cases: undefined, null, NaN, empty string
+    const inputValue = quantityReceived !== undefined && quantityReceived !== null ? quantityReceived : 0;
+    const numericValue = isNaN(Number(inputValue)) ? 0 : Number(inputValue);
     
-    // Get the current item and its maximum receivable quantity
+    // Step 2: Retrieve current values with proper validation
     const currentItems = [...billItems];
+    if (!currentItems[index]) {
+      console.error("ERROR: Item at index", index, "doesn't exist");
+      return; // Prevent crashes on non-existent items
+    }
+    
     const maxReceivable = currentItems[index]?.quantity || 0;
+    // Safety validation - quantity received cannot exceed ordered quantity
+    const safeQuantityReceived = Math.min(Math.max(0, numericValue), maxReceivable);
     
-    // Apply validation - quantity received cannot exceed ordered quantity
-    const safeQuantityReceived = Math.min(numericValue, maxReceivable);
-    
-    // Get product information for tracking
-    const productId = Number(currentItems[index]?.productId);
+    // Step 3: Get product details for logging and metadata
+    const productId = Number(currentItems[index]?.productId) || 0;
     const productName = currentItems[index]?.description || `Item ${index + 1}`;
     
-    // Create a completely new item object to avoid references
+    // Step 4: Create a completely new item object with proper metadata
     const updatedItem = {
       ...currentItems[index],
-      quantityReceived: safeQuantityReceived
+      // Primary storage location
+      quantityReceived: safeQuantityReceived,
+      // Secondary storage in item metadata (for redundancy)
+      metadata: {
+        ...(currentItems[index].metadata || {}),
+        receivedQuantity: safeQuantityReceived
+      }
     };
     
-    // Create a new array with the updated item
+    // Step 5: Create a new array with the updated item to trigger proper React re-rendering
     const updatedItems = [...currentItems];
     updatedItems[index] = updatedItem;
     
-    // Log the exact values being set
-    console.log(`RECEIVE QUANTITY - Product: ${productName} (ID: ${productId})`, {
-      receivedQuantity: safeQuantityReceived,
-      orderedQuantity: maxReceivable,
-      index
+    // Step 6: CRITICAL - Detailed logging for diagnostic tracing
+    console.log(`🔄 RECEIVED QTY UPDATE - "${productName}" (ID: ${productId}, Index: ${index})`, {
+      originalInput: quantityReceived,
+      validatedValue: numericValue,
+      finalValue: safeQuantityReceived,
+      maxAllowed: maxReceivable,
+      fullItemState: updatedItem
     });
     
-    // Update component state
+    // Step 7: Update all state mechanisms to ensure persistence
+    // 7.1: Update component state for UI rendering
     setBillItems(updatedItems);
     
-    // Update form state with special options to ensure the change is recognized
+    // 7.2: Update React Hook Form state for form submission
     form.setValue(`items.${index}.quantityReceived`, safeQuantityReceived, {
       shouldDirty: true,    // Mark the field as modified
       shouldTouch: true,    // Mark the field as touched
       shouldValidate: true  // Trigger validation
     });
     
-    // Force the form to recognize the change
-    const currentValues = form.getValues();
+    // 7.3: Also store in item metadata field for redundant storage
+    form.setValue(`items.${index}.metadata.receivedQuantity`, safeQuantityReceived, {
+      shouldDirty: true
+    });
     
-    // Log the form state after update
-    console.log('FORM STATE - After quantity received update:', 
-      form.getValues(`items.${index}.quantityReceived`));
+    // 7.4: Create redundant backup map in local storage
+    try {
+      const localBackupKey = 'purchase-bill-received-quantities';
+      const existingBackup = localStorage.getItem(localBackupKey);
+      const backupMap = existingBackup ? JSON.parse(existingBackup) : {};
+      
+      // Use product ID as reliable key
+      if (productId) {
+        backupMap[`product_${productId}`] = safeQuantityReceived;
+        localStorage.setItem(localBackupKey, JSON.stringify(backupMap));
+      }
+    } catch (e) {
+      // Silent catch - local storage is just a backup
+    }
+    
+    // Step 8: Verify the update was applied correctly by reading back values
+    const verifiedValue = form.getValues(`items.${index}.quantityReceived`);
+    console.log(`✅ VERIFICATION: Form state after update for item ${index}:`, {
+      requestedValue: safeQuantityReceived,
+      actualStoredValue: verifiedValue,
+      formItemSnapshot: form.getValues(`items.${index}`)
+    });
+    
+    // Step 9: Return the validated value for potential chaining
+    return safeQuantityReceived;
   };
   
   // Function to update item unit prices

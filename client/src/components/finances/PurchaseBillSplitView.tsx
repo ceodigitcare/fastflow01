@@ -477,55 +477,50 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                         {/* Conditionally render Received Quantity cell based on toggle state */}
                         {showReceivedQuantity && (
                           <td className="px-4 py-3 text-sm text-center">
-                            {/* FINAL FIX: Ultra-reliable display with guaranteed values */}
+                            {/* COMPLETE REBUILD: Ultra-reliable display with guaranteed values */}
                             <div className="flex justify-center items-center">
+                              {/* Simple, robust approach to received quantity display */}
                               {(() => {
-                                // ===== CRITICAL VIEW COMPONENT FIX =====
-                                // This self-executing function ensures received qty values are 
-                                // processed consistently every time an item renders
+                                // Extract quantity received with validation
+                                let receivedQty = 0;
                                 
-                                // Start with the most reliable direct source
-                                let displayValue: number;
-                                
-                                // Try parsing the item's direct property
+                                // Try direct property first (most reliable)
                                 if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
-                                  displayValue = Number(item.quantityReceived);
-                                  // Guarantee it's a valid number
-                                  if (isNaN(displayValue)) displayValue = 0;
-                                  console.log(`VIEW DISPLAY: Using direct value ${displayValue} for item ${item.productId}`);
-                                } else {
-                                  // Fallback to zero with clear logging
-                                  displayValue = 0;
-                                  console.log(`VIEW DISPLAY: No received quantity found for item ${item.productId}, using 0`);
+                                  const parsed = Number(item.quantityReceived);
+                                  if (!isNaN(parsed)) {
+                                    receivedQty = parsed;
+                                  }
                                 }
                                 
-                                // Compute styling based on this value
-                                let textColorClass = 'text-gray-500'; // Default
+                                // Compute styling based on completion status
+                                let textColorClass = 'text-gray-500'; 
                                 let displaySymbol = '';
+                                const orderedQty = item.quantity || 0;
                                 
-                                if (displayValue >= Number(item.quantity)) {
-                                  // Fully received - green with checkmark
+                                if (receivedQty === 0) {
+                                  // Not received yet
+                                  textColorClass = 'text-gray-500';
+                                } else if (receivedQty >= orderedQty) {
+                                  // Fully received
                                   textColorClass = 'text-green-600 font-medium';
                                   displaySymbol = '✓ ';
-                                } else if (displayValue > 0) {
-                                  // Partially received - blue
-                                  textColorClass = 'text-blue-600';
-                                  displaySymbol = '';
+                                } else if (receivedQty > 0) {
+                                  // Partially received
+                                  textColorClass = 'text-blue-600 font-medium';
+                                  displaySymbol = '⚬ ';
                                 }
                                 
                                 return (
                                   <>
-                                    {/* Display the processed value with appropriate formatting */}
                                     <span className={`inline-block ${textColorClass}`}>
-                                      {displaySymbol}{displayValue.toFixed(
-                                        Number.isInteger(displayValue) ? 0 : 2
+                                      {displaySymbol}{receivedQty.toFixed(
+                                        Number.isInteger(receivedQty) ? 0 : 2
                                       )}
                                     </span>
                                     
-                                    {/* Show fraction for partial quantities */}
-                                    {displayValue > 0 && displayValue < Number(item.quantity) && (
+                                    {receivedQty > 0 && receivedQty < orderedQty && (
                                       <span className="text-xs text-gray-500 ml-1">
-                                        /{item.quantity}
+                                        /{orderedQty}
                                       </span>
                                     )}
                                   </>
