@@ -305,102 +305,57 @@ export default function PurchaseBillFormSplit({
           ? (typeof item.discount === 'string' ? parseFloat(item.discount) : Number(item.discount)) 
           : 0;
 
-        // COMPLETE REBUILD: Extract quantityReceived values with multiple fallbacks
-        // This is the foundation of our fix - we're implementing a thorough retrieval system
+        // COMPLETE REIMPLEMENTATION: Simple, clean approach to extract received quantity
+        // This is a total rewrite focusing on predictability and reliability
+        
+        // Start with a default of 0 (not undefined or null)
         let quantityReceivedValue = 0;
-        let sourceLocation = "default";
+        let source = "default";
         
-        // Define helper variables to track the source of the quantityReceived value
-        let directItemValue = undefined;
-        let metadataMapValue = undefined;
-        let metadataArrayValue = undefined;
+        // APPROACH: Prioritize direct item property first - it's the most reliable source
+        if (item && item.quantityReceived !== undefined && item.quantityReceived !== null) {
+          // Force to number type regardless of input
+          const valueFromItem = Number(item.quantityReceived);
+          if (!isNaN(valueFromItem)) {
+            quantityReceivedValue = valueFromItem;
+            source = "item-direct";
+          }
+        }
         
-        // STEP 1: Try to parse metadata JSON and extract received quantities
-        try {
-          if (editingBill.metadata) {
-            // Handle both string and object metadata formats
-            const metadataObj = typeof editingBill.metadata === 'string' 
-              ? JSON.parse(editingBill.metadata) 
+        // CRITICAL: Check metadata as a backup only if needed
+        if (quantityReceivedValue === 0 && editingBill && editingBill.metadata) {
+          try {
+            // Parse metadata when it's a string
+            const metadataObject = typeof editingBill.metadata === 'string'
+              ? JSON.parse(editingBill.metadata)
               : editingBill.metadata;
-            
-            // PRIORITY 1: Check for newest map format (fastest lookup)
-            if (metadataObj.receivedQuantityMap && 
-                typeof metadataObj.receivedQuantityMap === 'object' &&
-                metadataObj.receivedQuantityMap[`product_${item.productId}`] !== undefined) {
               
-              metadataMapValue = Number(metadataObj.receivedQuantityMap[`product_${item.productId}`]);
+            // Check the product-specific value in the map
+            if (metadataObject && 
+                metadataObject.receivedQuantityMap && 
+                metadataObject.receivedQuantityMap[`product_${item.productId}`] !== undefined) {
               
-              // Use this value if it's not NaN
-              if (!isNaN(metadataMapValue)) {
-                quantityReceivedValue = metadataMapValue;
-                sourceLocation = "metadata-map";
-                console.log(`REBUILD: Found quantity in metadata MAP for product ${item.productId}: ${quantityReceivedValue}`);
+              const valueFromMap = Number(metadataObject.receivedQuantityMap[`product_${item.productId}`]);
+              if (!isNaN(valueFromMap)) {
+                quantityReceivedValue = valueFromMap;
+                source = "metadata-map";
               }
             }
-            
-            // PRIORITY 2: Check for array format (legacy/backup)
-            if ((!metadataMapValue || isNaN(metadataMapValue)) && 
-                metadataObj.itemQuantitiesReceived && 
-                Array.isArray(metadataObj.itemQuantitiesReceived)) {
-              
-              const matchingItem = metadataObj.itemQuantitiesReceived.find(
-                (metaItem: any) => Number(metaItem.productId) === Number(item.productId)
-              );
-              
-              if (matchingItem && matchingItem.quantityReceived !== undefined) {
-                metadataArrayValue = Number(matchingItem.quantityReceived);
-                
-                // Use this value if it's not NaN and we didn't already find a valid map value
-                if (!isNaN(metadataArrayValue) && 
-                    (isNaN(metadataMapValue) || metadataMapValue === undefined)) {
-                  quantityReceivedValue = metadataArrayValue;
-                  sourceLocation = "metadata-array";
-                  console.log(`REBUILD: Found quantity in metadata ARRAY for product ${item.productId}: ${quantityReceivedValue}`);
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.error("REBUILD: Error parsing metadata:", e);
-        }
-        
-        // PRIORITY 3: Check the direct item property
-        if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
-          directItemValue = typeof item.quantityReceived === 'string' 
-            ? parseFloat(item.quantityReceived) 
-            : Number(item.quantityReceived);
-          
-          // Use direct property if it's not NaN and is greater than our current value
-          // This ensures we capture the highest/latest value across sources
-          if (!isNaN(directItemValue) && 
-              (directItemValue > quantityReceivedValue || 
-               isNaN(quantityReceivedValue) || 
-               quantityReceivedValue === undefined)) {
-            
-            quantityReceivedValue = directItemValue;
-            sourceLocation = "direct-property";
-            console.log(`REBUILD: Using direct property value for product ${item.productId}: ${quantityReceivedValue}`);
+          } catch (error) {
+            console.error("Failed to parse metadata during edit form initialization:", error);
           }
         }
         
-        // Final validation - ensure we have a number, not NaN
+        // VALIDATION: Ensure we always have a valid number
         if (isNaN(quantityReceivedValue)) {
           quantityReceivedValue = 0;
-          sourceLocation = "fallback-after-NaN";
         }
         
-        // Add comprehensive debug trace
-        console.log(`REBUILD DATA TRACE - Item ${item.productId}:`, {
-          finalValue: quantityReceivedValue,
-          sourceUsed: sourceLocation,
-          values: {
-            fromDirectProperty: directItemValue,
-            fromMetadataMap: metadataMapValue,
-            fromMetadataArray: metadataArrayValue
-          },
-          rawItemHasProperty: 'quantityReceived' in item,
-          rawValue: item.quantityReceived,
-          rawValueType: typeof item.quantityReceived
+        // LOG: Simple, clear logging for debugging
+        console.log(`CLEAN REBUILD: Quantity received for product ${item.productId}:`, {
+          value: quantityReceivedValue,
+          source,
+          originalItemValue: item.quantityReceived
         });
           
         return {
