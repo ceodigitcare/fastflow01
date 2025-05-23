@@ -297,6 +297,7 @@ export default function PurchaseBillFormSplit({
       dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       status: editingBill.status ?? "draft",
       items: Array.isArray(editingBill.items) ? editingBill.items.map(item => {
+        // Convert tax rate and discount to numbers with safety checks
         const taxRateValue = item.taxRate !== undefined && item.taxRate !== null 
           ? (typeof item.taxRate === 'string' ? parseFloat(item.taxRate) : Number(item.taxRate)) 
           : 0;
@@ -304,71 +305,70 @@ export default function PurchaseBillFormSplit({
         const discountValue = item.discount !== undefined && item.discount !== null 
           ? (typeof item.discount === 'string' ? parseFloat(item.discount) : Number(item.discount)) 
           : 0;
-
-        // COMPLETE REIMPLEMENTATION: Simple, clean approach to extract received quantity
-        // This is a total rewrite focusing on predictability and reliability
+          
+        // FRESH IMPLEMENTATION: Extract received quantity with simplified logic
+        let receivedQty = 0;
         
-        // Start with a default of 0 (not undefined or null)
-        let quantityReceivedValue = 0;
-        let source = "default";
-        
-        // APPROACH: Prioritize direct item property first - it's the most reliable source
-        if (item && item.quantityReceived !== undefined && item.quantityReceived !== null) {
-          // Force to number type regardless of input
-          const valueFromItem = Number(item.quantityReceived);
-          if (!isNaN(valueFromItem)) {
-            quantityReceivedValue = valueFromItem;
-            source = "item-direct";
-          }
-        }
-        
-        // CRITICAL: Check metadata as a backup only if needed
-        if (quantityReceivedValue === 0 && editingBill && editingBill.metadata) {
+        // Start by checking if metadata contains received quantities
+        if (editingBill.metadata) {
           try {
-            // Parse metadata when it's a string
-            const metadataObject = typeof editingBill.metadata === 'string'
-              ? JSON.parse(editingBill.metadata)
+            const metaObj = typeof editingBill.metadata === 'string' 
+              ? JSON.parse(editingBill.metadata) 
               : editingBill.metadata;
               
-            // Check the product-specific value in the map
-            if (metadataObject && 
-                metadataObject.receivedQuantityMap && 
-                metadataObject.receivedQuantityMap[`product_${item.productId}`] !== undefined) {
+            // Check for received quantity in map format (primary storage)
+            if (metaObj && metaObj.receivedQuantityMap) {
+              const mapValue = metaObj.receivedQuantityMap[`product_${item.productId}`];
+              if (mapValue !== undefined) {
+                const parsedValue = Number(mapValue);
+                if (!isNaN(parsedValue)) {
+                  receivedQty = parsedValue;
+                  console.log(`Found quantity in metadata map: ${receivedQty} for product ${item.productId}`);
+                }
+              }
+            }
+            
+            // If not found in map, check array format (backup storage)
+            if (receivedQty === 0 && metaObj && metaObj.itemQuantitiesReceived) {
+              const foundItem = metaObj.itemQuantitiesReceived.find(
+                (i: any) => i && Number(i.productId) === Number(item.productId)
+              );
               
-              const valueFromMap = Number(metadataObject.receivedQuantityMap[`product_${item.productId}`]);
-              if (!isNaN(valueFromMap)) {
-                quantityReceivedValue = valueFromMap;
-                source = "metadata-map";
+              if (foundItem && foundItem.quantityReceived !== undefined) {
+                const parsedValue = Number(foundItem.quantityReceived);
+                if (!isNaN(parsedValue)) {
+                  receivedQty = parsedValue;
+                  console.log(`Found quantity in metadata array: ${receivedQty} for product ${item.productId}`);
+                }
               }
             }
           } catch (error) {
-            console.error("Failed to parse metadata during edit form initialization:", error);
+            console.error(`Error parsing metadata for received quantities:`, error);
           }
         }
         
-        // VALIDATION: Ensure we always have a valid number
-        if (isNaN(quantityReceivedValue)) {
-          quantityReceivedValue = 0;
+        // As a fallback, check if the item itself has a quantityReceived property
+        if (receivedQty === 0 && item.quantityReceived !== undefined && item.quantityReceived !== null) {
+          const parsedValue = Number(item.quantityReceived);
+          if (!isNaN(parsedValue)) {
+            receivedQty = parsedValue;
+            console.log(`Using direct item property for quantity: ${receivedQty} for product ${item.productId}`);
+          }
         }
         
-        // LOG: Simple, clear logging for debugging
-        console.log(`CLEAN REBUILD: Quantity received for product ${item.productId}:`, {
-          value: quantityReceivedValue,
-          source,
-          originalItemValue: item.quantityReceived
-        });
-          
+        // Create a clean form item with all required properties
         return {
-          productId: item.productId ?? 0,
-          description: item.description ?? "",
-          quantity: item.quantity ?? 1,
-          unitPrice: (item.unitPrice ?? 0) / 100, // Convert from cents to dollars
+          productId: Number(item.productId || 0),
+          description: String(item.description || ""),
+          quantity: Number(item.quantity || 1),
+          unitPrice: Number((item.unitPrice || 0) / 100), // Convert from cents to dollars
           taxRate: taxRateValue,
           discount: discountValue,
-          taxType: item.taxType ?? 'percentage', // Default to percentage for tax
-          discountType: item.discountType ?? 'percentage', // Default to percentage for item discount
-          quantityReceived: quantityReceivedValue, // Use the properly converted value
-          amount: (item.amount ?? 0) / 100 // Convert from cents to dollars
+          taxType: String(item.taxType || 'percentage'),
+          discountType: String(item.discountType || 'percentage'),
+          // This is the critical field we need to preserve
+          quantityReceived: receivedQty,
+          amount: Number((item.amount || 0) / 100) // Convert from cents to dollars
         };
       }) : [],
       subtotal: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
