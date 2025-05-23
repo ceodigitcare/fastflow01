@@ -1411,31 +1411,54 @@ export default function PurchaseBillFormSplit({
       dueDate: data.dueDate
     });
     
-    // Process items to ensure all numeric values are correctly formatted
+    // COMPLETELY SIMPLIFIED: Process items with a clean, reliable approach
     const processedItems = billItems.map(item => {
-      // Check if the unitPrice is already in cents (>100) or in dollars (<100)
-      // This is important for existing data that might already be in cents
+      // Check if the unitPrice is already in cents or dollars for conversion
       const isUnitPriceInCents = Number(item.unitPrice) > 100;
       
-      // Get form values for this item as they may be more up-to-date
-      // This is critical for ensuring quantityReceived is persisted correctly
+      // Get the most up-to-date form values first
       const formItems = form.getValues('items') || [];
-      const formItem = formItems[billItems.indexOf(item)];
+      const formIndex = billItems.indexOf(item);
+      const formItem = formItems[formIndex];
       
-      // Use the form value for quantityReceived if available, otherwise use the state value
-      const quantityReceivedValue = formItem?.quantityReceived !== undefined ? 
-        Number(formItem.quantityReceived) : 
-        (item.quantityReceived !== undefined && item.quantityReceived !== null ? 
-          Number(item.quantityReceived) : 0);
+      // IMPROVED: Prioritize form values over state values for reliability
+      // Form values represent the most recent user input
+      let quantityReceivedValue = 0;
+      let source = "default";
       
-      // Log each item's data for debugging
-      console.log(`Processing item ${item.description} for save:`, {
-        quantity: item.quantity,
-        quantityReceived: item.quantityReceived,
-        formQuantityReceived: formItem?.quantityReceived,
-        finalQuantityReceived: quantityReceivedValue,
-        unitPrice: item.unitPrice,
-        isAlreadyInCents: isUnitPriceInCents
+      // First check form values (most reliable and recent)
+      if (formItem && formItem.quantityReceived !== undefined && formItem.quantityReceived !== null) {
+        const formValue = Number(formItem.quantityReceived);
+        if (!isNaN(formValue)) {
+          quantityReceivedValue = formValue;
+          source = "form-value";
+        }
+      }
+      
+      // Fallback to item state if needed
+      if (quantityReceivedValue === 0 && 
+          item.quantityReceived !== undefined && 
+          item.quantityReceived !== null) {
+        const stateValue = Number(item.quantityReceived);
+        if (!isNaN(stateValue)) {
+          quantityReceivedValue = stateValue;
+          source = "state-value";
+        }
+      }
+      
+      // Ensure we have a valid number, never undefined or NaN
+      if (isNaN(quantityReceivedValue)) {
+        quantityReceivedValue = 0;
+        source = "fallback";
+      }
+      
+      // Log clear details for debugging
+      console.log(`SUBMIT: Processing item ${item.description}:`, {
+        productId: item.productId,
+        receivedQty: quantityReceivedValue,
+        source: source,
+        formValue: formItem?.quantityReceived,
+        stateValue: item.quantityReceived
       });
       
       // FINAL FIX: Create explicit item object with strong type enforcement
