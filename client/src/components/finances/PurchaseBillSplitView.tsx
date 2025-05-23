@@ -136,11 +136,13 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                     console.log("Original bill for editing:", selectedBill);
                     
                     // Parse metadata from JSON string if it exists, or create a new object
+                    // Include receivedQuantityMap in the default structure to avoid undefined errors
                     let metadata = { 
                       totalDiscount: 0,
                       totalDiscountType: 'flat',
                       dueDate: selectedBill.date,
-                      itemQuantitiesReceived: [] as {productId: number, quantityReceived: number}[]
+                      itemQuantitiesReceived: [] as {productId: number, quantityReceived: number}[],
+                      receivedQuantityMap: {} as Record<string, number>
                     };
                     
                     try {
@@ -183,10 +185,25 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                           
                           // COMPLETE REBUILD: Robust quantityReceived extraction with multiple fallbacks
                           
+                          // Parse metadata safely to avoid errors
+                          let parsedMetadata = null;
+                          try {
+                            if (selectedBill.metadata) {
+                              if (typeof selectedBill.metadata === 'string') {
+                                parsedMetadata = JSON.parse(selectedBill.metadata);
+                              } else if (typeof selectedBill.metadata === 'object') {
+                                parsedMetadata = selectedBill.metadata;
+                              }
+                            }
+                          } catch (error) {
+                            console.error("Failed to parse metadata in edit mode:", error);
+                          }
+                          
                           // First: Check for updated format in receivedQuantityMap (most reliable)
-                          if (metadata.receivedQuantityMap && 
-                              metadata.receivedQuantityMap[`product_${productId}`] !== undefined) {
-                            quantityReceived = Number(metadata.receivedQuantityMap[`product_${productId}`]);
+                          if (parsedMetadata && 
+                              parsedMetadata.receivedQuantityMap && 
+                              parsedMetadata.receivedQuantityMap[`product_${productId}`] !== undefined) {
+                            quantityReceived = Number(parsedMetadata.receivedQuantityMap[`product_${productId}`]);
                             console.log(`✅ EDIT MODE - Found quantity in receivedQuantityMap for product ${productId}: ${quantityReceived}`);
                           }
                           // Second: Check legacy array format in metadata
@@ -201,8 +218,8 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                           }
                           // Add comprehensive debug info
                           console.log(`EDIT MODE - Data sources for product ${productId}:`, {
-                            fromReceivedQuantityMap: metadata.receivedQuantityMap ? 
-                              metadata.receivedQuantityMap[`product_${productId}`] : 'map not found',
+                            fromReceivedQuantityMap: parsedMetadata?.receivedQuantityMap ? 
+                              parsedMetadata.receivedQuantityMap[`product_${productId}`] : 'map not found',
                             fromItemQuantitiesReceived: itemMetadata?.quantityReceived,
                             fromDirectProperty: item.quantityReceived,
                             finalValue: quantityReceived
@@ -426,30 +443,52 @@ export default function PurchaseBillSplitView({ businessData }: PurchaseBillSpli
                         {/* Conditionally render Received Quantity cell based on toggle state */}
                         {showReceivedQuantity && (
                           <td className="px-4 py-3 text-sm text-center">
-                            {/* Get received quantity from comprehensive sources */}
+                            {/* Get received quantity from the item property directly */}
                             {(() => {
                               // First check direct item property
                               if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
                                 return Number(item.quantityReceived);
                               }
                               
-                              // Next try to find in metadata (if parsed)
-                              if (metadata) {
-                                // Check map-based storage (new format)
-                                if (metadata.receivedQuantityMap && 
-                                    metadata.receivedQuantityMap[`product_${item.productId}`] !== undefined) {
-                                  return Number(metadata.receivedQuantityMap[`product_${item.productId}`]);
-                                }
-                                
-                                // Check array-based storage (legacy format)
-                                if (metadata.itemQuantitiesReceived && Array.isArray(metadata.itemQuantitiesReceived)) {
-                                  const metaItem = metadata.itemQuantitiesReceived.find(
-                                    (m: any) => Number(m.productId) === Number(item.productId)
-                                  );
-                                  if (metaItem && metaItem.quantityReceived !== undefined) {
-                                    return Number(metaItem.quantityReceived);
+                              // Try to access metadata from the transaction
+                              try {
+                                // Try to parse metadata if it exists as string
+                                if (selectedBill && selectedBill.metadata) {
+                                  let parsedMeta = null;
+                                  
+                                  // Handle different metadata formats
+                                  if (typeof selectedBill.metadata === 'string') {
+                                    try {
+                                      parsedMeta = JSON.parse(selectedBill.metadata);
+                                    } catch (e) {
+                                      console.error("Failed to parse metadata string:", e);
+                                    }
+                                  } else if (typeof selectedBill.metadata === 'object') {
+                                    parsedMeta = selectedBill.metadata;
+                                  }
+                                  
+                                  // If we have parsed metadata, try to find the quantityReceived
+                                  if (parsedMeta) {
+                                    // Check map-based storage (new format)
+                                    if (parsedMeta.receivedQuantityMap && 
+                                        typeof parsedMeta.receivedQuantityMap === 'object' &&
+                                        parsedMeta.receivedQuantityMap[`product_${item.productId}`] !== undefined) {
+                                      return Number(parsedMeta.receivedQuantityMap[`product_${item.productId}`]);
+                                    }
+                                    
+                                    // Check array-based storage (legacy format)
+                                    if (parsedMeta.itemQuantitiesReceived && Array.isArray(parsedMeta.itemQuantitiesReceived)) {
+                                      const metaItem = parsedMeta.itemQuantitiesReceived.find(
+                                        (m: any) => Number(m.productId) === Number(item.productId)
+                                      );
+                                      if (metaItem && metaItem.quantityReceived !== undefined) {
+                                        return Number(metaItem.quantityReceived);
+                                      }
+                                    }
                                   }
                                 }
+                              } catch (error) {
+                                console.error(`Error accessing metadata for product ${item.productId}:`, error);
                               }
                               
                               // Default to 0 if no received quantity found
