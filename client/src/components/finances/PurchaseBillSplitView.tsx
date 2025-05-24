@@ -21,6 +21,7 @@ import {
   History
 } from "lucide-react";
 import PurchaseBillFormSplit from "./PurchaseBillFormSplit";
+import TransactionVersionHistory from "./TransactionVersionHistory";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
