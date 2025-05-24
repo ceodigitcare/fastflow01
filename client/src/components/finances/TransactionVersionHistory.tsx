@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { TransactionVersion } from '@shared/schema';
+import { TransactionVersion, User as UserType } from '@shared/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -29,7 +29,33 @@ interface ChangeSummary {
 export default function TransactionVersionHistory({ transactionId, onClose }: TransactionVersionHistoryProps) {
   const { toast } = useToast();
   const [changeSummaries, setChangeSummaries] = useState<Map<number, ChangeSummary[]>>(new Map());
+  const [userMap, setUserMap] = useState<Map<number, string>>(new Map());
+  
+  // Fetch all users to map user IDs to names
+  const { data: users } = useQuery({
+    queryKey: ['/api/users'],
+    queryFn: async () => {
+      const response = await fetch('/api/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      return response.json() as Promise<UserType[]>;
+    }
+  });
 
+  // Build a map of user IDs to names
+  useEffect(() => {
+    if (users && users.length > 0) {
+      const map = new Map<number, string>();
+      users.forEach(user => {
+        if (user.id) {
+          map.set(user.id, user.name);
+        }
+      });
+      setUserMap(map);
+    }
+  }, [users]);
+  
   // Fetch version history
   const { data: versions, isLoading } = useQuery({
     queryKey: ['/api/transactions', transactionId, 'versions'],
@@ -261,7 +287,13 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
                     </div>
                     <div className="flex items-center mt-1">
                       <User className="h-3 w-3 mr-1" />
-                      <span>User ID: {version.userId}</span>
+                      <span>
+                        {version.userId && userMap.has(version.userId) 
+                          ? userMap.get(version.userId) 
+                          : version.userId 
+                            ? `Unknown User (ID: ${version.userId})` 
+                            : "System Action"}
+                      </span>
                     </div>
                   </div>
                   
