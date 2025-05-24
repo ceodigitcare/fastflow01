@@ -1199,64 +1199,114 @@ export class DatabaseStorage implements IStorage {
     businessId: number,
     userId: number
   ): Promise<Transaction | undefined> {
-    // Get the version to restore
-    const versionToRestore = await this.getTransactionVersion(versionId);
-    if (!versionToRestore) {
-      return undefined;
-    }
-    
-    // Get current transaction
-    const currentTransaction = await this.getTransaction(transactionId);
-    if (!currentTransaction) {
-      return undefined;
-    }
-    
-    // Get latest version number
-    const versions = await this.getTransactionVersions(transactionId);
-    const latestVersion = versions.length > 0 
-      ? Math.max(...versions.map(v => v.version)) 
-      : 0;
-    
-    // Create a version of the current state before restoring
-    await this.createTransactionVersion({
-      transactionId,
-      businessId,
-      userId,
-      version: latestVersion + 1,
-      changeType: 'pre-restore',
-      changeDescription: `Automatic backup before restoring to version ${versionToRestore.version}`,
-      data: currentTransaction,
-      important: false
-    });
-    
-    // Restore the transaction to the selected version
-    const restoredData = versionToRestore.data as any;
-    
-    // Ensure the ID and businessId remain the same
-    restoredData.id = transactionId;
-    restoredData.businessId = businessId;
-    
-    // Update the transaction with the restored data
-    const updatedTransaction = await this.updateTransaction({
-      ...restoredData,
-      updatedBy: userId
-    });
-    
-    if (updatedTransaction) {
-      // Create a record of the restore action
+    try {
+      // Get the version to restore
+      const versionToRestore = await this.getTransactionVersion(versionId);
+      if (!versionToRestore) {
+        return undefined;
+      }
+      
+      // Get current transaction
+      const currentTransaction = await this.getTransaction(transactionId);
+      if (!currentTransaction) {
+        return undefined;
+      }
+      
+      // Get latest version number
+      const versions = await this.getTransactionVersions(transactionId);
+      const latestVersion = versions.length > 0 
+        ? Math.max(...versions.map(v => v.version)) 
+        : 0;
+      
+      // Create a version of the current state before restoring
       await this.createTransactionVersion({
         transactionId,
         businessId,
         userId,
-        version: latestVersion + 2,
-        changeType: 'restore',
-        changeDescription: `Restored from version ${versionToRestore.version}`,
-        data: updatedTransaction,
-        important: true
+        version: latestVersion + 1,
+        changeType: 'pre-restore',
+        changeDescription: `Automatic backup before restoring to version ${versionToRestore.version}`,
+        data: currentTransaction,
+        important: false
       });
+      
+      // Restore the transaction to the selected version
+      let restoredData = structuredClone(versionToRestore.data) as any;
+      
+      // Convert all string dates to Date objects
+      if (restoredData.date && typeof restoredData.date === 'string') {
+        restoredData.date = new Date(restoredData.date);
+      }
+      
+      if (restoredData.createdAt && typeof restoredData.createdAt === 'string') {
+        restoredData.createdAt = new Date(restoredData.createdAt);
+      }
+      
+      if (restoredData.updatedAt && typeof restoredData.updatedAt === 'string') {
+        restoredData.updatedAt = new Date(restoredData.updatedAt);
+      }
+      
+      // Process metadata field if it exists
+      if (typeof restoredData.metadata === 'string') {
+        try {
+          restoredData.metadata = JSON.parse(restoredData.metadata);
+        } catch (error) {
+          console.error('Error parsing metadata during restore:', error);
+          // If parsing fails, use an empty object to avoid errors
+          restoredData.metadata = {};
+        }
+      }
+      
+      // If metadata is an object with a dueDate field, ensure it's a Date object
+      if (restoredData.metadata && typeof restoredData.metadata === 'object') {
+        if (restoredData.metadata.dueDate && typeof restoredData.metadata.dueDate === 'string') {
+          try {
+            restoredData.metadata.dueDate = new Date(restoredData.metadata.dueDate);
+          } catch (error) {
+            console.error('Error converting dueDate in metadata:', error);
+            // Use the current date if conversion fails
+            restoredData.metadata.dueDate = new Date();
+          }
+        }
+      }
+      
+      // Ensure the ID and businessId remain the same
+      restoredData.id = transactionId;
+      restoredData.businessId = businessId;
+      restoredData.updatedBy = userId;
+      
+      // Set current timestamp for update
+      restoredData.updatedAt = new Date();
+      
+      // Clean up any fields that might cause conflicts
+      delete restoredData._select;
+      
+      // Update the transaction with the restored data
+      const [updatedTransaction] = await db
+        .update(transactions)
+        .set(restoredData)
+        .where(eq(transactions.id, transactionId))
+        .returning();
+      
+      if (updatedTransaction) {
+        // Create a record of the restore action
+        await this.createTransactionVersion({
+          transactionId,
+          businessId,
+          userId,
+          version: latestVersion + 2,
+          changeType: 'restore',
+          changeDescription: `Restored from version ${versionToRestore.version}`,
+          data: updatedTransaction,
+          important: true
+        });
+      }
+      
+      return updatedTransaction;
+    } catch (error) {
+      console.error('Error in restoreTransactionVersion:', error);
+      throw error;
     }
-    
-    return updatedTransaction;
   }
   
   async updateVersionImportance(versionId: number, important: boolean): Promise<boolean> {
