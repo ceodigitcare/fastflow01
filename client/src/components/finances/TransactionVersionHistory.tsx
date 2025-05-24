@@ -257,7 +257,7 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
                   <div className="text-sm text-muted-foreground mb-2">
                     <div className="flex items-center">
                       <Clock className="h-3 w-3 mr-1" />
-                      <span>{formatDateTime(version.createdAt)}</span>
+                      <span>{formatDateTime(version.timestamp || new Date())}</span>
                     </div>
                     <div className="flex items-center mt-1">
                       <User className="h-3 w-3 mr-1" />

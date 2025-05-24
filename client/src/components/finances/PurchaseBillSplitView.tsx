@@ -767,10 +767,9 @@ export default function PurchaseBillSplitView({
               </div>
             )}
             
-            {/* Version History */}
+            {/* Version History - Only shown when explicitly toggled */}
             {showVersionHistory && selectedBill && (
               <div className="mt-6 border-t pt-6">
-                <h3 className="font-semibold mb-4">Version History</h3>
                 <TransactionVersionHistory 
                   transactionId={selectedBill.id} 
                   onClose={() => setShowVersionHistory(false)}
