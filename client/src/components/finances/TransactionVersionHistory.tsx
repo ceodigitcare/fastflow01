@@ -54,8 +54,7 @@ interface ChangeSummary {
 export default function TransactionVersionHistory({ transactionId, onClose }: TransactionVersionHistoryProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState<TransactionVersion | null>(null);
-  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  // Simplified state management - removed restore-related state
   const [changeSummaries, setChangeSummaries] = useState<Map<number, ChangeSummary[]>>(new Map());
 
   // Fetch version history
@@ -197,58 +196,9 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
     },
   });
 
-  // Mutation to restore a version
-  const restoreVersionMutation = useMutation({
-    mutationFn: async (versionId: number) => {
-      const response = await fetch(`/api/transactions/${transactionId}/versions/${versionId}/restore`, {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to restore version');
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Version restored successfully',
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transactions', transactionId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transactions', transactionId, 'versions'] });
-      setShowRestoreDialog(false);
-      setIsOpen(false);
-      
-      // If there's a close handler, call it to refresh the parent view
-      if (onClose) {
-        onClose();
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
+  // Handle toggling version importance
   const handleToggleImportant = (versionId: number, currentImportant: boolean) => {
     markImportantMutation.mutate({ versionId, important: !currentImportant });
-  };
-
-  const handleRestore = (version: TransactionVersion) => {
-    setSelectedVersion(version);
-    setShowRestoreDialog(true);
-  };
-
-  const confirmRestore = () => {
-    if (selectedVersion) {
-      restoreVersionMutation.mutate(selectedVersion.id);
-    }
   };
 
   const getChangeTypeIcon = (changeType: string) => {
@@ -279,19 +229,7 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
     }).format(amount);
   };
 
-  // Determine if a version can be restored
-  // Disable restore for the initial creation version (it has nothing to restore to)
-  const canRestoreVersion = (version: TransactionVersion, allVersions: TransactionVersion[]) => {
-    if (!allVersions || allVersions.length === 0) return false;
-    
-    // Cannot restore the initial creation version
-    if (version.changeType === 'create') return false;
-    
-    // Cannot restore if this is a backup just before a restore
-    if (version.changeType === 'pre-restore') return false;
-    
-    return true;
-  };
+  // Removed restore functionality as requested
 
   return (
     <>
@@ -389,20 +327,7 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
                     </div>
                   )}
                   
-                  <div className="flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRestore(version)}
-                      disabled={
-                        restoreVersionMutation.isPending || 
-                        !canRestoreVersion(version, versions)
-                      }
-                    >
-                      <CornerDownLeft className="h-4 w-4 mr-2" />
-                      Restore
-                    </Button>
-                  </div>
+                  {/* Restore button removed as requested */}
                 </div>
               ))}
             </div>
