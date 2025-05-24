@@ -167,8 +167,16 @@ export default function PurchaseBillSplitView({
               <div className="flex space-x-2">
                 <Button 
                   variant="outline" 
-                  size="sm" 
+                  size="sm"
+                  onClick={() => setIsPrintDialogOpen(true)}
+                >
+                  <Printer className="h-4 w-4 mr-2" /> Print
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
                   onClick={() => {
+                    // Edit bill logic starts here
                     // COMPLETELY NEW APPROACH: Create a fresh object with ONLY the necessary data
                     // This avoids reference issues and ensures clean data
                     
