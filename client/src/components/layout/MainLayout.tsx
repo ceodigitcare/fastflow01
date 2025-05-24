@@ -100,9 +100,7 @@ export default function MainLayout({ children, onRightPanelToggle }: MainLayoutP
         ></div>
       )}
       
-      {/* This is a spacer for desktop layout that reserves space for the sidebar
-          Creating proper side-by-side layout on desktop without content shifting */}
-      <div className={`hidden lg:block flex-shrink-0 ${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300`} aria-hidden="true"></div>
+      {/* No spacer needed - we want content to expand fully when sidebar is hidden */}
       
       {/* Sidebar with fixed position on mobile (overlay) and absolute on desktop (side by side) */}
       <Sidebar isOpen={sidebarOpen} onClose={toggleSidebar} user={user} />
