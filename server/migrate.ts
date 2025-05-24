@@ -196,9 +196,11 @@ async function migrate() {
       ON CONFLICT (business_id, category_id, name) DO NOTHING;
     `);
     
-    // Create transaction_versions table if it doesn't exist
+    // Drop transaction_versions table if it exists and recreate it
     await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS transaction_versions (
+      DROP TABLE IF EXISTS transaction_versions;
+      
+      CREATE TABLE transaction_versions (
         id SERIAL PRIMARY KEY,
         transaction_id INTEGER NOT NULL,
         version INTEGER NOT NULL,

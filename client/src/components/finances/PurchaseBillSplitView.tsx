@@ -176,13 +176,6 @@ export default function PurchaseBillSplitView({
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => setEditingBill(selectedBill)}
-                >
-                  <Edit className="h-4 w-4 mr-2" /> Edit
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
                   onClick={() => setShowVersionHistory(!showVersionHistory)}
                 >
                   <History className="h-4 w-4 mr-2" /> History
