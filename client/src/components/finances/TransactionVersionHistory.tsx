@@ -37,9 +37,10 @@ import { format } from 'date-fns';
 
 interface TransactionVersionHistoryProps {
   transactionId: number;
+  onClose?: () => void;
 }
 
-export default function TransactionVersionHistory({ transactionId }: TransactionVersionHistoryProps) {
+export default function TransactionVersionHistory({ transactionId, onClose }: TransactionVersionHistoryProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<TransactionVersion | null>(null);

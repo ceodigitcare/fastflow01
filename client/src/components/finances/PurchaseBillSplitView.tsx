@@ -64,6 +64,7 @@ export default function PurchaseBillSplitView({
   }, [externalCreatingNew]);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<Transaction | null>(null);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
   
   // State for toggling received quantity column visibility
   const [showReceivedQuantity, setShowReceivedQuantity] = useState(() => {
@@ -175,8 +176,22 @@ export default function PurchaseBillSplitView({
                 <Button 
                   variant="outline" 
                   size="sm"
+                  onClick={() => setEditingBill(selectedBill)}
+                >
+                  <Edit className="h-4 w-4 mr-2" /> Edit
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowVersionHistory(!showVersionHistory)}
+                >
+                  <History className="h-4 w-4 mr-2" /> History
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
                   onClick={() => {
-                    // Edit bill logic starts here
+                    // Original edit logic starts here
                     // COMPLETELY NEW APPROACH: Create a fresh object with ONLY the necessary data
                     // This avoids reference issues and ensures clean data
                     
@@ -763,6 +778,17 @@ export default function PurchaseBillSplitView({
               <div>
                 <h3 className="font-semibold mb-2">Notes</h3>
                 <p className="text-sm text-gray-600">{selectedBill.notes}</p>
+              </div>
+            )}
+            
+            {/* Version History */}
+            {showVersionHistory && selectedBill && (
+              <div className="mt-6 border-t pt-6">
+                <h3 className="font-semibold mb-4">Version History</h3>
+                <TransactionVersionHistory 
+                  transactionId={selectedBill.id} 
+                  onClose={() => setShowVersionHistory(false)}
+                />
               </div>
             )}
             
