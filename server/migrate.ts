@@ -196,6 +196,22 @@ async function migrate() {
       ON CONFLICT (business_id, category_id, name) DO NOTHING;
     `);
     
+    // Create transaction_versions table if it doesn't exist
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS transaction_versions (
+        id SERIAL PRIMARY KEY,
+        transaction_id INTEGER NOT NULL,
+        version INTEGER NOT NULL,
+        business_id INTEGER NOT NULL,
+        user_id INTEGER,
+        timestamp TIMESTAMP DEFAULT NOW(),
+        change_description TEXT,
+        change_type TEXT NOT NULL,
+        data JSONB NOT NULL,
+        important BOOLEAN DEFAULT FALSE
+      );
+    `);
+    
     console.log("Migration completed successfully!");
   } catch (error) {
     console.error("Migration failed:", error);

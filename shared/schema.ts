@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Business users
 export const businesses = pgTable("businesses", {
@@ -240,6 +241,36 @@ export const transfers = pgTable("transfers", {
 export const insertTransferSchema = createInsertSchema(transfers).omit({
   id: true,
   createdAt: true,
+});
+
+// Transaction Version History (for tracking changes to purchase bills, invoices, etc.)
+export const transactionVersions = pgTable("transaction_versions", {
+  id: serial("id").primaryKey(),
+  transactionId: integer("transaction_id").notNull(), // References the original transaction
+  version: integer("version").notNull(), // Version number, starts at 1
+  businessId: integer("business_id").notNull(),
+  userId: integer("user_id"), // User who made the change (null for system/initial create)
+  timestamp: timestamp("timestamp").defaultNow(),
+  changeDescription: text("change_description"), // Short description of changes
+  changeType: text("change_type").notNull(), // Type of change: create, update, restore
+  data: jsonb("data").notNull(), // Complete snapshot of transaction data at this version
+  important: boolean("important").default(false), // Flag for important versions
+});
+
+export const transactionVersionsRelations = relations(transactionVersions, ({ one }) => ({
+  transaction: one(transactions, {
+    fields: [transactionVersions.transactionId],
+    references: [transactions.id],
+  }),
+  user: one(users, {
+    fields: [transactionVersions.userId],
+    references: [users.id],
+    relationName: "versionUser"
+  }),
+}));
+
+export const insertTransactionVersionSchema = createInsertSchema(transactionVersions).omit({
+  id: true,
 });
 
 // Chatbot conversations
