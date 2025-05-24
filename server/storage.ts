@@ -9,7 +9,8 @@ import {
   accountCategories, AccountCategory, InsertAccountCategory,
   accounts, Account, InsertAccount,
   transfers, Transfer, InsertTransfer,
-  users, User, InsertUser, LoginHistoryEntry
+  users, User, InsertUser, LoginHistoryEntry,
+  transactionVersions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, asc, desc, and, or, gte, lte } from "drizzle-orm";
@@ -20,6 +21,13 @@ export interface IStorage {
   getBusinessByUsername(username: string): Promise<Business | undefined>;
   createBusiness(business: InsertBusiness): Promise<Business>;
   updateBusiness(id: number, data: Partial<Business>): Promise<Business | undefined>;
+  
+  // Transaction version history methods
+  getTransactionVersions(transactionId: number): Promise<TransactionVersion[]>;
+  getTransactionVersion(versionId: number): Promise<TransactionVersion | undefined>;
+  createTransactionVersion(version: InsertTransactionVersion): Promise<TransactionVersion>;
+  restoreTransactionVersion(transactionId: number, versionId: number, businessId: number, userId: number): Promise<Transaction | undefined>;
+  updateVersionImportance(versionId: number, important: boolean): Promise<boolean>;
   
   // Product methods
   getProduct(id: number): Promise<Product | undefined>;
@@ -1069,24 +1077,195 @@ export class DatabaseStorage implements IStorage {
       .insert(transactions)
       .values(insertTransaction)
       .returning();
+    
+    // Create an initial version for this transaction
+    await this.createTransactionVersion({
+      transactionId: transaction.id,
+      version: 1,
+      businessId: transaction.businessId,
+      userId: null, // System-created initial version
+      changeType: 'create',
+      changeDescription: 'Initial creation',
+      data: transaction,
+      important: true // Mark the initial version as important
+    });
+    
     return transaction;
   }
   
   async updateTransaction(data: Transaction): Promise<Transaction | undefined> {
     const id = data.id;
+    
+    // Get current transaction before updating
+    const currentTransaction = await this.getTransaction(id);
+    if (!currentTransaction) {
+      return undefined;
+    }
+    
+    // Update the transaction
     const [transaction] = await db
       .update(transactions)
       .set(data)
       .where(eq(transactions.id, id))
       .returning();
+    
+    if (transaction) {
+      // Get the latest version number
+      const versions = await this.getTransactionVersions(id);
+      const latestVersion = versions.length > 0 
+        ? Math.max(...versions.map(v => v.version)) 
+        : 0;
+      
+      // Create a new version record
+      await this.createTransactionVersion({
+        transactionId: transaction.id,
+        businessId: transaction.businessId,
+        version: latestVersion + 1,
+        userId: data.updatedBy as number | null, // The user who made the change
+        changeType: 'update',
+        changeDescription: 'Transaction updated',
+        data: transaction,
+        important: false // By default, updates are not marked as important
+      });
+    }
+    
     return transaction || undefined;
   }
   
   async deleteTransaction(id: number): Promise<boolean> {
+    // Get the transaction before deleting
+    const transaction = await this.getTransaction(id);
+    if (!transaction) {
+      return false;
+    }
+    
     const result = await db
       .delete(transactions)
       .where(eq(transactions.id, id))
       .returning({ id: transactions.id });
+      
+    // We don't actually delete versions, just mark them as deleted in a final version
+    if (result.length > 0) {
+      // Get the latest version number
+      const versions = await this.getTransactionVersions(id);
+      const latestVersion = versions.length > 0 
+        ? Math.max(...versions.map(v => v.version)) 
+        : 0;
+      
+      // Create a final version record to mark the deletion
+      await this.createTransactionVersion({
+        transactionId: id,
+        businessId: transaction.businessId,
+        version: latestVersion + 1,
+        userId: null, // System deletion
+        changeType: 'delete',
+        changeDescription: 'Transaction deleted',
+        data: transaction,
+        important: true // Mark deletion as important
+      });
+    }
+    
+    return result.length > 0;
+  }
+  
+  // Version history methods
+  async getTransactionVersions(transactionId: number): Promise<TransactionVersion[]> {
+    return await db
+      .select()
+      .from(transactionVersions)
+      .where(eq(transactionVersions.transactionId, transactionId))
+      .orderBy(desc(transactionVersions.version));
+  }
+  
+  async getTransactionVersion(versionId: number): Promise<TransactionVersion | undefined> {
+    const [version] = await db
+      .select()
+      .from(transactionVersions)
+      .where(eq(transactionVersions.id, versionId));
+    return version || undefined;
+  }
+  
+  async createTransactionVersion(version: InsertTransactionVersion): Promise<TransactionVersion> {
+    const [newVersion] = await db
+      .insert(transactionVersions)
+      .values(version)
+      .returning();
+    return newVersion;
+  }
+  
+  async restoreTransactionVersion(
+    transactionId: number, 
+    versionId: number, 
+    businessId: number,
+    userId: number
+  ): Promise<Transaction | undefined> {
+    // Get the version to restore
+    const versionToRestore = await this.getTransactionVersion(versionId);
+    if (!versionToRestore) {
+      return undefined;
+    }
+    
+    // Get current transaction
+    const currentTransaction = await this.getTransaction(transactionId);
+    if (!currentTransaction) {
+      return undefined;
+    }
+    
+    // Get latest version number
+    const versions = await this.getTransactionVersions(transactionId);
+    const latestVersion = versions.length > 0 
+      ? Math.max(...versions.map(v => v.version)) 
+      : 0;
+    
+    // Create a version of the current state before restoring
+    await this.createTransactionVersion({
+      transactionId,
+      businessId,
+      userId,
+      version: latestVersion + 1,
+      changeType: 'pre-restore',
+      changeDescription: `Automatic backup before restoring to version ${versionToRestore.version}`,
+      data: currentTransaction,
+      important: false
+    });
+    
+    // Restore the transaction to the selected version
+    const restoredData = versionToRestore.data as any;
+    
+    // Ensure the ID and businessId remain the same
+    restoredData.id = transactionId;
+    restoredData.businessId = businessId;
+    
+    // Update the transaction with the restored data
+    const updatedTransaction = await this.updateTransaction({
+      ...restoredData,
+      updatedBy: userId
+    });
+    
+    if (updatedTransaction) {
+      // Create a record of the restore action
+      await this.createTransactionVersion({
+        transactionId,
+        businessId,
+        userId,
+        version: latestVersion + 2,
+        changeType: 'restore',
+        changeDescription: `Restored from version ${versionToRestore.version}`,
+        data: updatedTransaction,
+        important: true
+      });
+    }
+    
+    return updatedTransaction;
+  }
+  
+  async updateVersionImportance(versionId: number, important: boolean): Promise<boolean> {
+    const result = await db
+      .update(transactionVersions)
+      .set({ important })
+      .where(eq(transactionVersions.id, versionId))
+      .returning({ id: transactionVersions.id });
+    
     return result.length > 0;
   }
   

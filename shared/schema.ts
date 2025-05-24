@@ -271,6 +271,7 @@ export const transactionVersionsRelations = relations(transactionVersions, ({ on
 
 export const insertTransactionVersionSchema = createInsertSchema(transactionVersions).omit({
   id: true,
+  timestamp: true,
 });
 
 // Chatbot conversations
@@ -380,3 +381,6 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginHistoryEntry = z.infer<typeof loginHistoryEntrySchema>;
 export type BalanceHistoryEntry = z.infer<typeof balanceHistoryEntrySchema>;
+
+export type TransactionVersion = typeof transactionVersions.$inferSelect;
+export type InsertTransactionVersion = z.infer<typeof insertTransactionVersionSchema>;

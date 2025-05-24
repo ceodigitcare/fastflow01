@@ -16,7 +16,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  X
+  X,
+  Edit,
+  History
 } from "lucide-react";
 import PurchaseBillFormSplit from "./PurchaseBillFormSplit";
 import { useToast } from "@/hooks/use-toast";

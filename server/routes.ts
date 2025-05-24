@@ -1234,6 +1234,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.use("/api/chatbot", chatbotRouter);
 
+  // Transaction version history routes
+  // Get all versions for a transaction
+  app.get("/api/transactions/:id/versions", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const transactionId = parseInt(req.params.id);
+      
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ message: "Invalid transaction ID" });
+      }
+      
+      // Check if transaction exists and belongs to the business
+      const transaction = await storage.getTransaction(transactionId);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      if (transaction.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this transaction" });
+      }
+      
+      // Get all versions for this transaction
+      const versions = await storage.getTransactionVersions(transactionId);
+      res.json(versions);
+    } catch (error) {
+      console.error("Error fetching transaction versions:", error);
+      res.status(500).json({ message: "Failed to fetch transaction versions" });
+    }
+  });
+  
+  // Get specific version of a transaction
+  app.get("/api/transactions/:id/versions/:versionId", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const transactionId = parseInt(req.params.id);
+      const versionId = parseInt(req.params.versionId);
+      
+      if (isNaN(transactionId) || isNaN(versionId)) {
+        return res.status(400).json({ message: "Invalid ID parameters" });
+      }
+      
+      // Check if transaction exists and belongs to the business
+      const transaction = await storage.getTransaction(transactionId);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      if (transaction.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this transaction" });
+      }
+      
+      // Get specific version
+      const version = await storage.getTransactionVersion(versionId);
+      
+      if (!version || version.transactionId !== transactionId) {
+        return res.status(404).json({ message: "Version not found" });
+      }
+      
+      res.json(version);
+    } catch (error) {
+      console.error("Error fetching transaction version:", error);
+      res.status(500).json({ message: "Failed to fetch transaction version" });
+    }
+  });
+  
+  // Restore a specific version
+  app.post("/api/transactions/:id/versions/:versionId/restore", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const transactionId = parseInt(req.params.id);
+      const versionId = parseInt(req.params.versionId);
+      
+      if (isNaN(transactionId) || isNaN(versionId)) {
+        return res.status(400).json({ message: "Invalid ID parameters" });
+      }
+      
+      // Check if transaction exists and belongs to the business
+      const transaction = await storage.getTransaction(transactionId);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      if (transaction.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this transaction" });
+      }
+      
+      // Get version to restore
+      const versionToRestore = await storage.getTransactionVersion(versionId);
+      
+      if (!versionToRestore || versionToRestore.transactionId !== transactionId) {
+        return res.status(404).json({ message: "Version not found" });
+      }
+      
+      // Restore the transaction to this version
+      const restoredTransaction = await storage.restoreTransactionVersion(
+        transactionId, 
+        versionId, 
+        businessId, 
+        req.user.id
+      );
+      
+      res.json(restoredTransaction);
+    } catch (error) {
+      console.error("Error restoring transaction version:", error);
+      res.status(500).json({ message: "Failed to restore transaction version" });
+    }
+  });
+  
+  // Mark version as important
+  app.patch("/api/transactions/:id/versions/:versionId/important", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const transactionId = parseInt(req.params.id);
+      const versionId = parseInt(req.params.versionId);
+      const { important } = req.body;
+      
+      if (isNaN(transactionId) || isNaN(versionId)) {
+        return res.status(400).json({ message: "Invalid ID parameters" });
+      }
+      
+      if (typeof important !== 'boolean') {
+        return res.status(400).json({ message: "Important flag must be a boolean" });
+      }
+      
+      // Check if transaction exists and belongs to the business
+      const transaction = await storage.getTransaction(transactionId);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      if (transaction.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this transaction" });
+      }
+      
+      // Get version to mark as important
+      const version = await storage.getTransactionVersion(versionId);
+      
+      if (!version || version.transactionId !== transactionId) {
+        return res.status(404).json({ message: "Version not found" });
+      }
+      
+      // Update version importance
+      await storage.updateVersionImportance(versionId, important);
+      
+      res.json({ message: `Version marked as ${important ? 'important' : 'not important'}` });
+    } catch (error) {
+      console.error("Error updating version importance:", error);
+      res.status(500).json({ message: "Failed to update version importance" });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
 
