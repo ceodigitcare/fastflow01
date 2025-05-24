@@ -100,12 +100,15 @@ export default function MainLayout({ children, onRightPanelToggle }: MainLayoutP
         ></div>
       )}
       
-      {/* No spacer needed - we want content to expand fully when sidebar is hidden */}
+      {/* Sidebar */}
+      <div className={`${sidebarOpen ? 'lg:w-64' : 'lg:w-0'} transition-all duration-300 flex-shrink-0 hidden lg:block`} aria-hidden="true">
+        {/* This is just a spacer div that reserves space for the sidebar on desktop */}
+      </div>
       
-      {/* Sidebar with fixed position on mobile (overlay) and absolute on desktop (side by side) */}
+      {/* Actual sidebar component with fixed position on mobile, absolute on desktop */}
       <Sidebar isOpen={sidebarOpen} onClose={toggleSidebar} user={user} />
       
-      {/* Main content that maintains its position relative to sidebar on desktop */}
+      {/* Main content that properly adjusts to sidebar width on desktop */}
       <div className="flex-1 flex flex-col min-w-0 w-full transition-all duration-300">
         <Header 
           onSidebarToggle={toggleSidebar} 
