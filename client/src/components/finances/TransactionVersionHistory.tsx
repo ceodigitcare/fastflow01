@@ -20,7 +20,8 @@ import {
   CornerDownLeft,
   AlertCircle,
   Trash,
-  Clock
+  Clock,
+  X
 } from 'lucide-react';
 import { queryClient } from '@/lib/queryClient';
 import {
@@ -56,7 +57,7 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
       }
       return response.json() as Promise<TransactionVersion[]>;
     },
-    enabled: isOpen && !!transactionId,
+    enabled: !!transactionId,
   });
 
   // Mutation to mark a version as important
@@ -157,90 +158,84 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
 
   return (
     <>
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="sm" onClick={() => setIsOpen(true)}>
-            <History className="h-4 w-4 mr-2" />
-            Version History
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center">
+          <h4 className="font-medium">Version History</h4>
+        </div>
+        {onClose && (
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
           </Button>
-        </SheetTrigger>
-        <SheetContent className="w-[400px] sm:w-[540px]">
-          <SheetHeader>
-            <SheetTitle>Version History</SheetTitle>
-            <SheetDescription>
-              View and restore previous versions of this transaction.
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className="mt-6">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-40">
-                <p>Loading version history...</p>
-              </div>
-            ) : !versions || versions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
-                <History className="h-10 w-10 mb-2" />
-                <p>No version history available</p>
-              </div>
-            ) : (
-              <ScrollArea className="h-[65vh]">
-                <div className="space-y-4">
-                  {versions.map((version) => (
-                    <div 
-                      key={version.id} 
-                      className={`p-4 border rounded-md ${
-                        version.important ? 'border-yellow-400 bg-yellow-50' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center">
-                          {getChangeTypeIcon(version.changeType)}
-                          <span className="ml-2 font-semibold">
-                            Version {version.version}
-                          </span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleImportant(version.id, !!version.important)}
-                          disabled={markImportantMutation.isPending}
-                        >
-                          <Star
-                            className={`h-4 w-4 ${
-                              version.important ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'
-                            }`}
-                          />
-                        </Button>
-                      </div>
-                      
-                      <div className="text-sm text-gray-500 mb-2 flex items-center">
-                        <Clock className="h-4 w-4 mr-1" />
-                        {formatDateTime(version.timestamp as unknown as Date)}
-                      </div>
-                      
-                      {version.changeDescription && (
-                        <p className="text-sm mb-2">{version.changeDescription}</p>
-                      )}
-                      
-                      <div className="flex justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRestore(version)}
-                          disabled={restoreVersionMutation.isPending}
-                        >
-                          <CornerDownLeft className="h-4 w-4 mr-2" />
-                          Restore
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
+        )}
+      </div>
+      
+      <div>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-40">
+            <p>Loading version history...</p>
           </div>
-        </SheetContent>
-      </Sheet>
+        ) : !versions || versions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+            <History className="h-10 w-10 mb-2" />
+            <p>No version history available</p>
+          </div>
+        ) : (
+          <ScrollArea className="h-[300px]">
+            <div className="space-y-4">
+              {versions.map((version) => (
+                <div 
+                  key={version.id} 
+                  className={`p-4 border rounded-md ${
+                    version.important ? 'border-yellow-400 bg-yellow-50' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center">
+                      {getChangeTypeIcon(version.changeType)}
+                      <span className="ml-2 font-semibold">
+                        Version {version.version}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleImportant(version.id, !!version.important)}
+                      disabled={markImportantMutation.isPending}
+                    >
+                      <Star
+                        className={`h-4 w-4 ${
+                          version.important ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'
+                        }`}
+                      />
+                    </Button>
+                  </div>
+                  
+                  <div className="text-sm text-gray-500 mb-2 flex items-center">
+                    <Clock className="h-4 w-4 mr-1" />
+                    {formatDateTime(version.timestamp as unknown as Date)}
+                  </div>
+                  
+                  {version.changeDescription && (
+                    <p className="text-sm mb-2">{version.changeDescription}</p>
+                  )}
+                  
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRestore(version)}
+                      disabled={restoreVersionMutation.isPending}
+                    >
+                      <CornerDownLeft className="h-4 w-4 mr-2" />
+                      Restore
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
+      </div>
 
       <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
         <AlertDialogContent>
