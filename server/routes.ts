@@ -769,7 +769,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: transactionId,
         // Add any other required default values
         paymentReceived: transactionData.paymentReceived !== undefined ? Number(transactionData.paymentReceived) : 0,
-        amount: Number(transactionData.amount)
+        amount: Number(transactionData.amount),
+        // Add the authenticated user ID for proper version history attribution
+        updatedBy: req.user.id
       };
       
       // Parse the transaction data
@@ -833,7 +835,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         businessId,
         id: transactionId,
         paymentReceived: transactionData.paymentReceived !== undefined ? Number(transactionData.paymentReceived) : 0,
-        amount: Number(transactionData.amount)
+        amount: Number(transactionData.amount),
+        // Add the authenticated user ID for proper version history attribution
+        updatedBy: req.user.id
       });
       
       if (updatedTransaction) {
