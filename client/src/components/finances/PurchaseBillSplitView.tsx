@@ -169,13 +169,6 @@ export default function PurchaseBillSplitView({
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => setIsPrintDialogOpen(true)}
-                >
-                  <Printer className="h-4 w-4 mr-2" /> Print
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
                   onClick={() => setShowVersionHistory(!showVersionHistory)}
                 >
                   <History className="h-4 w-4 mr-2" /> History

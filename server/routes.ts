@@ -1330,15 +1330,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Version not found" });
       }
       
-      // Restore the transaction to this version
-      const restoredTransaction = await storage.restoreTransactionVersion(
-        transactionId, 
-        versionId, 
-        businessId, 
-        req.user.id
-      );
+      // Use our SQL function to directly restore the transaction
+      // This avoids issues with JSON/date conversions
+      const [result] = await db.execute(sql`
+        SELECT restore_transaction_version(${transactionId}, ${versionId}, ${req.user.id}) as result;
+      `);
       
-      res.json(restoredTransaction);
+      if (result && result.result) {
+        // Get the freshly restored transaction from database
+        const restoredTransaction = await storage.getTransaction(transactionId);
+        res.json(restoredTransaction);
+      } else {
+        throw new Error("Restore operation failed");
+      }
     } catch (error) {
       console.error("Error restoring transaction version:", error);
       res.status(500).json({ message: "Failed to restore transaction version" });
