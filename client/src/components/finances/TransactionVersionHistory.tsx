@@ -6,39 +6,14 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import {
   Star,
   History,
-  ArrowUpRight,
-  CornerDownLeft,
-  AlertCircle,
-  Trash,
   Clock,
   X,
   User,
-  BookOpen,
-  DollarSign,
 } from 'lucide-react';
 import { queryClient } from '@/lib/queryClient';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { format } from 'date-fns';
-import { Separator } from "@/components/ui/separator";
 
 interface TransactionVersionHistoryProps {
   transactionId: number;
@@ -53,8 +28,6 @@ interface ChangeSummary {
 
 export default function TransactionVersionHistory({ transactionId, onClose }: TransactionVersionHistoryProps) {
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
-  // Simplified state management - removed restore-related state
   const [changeSummaries, setChangeSummaries] = useState<Map<number, ChangeSummary[]>>(new Map());
 
   // Fetch version history
@@ -161,8 +134,6 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
         }
       }
       
-      // Add other change checks as needed
-      
       summaries.set(currentVersion.id, changes);
     }
     
@@ -229,8 +200,6 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
     }).format(amount);
   };
 
-  // Removed restore functionality as requested
-
   return (
     <>
       <div className="flex justify-between items-center mb-4">
@@ -285,33 +254,29 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
                     </Button>
                   </div>
                   
-                  <div className="text-sm text-gray-500 mb-2 flex items-center">
-                    <Clock className="h-4 w-4 mr-1" />
-                    {formatDateTime(version.timestamp as unknown as Date)}
-                    
-                    {version.userId && (
-                      <div className="ml-3 flex items-center">
-                        <User className="h-4 w-4 mr-1" />
-                        <span>User ID: {version.userId}</span>
-                      </div>
-                    )}
+                  <div className="text-sm text-muted-foreground mb-2">
+                    <div className="flex items-center">
+                      <Clock className="h-3 w-3 mr-1" />
+                      <span>{formatDateTime(version.createdAt)}</span>
+                    </div>
+                    <div className="flex items-center mt-1">
+                      <User className="h-3 w-3 mr-1" />
+                      <span>User ID: {version.userId}</span>
+                    </div>
                   </div>
                   
-                  {version.changeDescription && (
-                    <p className="text-sm mb-2">{version.changeDescription}</p>
-                  )}
+                  <div className="mb-2">
+                    <p className="text-sm">{version.changeDescription}</p>
+                  </div>
                   
-                  {/* Change summary section */}
-                  {changeSummaries.has(version.id) && changeSummaries.get(version.id)?.length > 0 && (
-                    <div className="mt-3 mb-3 bg-gray-50 p-2 rounded-md">
-                      <p className="text-sm font-medium mb-1 flex items-center">
-                        <BookOpen className="h-4 w-4 mr-1" /> Changes:
-                      </p>
+                  {changeSummaries.has(version.id) && changeSummaries.get(version.id)?.length ? (
+                    <div className="mt-2 border-t pt-2">
+                      <div className="text-xs font-medium mb-1">Changes:</div>
                       <div className="space-y-1">
                         {changeSummaries.get(version.id)?.map((change, idx) => (
                           <div key={idx} className="text-xs">
                             <span className="font-medium">{change.field}:</span>{' '}
-                            <span className="text-red-500 line-through">
+                            <span className="text-red-500">
                               {change.field.includes('Amount') || change.field.includes('Payment') 
                                 ? formatCurrency(change.oldValue) 
                                 : change.oldValue}
@@ -325,33 +290,13 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
                         ))}
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Restore button removed as requested */}
+                  ) : null}
                 </div>
               ))}
             </div>
           </ScrollArea>
         )}
       </div>
-
-      <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Restore Version</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to restore this transaction to version {selectedVersion?.version}? 
-              This will overwrite the current version.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRestore}>
-              {restoreVersionMutation.isPending ? 'Restoring...' : 'Restore'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
