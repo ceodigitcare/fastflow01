@@ -79,6 +79,8 @@ export default function ProductPanel({
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryError, setCategoryError] = useState("");
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -94,6 +96,9 @@ export default function ProductPanel({
       const res = await apiRequest("POST", "/api/product-categories", { name });
       return await res.json();
     },
+    onMutate: () => {
+      setIsAddingCategory(true);
+    },
     onSuccess: () => {
       setNewCategoryName("");
       setShowNewCategoryInput(false);
@@ -103,6 +108,7 @@ export default function ProductPanel({
         title: "Category added",
         description: "Product category has been added successfully",
       });
+      setIsAddingCategory(false);
     },
     onError: (error: Error) => {
       setCategoryError(error.message);
@@ -111,6 +117,7 @@ export default function ProductPanel({
         description: error.message,
         variant: "destructive"
       });
+      setIsAddingCategory(false);
     }
   });
   
@@ -119,12 +126,16 @@ export default function ProductPanel({
     mutationFn: async (categoryId: number) => {
       await apiRequest("DELETE", `/api/product-categories/${categoryId}`);
     },
+    onMutate: () => {
+      setIsDeletingCategory(true);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/product-categories'] });
       toast({
         title: "Category deleted",
         description: "Product category has been deleted successfully",
       });
+      setIsDeletingCategory(false);
     },
     onError: (error: Error) => {
       toast({
@@ -132,6 +143,7 @@ export default function ProductPanel({
         description: error.message,
         variant: "destructive"
       });
+      setIsDeletingCategory(false);
     }
   });
 
@@ -395,25 +407,109 @@ export default function ProductPanel({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          value={field.value || ""}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="clothing">Clothing</SelectItem>
-                            <SelectItem value="electronics">Electronics</SelectItem>
-                            <SelectItem value="home">Home & Kitchen</SelectItem>
-                            <SelectItem value="beauty">Beauty & Personal Care</SelectItem>
-                            <SelectItem value="sports">Sports & Outdoors</SelectItem>
-                            <SelectItem value="toys">Toys & Games</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                          {showNewCategoryInput ? (
+                            <div className="flex items-end gap-2">
+                              <div className="flex-1">
+                                <Input
+                                  placeholder="Enter new category name"
+                                  value={newCategoryName}
+                                  onChange={(e) => setNewCategoryName(e.target.value)}
+                                  className={categoryError ? "border-destructive" : ""}
+                                />
+                                {categoryError && (
+                                  <p className="text-xs text-destructive mt-1">{categoryError}</p>
+                                )}
+                              </div>
+                              <div className="flex gap-1">
+                                <Button 
+                                  type="button" 
+                                  size="sm" 
+                                  onClick={() => {
+                                    if (newCategoryName.trim().length < 2) {
+                                      setCategoryError("Category name must be at least 2 characters");
+                                      return;
+                                    }
+                                    addCategoryMutation.mutate(newCategoryName);
+                                  }}
+                                  disabled={isAddingCategory}
+                                >
+                                  Add
+                                </Button>
+                                <Button 
+                                  type="button" 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => {
+                                    setShowNewCategoryInput(false);
+                                    setNewCategoryName("");
+                                    setCategoryError("");
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Select 
+                              onValueChange={(value) => {
+                                if (value === "add-new") {
+                                  setShowNewCategoryInput(true);
+                                  return;
+                                }
+                                field.onChange(value);
+                              }} 
+                              value={field.value || ""}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {isLoadingCategories ? (
+                                  <div className="flex items-center justify-center p-2">
+                                    <span className="text-sm text-muted-foreground">Loading categories...</span>
+                                  </div>
+                                ) : categories.length > 0 ? (
+                                  <>
+                                    <SelectGroup>
+                                      {categories.map((category) => (
+                                        <div key={category.id} className="flex items-center justify-between group">
+                                          <SelectItem value={category.name}>{category.name}</SelectItem>
+                                          {!category.isDefault && (
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteCategoryMutation.mutate(category.id);
+                                              }}
+                                              disabled={isDeletingCategory}
+                                            >
+                                              <Trash className="h-3 w-3" />
+                                            </Button>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </SelectGroup>
+                                    <SelectSeparator />
+                                  </>
+                                ) : (
+                                  <div className="flex items-center justify-center p-2">
+                                    <span className="text-sm text-muted-foreground">No categories found</span>
+                                  </div>
+                                )}
+                                <SelectItem value="add-new" className="text-primary flex items-center gap-1">
+                                  <PlusCircle className="h-4 w-4" />
+                                  <span>Add New Category</span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
