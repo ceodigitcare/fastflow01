@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/tabs";
 
 interface ProductPanelProps {
-  product?: Product | null;
+  product: Product | null;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
