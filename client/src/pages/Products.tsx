@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
 import ProductCard from "@/components/products/ProductCard";
-import ProductForm from "@/components/products/ProductForm";
+import ProductPanel from "@/components/products/ProductPanel";
 import { Product } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -16,15 +16,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -40,7 +31,7 @@ export default function Products() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [filterValue, setFilterValue] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -83,7 +74,7 @@ export default function Products() {
         description: "Your product has been added successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      setDialogOpen(false);
+      setPanelOpen(false);
     },
     onError: (error) => {
       toast({
@@ -127,7 +118,7 @@ export default function Products() {
         description: "Your product has been updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      setDialogOpen(false);
+      setPanelOpen(false);
       setEditingProduct(null);
     },
     onError: (error) => {
