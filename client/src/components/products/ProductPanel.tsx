@@ -403,10 +403,9 @@ export default function ProductPanel({
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <Form {...form}>
           <form id="product-form" onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
-            {/* Tabs Navigation - Sticky below header */}
-            <div className="sticky top-[57px] z-20 bg-background">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="px-4 pt-2 bg-muted/20 border-b w-full">
+            <div className="sticky top-[57px] z-20 bg-background border-b">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="px-4 pt-2 w-full">
                   <TabsTrigger value="general" className="flex items-center gap-1">
                     <FileText className="h-4 w-4" />
                     <span>General</span>
@@ -427,262 +426,218 @@ export default function ProductPanel({
               </Tabs>
             </div>
             
-            {/* Scrollable Tab Content */}
             <div className="flex-1 overflow-y-auto pb-[70px]">
-              {/* General Tab Content */}
-              <TabsContent value="general" className="mt-0 p-4 space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Product Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter product name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Enter product description" 
-                          className="resize-none min-h-[120px]" 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <div className="space-y-2">
-                        {showNewCategoryInput ? (
-                          <div className="flex items-end gap-2">
-                            <div className="flex-1">
-                              <Input
-                                placeholder="Enter new category name"
-                                value={newCategoryName}
-                                onChange={(e) => setNewCategoryName(e.target.value)}
-                                className={categoryError ? "border-destructive" : ""}
-                              />
-                              {categoryError && (
-                                <p className="text-xs text-destructive mt-1">{categoryError}</p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setShowNewCategoryInput(false);
-                                  setNewCategoryName("");
-                                  setCategoryError("");
-                                }}
-                                disabled={isAddingCategory}
-                              >
-                                Cancel
-                              </Button>
-                              <Button 
-                                type="button"
-                                size="sm"
-                                onClick={() => {
-                                  if (newCategoryName.trim()) {
-                                    addCategoryMutation.mutate(newCategoryName.trim());
-                                  } else {
-                                    setCategoryError("Category name is required");
-                                  }
-                                }}
-                                disabled={isAddingCategory}
-                              >
-                                {isAddingCategory ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Adding...
-                                  </>
-                                ) : "Add"}
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <Select
-                            value={field.value}
-                            onValueChange={(value) => {
-                              if (value === "add-new") {
-                                setShowNewCategoryInput(true);
-                              } else {
-                                field.onChange(value);
-                              }
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.length > 0 ? (
-                                categories.map((category) => (
-                                  <SelectItem 
-                                    key={category.id} 
-                                    value={category.id.toString()}
-                                  >
-                                    <div className="flex items-center justify-between w-full">
-                                      <span>{category.name}</span>
-                                      {!category.isDefault && (
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-6 w-6 ml-2"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (confirm(`Are you sure you want to delete the "${category.name}" category? All products in this category will be moved to the "Other" category.`)) {
-                                              deleteCategoryMutation.mutate(category.id);
-                                            }
-                                          }}
-                                          disabled={isDeletingCategory}
-                                        >
-                                          <Trash className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <div className="flex items-center justify-center p-2">
-                                  <span className="text-sm text-muted-foreground">No categories found</span>
-                                </div>
-                              )}
-                              <SelectItem value="add-new">
-                                <div className="flex items-center text-primary gap-1">
-                                  <PlusCircle className="h-4 w-4" />
-                                  <span>Add New Category</span>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* SEO Tags Field with Chip/Label Design */}
-                <FormField
-                  control={form.control}
-                  name="tags"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SEO Tags</FormLabel>
-                      <FormDescription>
-                        Add keywords to help customers find your product 
-                        (press Enter, comma, or space to add)
-                      </FormDescription>
-                      
-                      <div className="space-y-2">
-                        <FormControl>
-                          <Input
-                            placeholder="e.g., modern, eco-friendly, bestseller"
-                            value={inputTagValue}
-                            onChange={(e) => setInputTagValue(e.target.value)}
-                            onKeyDown={handleTagKeyDown}
-                            onBlur={() => {
-                              if (inputTagValue) handleAddTag(inputTagValue);
-                            }}
-                          />
-                        </FormControl>
-                        
-                        {field.value && field.value.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {field.value.map((tag, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-full text-sm"
-                              >
-                                <span>{tag}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveTag(tag)}
-                                  className="text-secondary-foreground/70 hover:text-secondary-foreground rounded-full w-4 h-4 inline-flex items-center justify-center"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-              
-              {/* Pricing Tab Content */}
-              <TabsContent value="pricing" className="mt-0 p-4 space-y-4">
-                <FormField
-                  control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Price ($)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="0.01" 
-                          placeholder="0.00" 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="isOnSale"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>On Sale</FormLabel>
-                        <FormDescription>
-                          Mark this product as being on sale
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                
-                {form.watch("isOnSale") && (
+              <Tabs value={activeTab}>
+                <TabsContent value="general" className="mt-0 p-4 space-y-4">
                   <FormField
                     control={form.control}
-                    name="salePrice"
+                    name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Sale Price ($)</FormLabel>
+                        <FormLabel>Product Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter product name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter product description" 
+                            className="resize-none min-h-[120px]" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <div className="space-y-2">
+                          {showNewCategoryInput ? (
+                            <div className="flex items-end gap-2">
+                              <div className="flex-1">
+                                <Input
+                                  placeholder="Enter new category name"
+                                  value={newCategoryName}
+                                  onChange={(e) => setNewCategoryName(e.target.value)}
+                                  className={categoryError ? "border-destructive" : ""}
+                                />
+                                {categoryError && (
+                                  <p className="text-xs text-destructive mt-1">{categoryError}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setShowNewCategoryInput(false);
+                                    setNewCategoryName("");
+                                    setCategoryError("");
+                                  }}
+                                  disabled={isAddingCategory}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (newCategoryName.trim()) {
+                                      addCategoryMutation.mutate(newCategoryName.trim());
+                                    } else {
+                                      setCategoryError("Category name is required");
+                                    }
+                                  }}
+                                  disabled={isAddingCategory}
+                                >
+                                  {isAddingCategory ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Adding...
+                                    </>
+                                  ) : "Add"}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Select
+                              value={field.value}
+                              onValueChange={(value) => {
+                                if (value === "add-new") {
+                                  setShowNewCategoryInput(true);
+                                } else {
+                                  field.onChange(value);
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.length > 0 ? (
+                                  categories.map((category) => (
+                                    <SelectItem 
+                                      key={category.id} 
+                                      value={category.id.toString()}
+                                    >
+                                      <div className="flex items-center justify-between w-full">
+                                        <span>{category.name}</span>
+                                        {!category.isDefault && (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 ml-2"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (confirm(`Are you sure you want to delete the "${category.name}" category? All products in this category will be moved to the "Other" category.`)) {
+                                                deleteCategoryMutation.mutate(category.id);
+                                              }
+                                            }}
+                                            disabled={isDeletingCategory}
+                                          >
+                                            <Trash className="h-4 w-4 text-destructive" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <div className="flex items-center justify-center p-2">
+                                    <span className="text-sm text-muted-foreground">No categories found</span>
+                                  </div>
+                                )}
+                                <SelectItem value="add-new">
+                                  <div className="flex items-center text-primary gap-1">
+                                    <PlusCircle className="h-4 w-4" />
+                                    <span>Add New Category</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {/* SEO Tags Field with Chip/Label Design */}
+                  <FormField
+                    control={form.control}
+                    name="tags"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SEO Tags</FormLabel>
+                        <FormDescription>
+                          Add keywords to help customers find your product 
+                          (press Enter, comma, or space to add)
+                        </FormDescription>
+                        
+                        <div className="space-y-2">
+                          <FormControl>
+                            <Input
+                              placeholder="e.g., modern, eco-friendly, bestseller"
+                              value={inputTagValue}
+                              onChange={(e) => setInputTagValue(e.target.value)}
+                              onKeyDown={handleTagKeyDown}
+                              onBlur={() => {
+                                if (inputTagValue) handleAddTag(inputTagValue);
+                              }}
+                            />
+                          </FormControl>
+                          
+                          {field.value && field.value.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {field.value.map((tag, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-full text-sm"
+                                >
+                                  <span>{tag}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveTag(tag)}
+                                    className="text-secondary-foreground/70 hover:text-secondary-foreground rounded-full w-4 h-4 inline-flex items-center justify-center"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="pricing" className="mt-0 p-4 space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Price ($)</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
@@ -690,277 +645,318 @@ export default function ProductPanel({
                             step="0.01" 
                             placeholder="0.00" 
                             {...field} 
-                            value={field.value === undefined ? "" : field.value}
-                            onChange={(e) => {
-                              const value = e.target.value === "" ? undefined : parseFloat(e.target.value);
-                              field.onChange(value);
-                            }}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                )}
-                
-                <FormField
-                  control={form.control}
-                  name="sku"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
-                      <FormDescription>
-                        Optional unique identifier for this product
-                      </FormDescription>
-                      <FormControl>
-                        <Input placeholder="e.g., PROD-001" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-              
-              {/* Inventory Tab Content */}
-              <TabsContent value="inventory" className="mt-0 p-4 space-y-4">
-                <FormField
-                  control={form.control}
-                  name="inStock"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>In Stock</FormLabel>
-                        <FormDescription>
-                          Is this product currently available for purchase?
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="inventory"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Inventory Quantity</FormLabel>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleAdjustInventory(-1)}
-                          disabled={field.value <= 0}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
+                  
+                  <FormField
+                    control={form.control}
+                    name="isOnSale"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>On Sale</FormLabel>
+                          <FormDescription>
+                            Mark this product as being on sale
+                          </FormDescription>
+                        </div>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            min="0" 
-                            step="1"
-                            {...field}
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
                           />
                         </FormControl>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleAdjustInventory(1)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="hasVariants"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>Has Variants</FormLabel>
-                        <FormDescription>
-                          Does this product come in different variations? (e.g., sizes, colors)
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                
-                {form.watch("hasVariants") && (
-                  <div className="space-y-2">
-                    <Alert className="bg-muted">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Variant management will be available after saving the product.
-                      </AlertDescription>
-                    </Alert>
-                  </div>
-                )}
-                
-                <FormField
-                  control={form.control}
-                  name="isFeatured"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>Featured Product</FormLabel>
-                        <FormDescription>
-                          Featured products will be highlighted in your store
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-              
-              {/* Images Tab Content */}
-              <TabsContent value="images" className="mt-0 p-4 space-y-4">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Main Product Image</h3>
-                    <div 
-                      className={cn(
-                        "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
-                        dragActive ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50",
-                        uploadedImage ? "p-2" : "py-8"
-                      )}
-                      onDragEnter={handleDrag}
-                      onDragLeave={handleDrag}
-                      onDragOver={handleDrag}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        onChange={handleFileChange}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                      
-                      {uploadedImage ? (
-                        <div className="relative group">
-                          <img 
-                            src={uploadedImage} 
-                            alt="Product preview" 
-                            className="max-h-[200px] mx-auto rounded-md object-contain" 
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-md">
-                            <Button 
-                              type="button" 
-                              variant="secondary" 
-                              size="sm" 
-                              className="text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setUploadedImage(null);
-                                form.setValue("imageUrl", "");
-                              }}
-                            >
-                              <Trash className="h-4 w-4 mr-1" />
-                              Remove
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-2">
-                          <Upload className="h-8 w-8 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">
-                            Drag & drop your product image here, or click to browse
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Recommended: 800 x 800px, PNG or JPG
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                      </FormItem>
+                    )}
+                  />
                   
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Additional Images</h3>
+                  {form.watch("isOnSale") && (
+                    <FormField
+                      control={form.control}
+                      name="salePrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Sale Price ($)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              step="0.01" 
+                              placeholder="0.00" 
+                              {...field} 
+                              value={field.value === undefined ? "" : field.value}
+                              onChange={(e) => {
+                                const value = e.target.value === "" ? undefined : parseFloat(e.target.value);
+                                field.onChange(value);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
+                  <FormField
+                    control={form.control}
+                    name="sku"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
+                        <FormDescription>
+                          Optional unique identifier for this product
+                        </FormDescription>
+                        <FormControl>
+                          <Input placeholder="e.g., PROD-001" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="inventory" className="mt-0 p-4 space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="inStock"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>In Stock</FormLabel>
+                          <FormDescription>
+                            Is this product currently available for purchase?
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="inventory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Inventory Quantity</FormLabel>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleAdjustInventory(-1)}
+                            disabled={field.value <= 0}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              step="1"
+                              {...field}
+                            />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleAdjustInventory(1)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="hasVariants"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>Has Variants</FormLabel>
+                          <FormDescription>
+                            Does this product come in different variations? (e.g., sizes, colors)
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {form.watch("hasVariants") && (
                     <div className="space-y-2">
+                      <Alert className="bg-muted">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          Variant management will be available after saving the product.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  )}
+                  
+                  <FormField
+                    control={form.control}
+                    name="isFeatured"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>Featured Product</FormLabel>
+                          <FormDescription>
+                            Featured products will be highlighted in your store
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="images" className="mt-0 p-4 space-y-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Main Product Image</h3>
                       <div 
                         className={cn(
                           "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
-                          "border-border hover:bg-muted/50 py-4"
+                          dragActive ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50",
+                          uploadedImage ? "p-2" : "py-8"
                         )}
-                        onClick={() => additionalFileInputRef.current?.click()}
-                        onDragEnter={handleAdditionalImageDrop}
-                        onDragLeave={handleAdditionalImageDrop}
-                        onDragOver={handleAdditionalImageDrop}
-                        onDrop={handleAdditionalImageDrop}
+                        onDragEnter={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDragOver={handleDrag}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
                       >
                         <input
-                          ref={additionalFileInputRef}
+                          ref={fileInputRef}
                           type="file"
-                          onChange={handleAdditionalImageChange}
+                          onChange={handleFileChange}
                           accept="image/*"
                           className="hidden"
                         />
                         
-                        <div className="flex flex-col items-center gap-1">
-                          <Upload className="h-6 w-6 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">
-                            Add more product images
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {additionalImages.length > 0 && (
-                        <div className="grid grid-cols-3 gap-2 mt-2">
-                          {additionalImages.map((img, index) => (
-                            <div key={index} className="relative group rounded-md overflow-hidden">
-                              <img 
-                                src={img} 
-                                alt={`Product image ${index + 1}`} 
-                                className="w-full h-24 object-cover" 
-                              />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                <Button 
-                                  type="button" 
-                                  variant="destructive" 
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => handleRemoveAdditionalImage(index)}
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </div>
+                        {uploadedImage ? (
+                          <div className="relative group">
+                            <img 
+                              src={uploadedImage} 
+                              alt="Product preview" 
+                              className="max-h-[200px] mx-auto rounded-md object-contain" 
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-md">
+                              <Button 
+                                type="button" 
+                                variant="secondary" 
+                                size="sm" 
+                                className="text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setUploadedImage(null);
+                                  form.setValue("imageUrl", "");
+                                }}
+                              >
+                                <Trash className="h-4 w-4 mr-1" />
+                                Remove
+                              </Button>
                             </div>
-                          ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2">
+                            <Upload className="h-8 w-8 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">
+                              Drag & drop your product image here, or click to browse
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Recommended: 800 x 800px, PNG or JPG
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Additional Images</h3>
+                      <div className="space-y-2">
+                        <div 
+                          className={cn(
+                            "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
+                            "border-border hover:bg-muted/50 py-4"
+                          )}
+                          onClick={() => additionalFileInputRef.current?.click()}
+                          onDragEnter={handleAdditionalImageDrop}
+                          onDragLeave={handleAdditionalImageDrop}
+                          onDragOver={handleAdditionalImageDrop}
+                          onDrop={handleAdditionalImageDrop}
+                        >
+                          <input
+                            ref={additionalFileInputRef}
+                            type="file"
+                            onChange={handleAdditionalImageChange}
+                            accept="image/*"
+                            className="hidden"
+                          />
+                          
+                          <div className="flex flex-col items-center gap-1">
+                            <Upload className="h-6 w-6 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">
+                              Add more product images
+                            </p>
+                          </div>
                         </div>
-                      )}
-                      
-                      <p className="text-xs text-muted-foreground text-center mt-2">
-                        You can add up to 5 additional product images
-                      </p>
+                        
+                        {additionalImages.length > 0 && (
+                          <div className="grid grid-cols-3 gap-2 mt-2">
+                            {additionalImages.map((img, index) => (
+                              <div key={index} className="relative group rounded-md overflow-hidden">
+                                <img 
+                                  src={img} 
+                                  alt={`Product image ${index + 1}`} 
+                                  className="w-full h-24 object-cover" 
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                  <Button 
+                                    type="button" 
+                                    variant="destructive" 
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => handleRemoveAdditionalImage(index)}
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        <p className="text-xs text-muted-foreground text-center mt-2">
+                          You can add up to 5 additional product images
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
+                </TabsContent>
+              </Tabs>
             </div>
             
             {/* Action Buttons - Fixed at bottom */}
