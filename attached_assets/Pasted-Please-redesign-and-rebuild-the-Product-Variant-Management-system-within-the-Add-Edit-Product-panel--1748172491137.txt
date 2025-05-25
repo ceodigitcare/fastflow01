@@ -1,0 +1,59 @@
+Please redesign and rebuild the Product Variant Management system within the Add/Edit Product panel, ensuring full functionality, minimal space usage, and intuitive user experience.
+
+🧱 System Overview
+The current "Add Variant" button does not respond or open any input fields. We need to rebuild the entire variant management module with full functionality and a clean, space-conscious design suitable for a tabbed modal layout.
+
+✅ Functional Requirements
+Add Variant Group
+
+Allow user to create variant types (e.g., Size, Color).
+
+Variant group name input (e.g., “Size”).
+
+Multiple values can be added for a group (e.g., Small, Medium, Large).
+
+Support multiple groups (e.g., Size + Color = 9 combinations total if 3 each).
+
+Auto-Generate Variant Combinations
+
+Once values are entered, auto-generate all possible variant combinations in a scrollable table.
+
+Each row = one combination (e.g., Medium + Blue).
+
+Editable Fields per Variant
+For each combination row, allow user to enter:
+
+SKU
+
+Price (optional override)
+
+Stock Quantity
+
+(Optional) Barcode or custom field
+
+Delete Variant Group or Values
+
+User can delete entire variant group or individual variant values.
+
+Changing groups should re-calculate combinations dynamically.
+
+💡 UX/UI Guidelines
+Use accordion or collapsible group sections if needed to minimize space.
+
+Display the variant table inside a scrollable container with fixed height (~250–300px max).
+
+Make “Add Variant” clearly visible and styled as a primary button.
+
+Display a short helper text:
+“Add variant types like Size or Color to offer different versions of this product.”
+
+⚠️ Validation Rules
+Do not allow creation of a variant group with empty values.
+
+Show inline warnings if SKU is duplicated across combinations.
+
+Ensure at least one variant must be filled if a group is added.
+
+Once implemented, this will allow fully dynamic, scalable variant handling within limited modal/tab space while maintaining user clarity and ease of use.
+
+Let me know if you want a wireframe sketch of the proposed UI layout as well.

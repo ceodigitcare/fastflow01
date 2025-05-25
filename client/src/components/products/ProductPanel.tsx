@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, PackageCheck, DollarSign, ImageIcon, FileText, Plus, Minus, Upload, Trash, PlusCircle, AlertCircle, Loader2 } from "lucide-react";
+import { X, PackageCheck, DollarSign, ImageIcon, FileText, Plus, Minus, Upload, Trash, PlusCircle, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { Product, ProductCategory } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,12 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Form,
   FormControl,
@@ -84,6 +90,29 @@ export default function ProductPanel({
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
   const [inputTagValue, setInputTagValue] = useState("");
+  
+  // Variant management state
+  interface VariantGroup {
+    name: string;
+    values: string[];
+  }
+  
+  interface VariantOption {
+    group: string;
+    value: string;
+  }
+  
+  interface VariantCombination {
+    options: VariantOption[];
+    sku: string;
+    price?: number;
+    inventory: number;
+  }
+  
+  const [variantGroups, setVariantGroups] = useState<VariantGroup[]>([]);
+  const [newVariantValues, setNewVariantValues] = useState<string[]>([]);
+  const [variantCombinations, setVariantCombinations] = useState<VariantCombination[]>([]);
+  const [skuDuplicates, setSkuDuplicates] = useState<string[]>([]);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -212,6 +241,14 @@ export default function ProductPanel({
       } else {
         setAdditionalImages([]);
       }
+      
+      // Reset variant management state
+      // In a real implementation, we would fetch variant data from the database
+      setVariantGroups([]);
+      setNewVariantValues([]);
+      setVariantCombinations([]);
+      setSkuDuplicates([]);
+      
     } else {
       // Reset form and images for a new product
       form.reset({
@@ -231,6 +268,12 @@ export default function ProductPanel({
       });
       setUploadedImage(null);
       setAdditionalImages([]);
+      
+      // Reset variant management state for new products
+      setVariantGroups([]);
+      setNewVariantValues([]);
+      setVariantCombinations([]);
+      setSkuDuplicates([]);
     }
   }, [product, form]);
 
@@ -240,6 +283,19 @@ export default function ProductPanel({
       setActiveTab("general");
     }
   }, [isOpen, product]);
+  
+  // Watch for hasVariants changes to determine if we should show the variant UI
+  useEffect(() => {
+    const hasVariantsValue = form.watch("hasVariants");
+    
+    // When turning off variants, reset the variant state
+    if (!hasVariantsValue) {
+      setVariantGroups([]);
+      setNewVariantValues([]);
+      setVariantCombinations([]);
+      setSkuDuplicates([]);
+    }
+  }, [form.watch("hasVariants")]);
 
   // File upload handlers
   const [dragActive, setDragActive] = useState(false);
@@ -332,6 +388,215 @@ export default function ProductPanel({
     const currentInventory = form.getValues("inventory") || 0;
     const newInventory = Math.max(0, currentInventory + amount); // Never go below 0
     form.setValue("inventory", newInventory);
+  };
+  
+  // Variant management functions
+  const hasValidVariantGroups = variantGroups.length > 0 && 
+    variantGroups.every(group => group.name.trim() && group.values.length > 0);
+  
+  // Add a new variant group (e.g., Size, Color)
+  const handleAddVariantGroup = () => {
+    // Limit to 3 variant types
+    if (variantGroups.length >= 3) return;
+    
+    const newGroup: VariantGroup = {
+      name: "",
+      values: []
+    };
+    
+    setVariantGroups([...variantGroups, newGroup]);
+    setNewVariantValues([...newVariantValues, ""]);
+  };
+  
+  // Update variant group name
+  const handleVariantGroupNameChange = (groupIndex: number, name: string) => {
+    const updatedGroups = [...variantGroups];
+    updatedGroups[groupIndex].name = name;
+    setVariantGroups(updatedGroups);
+    
+    // Update existing combinations if they exist
+    if (variantCombinations.length > 0) {
+      const updatedCombinations = variantCombinations.map(combo => {
+        const updatedOptions = combo.options.map(option => {
+          if (option.group === variantGroups[groupIndex].name) {
+            return { ...option, group: name };
+          }
+          return option;
+        });
+        return { ...combo, options: updatedOptions };
+      });
+      setVariantCombinations(updatedCombinations);
+    }
+  };
+  
+  // Remove a variant group
+  const handleRemoveVariantGroup = (groupIndex: number) => {
+    const updatedGroups = variantGroups.filter((_, index) => index !== groupIndex);
+    setVariantGroups(updatedGroups);
+    
+    // Reset combinations when a group is removed
+    if (updatedGroups.length === 0) {
+      setVariantCombinations([]);
+    } else {
+      // We could recalculate, but safer to just clear and let user regenerate
+      setVariantCombinations([]);
+    }
+  };
+  
+  // Add a value to a variant group (e.g., add "Medium" to "Size")
+  const handleAddVariantValue = (groupIndex: number, value: string) => {
+    // Don't add empty or duplicate values
+    if (!value.trim() || variantGroups[groupIndex].values.includes(value.trim())) {
+      return;
+    }
+    
+    const updatedGroups = [...variantGroups];
+    updatedGroups[groupIndex].values.push(value.trim());
+    setVariantGroups(updatedGroups);
+    
+    // Reset combinations when values change
+    setVariantCombinations([]);
+  };
+  
+  // Remove a value from a variant group
+  const handleRemoveVariantValue = (groupIndex: number, valueIndex: number) => {
+    const updatedGroups = [...variantGroups];
+    updatedGroups[groupIndex].values.splice(valueIndex, 1);
+    setVariantGroups(updatedGroups);
+    
+    // Reset combinations when values change
+    setVariantCombinations([]);
+  };
+  
+  // Generate all possible variant combinations
+  const generateVariantCombinations = () => {
+    if (!hasValidVariantGroups) return;
+    
+    // Helper function to generate all combinations recursively
+    const generateCombos = (
+      groups: VariantGroup[],
+      currentIndex: number,
+      currentCombo: VariantOption[] = []
+    ): VariantOption[][] => {
+      // Base case: we've processed all groups
+      if (currentIndex >= groups.length) {
+        return [currentCombo];
+      }
+      
+      const currentGroup = groups[currentIndex];
+      const results: VariantOption[][] = [];
+      
+      // For each value in the current group, create a new branch of combinations
+      for (const value of currentGroup.values) {
+        const newCombo = [
+          ...currentCombo,
+          { group: currentGroup.name, value }
+        ];
+        
+        // Recursive call to process the next group with our current selection
+        const combosWithThisValue = generateCombos(
+          groups,
+          currentIndex + 1,
+          newCombo
+        );
+        
+        results.push(...combosWithThisValue);
+      }
+      
+      return results;
+    };
+    
+    // Generate all option combinations
+    const allOptionCombinations = generateCombos(variantGroups, 0);
+    
+    // Create variant combinations with default values
+    const basePrice = form.getValues("price") || 0;
+    const newCombinations = allOptionCombinations.map(options => {
+      // Check if this combination already exists
+      const existingCombo = variantCombinations.find(combo => 
+        JSON.stringify(combo.options.map(o => ({ group: o.group, value: o.value }))) === 
+        JSON.stringify(options.map(o => ({ group: o.group, value: o.value })))
+      );
+      
+      // If it exists, keep its values, otherwise create a new one
+      if (existingCombo) {
+        return existingCombo;
+      }
+      
+      return {
+        options,
+        sku: "",
+        price: undefined, // undefined means use the base product price
+        inventory: 0
+      };
+    });
+    
+    setVariantCombinations(newCombinations);
+    
+    // Check for duplicate SKUs
+    checkForDuplicateSKUs(newCombinations);
+  };
+  
+  // Helper function to check for duplicate SKUs
+  const checkForDuplicateSKUs = (combinations: VariantCombination[]) => {
+    const skus = combinations
+      .map(combo => combo.sku)
+      .filter(sku => sku && sku.trim() !== "");
+      
+    const duplicates = skus.filter((sku, index, self) => 
+      sku && self.indexOf(sku) !== index
+    );
+    
+    setSkuDuplicates(duplicates);
+  };
+  
+  // Update a variant's SKU
+  const handleVariantSkuChange = (index: number, sku: string) => {
+    const updatedCombinations = [...variantCombinations];
+    updatedCombinations[index].sku = sku;
+    setVariantCombinations(updatedCombinations);
+    
+    // Check for duplicates
+    checkForDuplicateSKUs(updatedCombinations);
+  };
+  
+  // Update a variant's price
+  const handleVariantPriceChange = (index: number, price: number | undefined) => {
+    const updatedCombinations = [...variantCombinations];
+    updatedCombinations[index].price = price;
+    setVariantCombinations(updatedCombinations);
+  };
+  
+  // Update a variant's inventory
+  const handleVariantInventoryChange = (index: number, inventory: number) => {
+    const updatedCombinations = [...variantCombinations];
+    updatedCombinations[index].inventory = inventory;
+    setVariantCombinations(updatedCombinations);
+  };
+  
+  // Remove a variant combination
+  const handleRemoveVariantCombination = (index: number) => {
+    const updatedCombinations = variantCombinations.filter((_, i) => i !== index);
+    setVariantCombinations(updatedCombinations);
+    
+    // Check for duplicates
+    checkForDuplicateSKUs(updatedCombinations);
+  };
+  
+  // Calculate total inventory across all variants
+  const getTotalVariantInventory = () => {
+    return variantCombinations.reduce((total, combo) => total + (combo.inventory || 0), 0);
+  };
+  
+  // Get the total number of variant combinations
+  const getVariantCombinationsCount = () => {
+    if (variantGroups.length === 0) return 0;
+    
+    // Calculate the total possible combinations (multiply the number of values in each group)
+    return variantGroups.reduce(
+      (total, group) => total * (group.values.length || 1), 
+      1
+    );
   };
 
   // Add a tag to the tags array
@@ -851,115 +1116,266 @@ export default function ProductPanel({
                   
                   {form.watch("hasVariants") && (
                     <div className="space-y-4 border rounded-lg p-4">
-                      <h3 className="text-sm font-medium flex items-center gap-2">
-                        <PackageCheck className="h-4 w-4" />
-                        Variant Management
-                      </h3>
-                      
-                      {/* Variant Types Section */}
-                      <div className="space-y-3 border-b pb-4">
-                        <h4 className="text-xs uppercase text-muted-foreground font-medium">Variant Types</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="border rounded-md p-2">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium">Size</span>
-                              <Button type="button" size="icon" variant="ghost" className="h-6 w-6">
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              <Badge variant="outline" className="text-xs">S</Badge>
-                              <Badge variant="outline" className="text-xs">M</Badge>
-                              <Badge variant="outline" className="text-xs">L</Badge>
-                              <Badge variant="outline" className="text-xs">XL</Badge>
-                              <Button type="button" variant="ghost" size="sm" className="h-5 rounded-sm">
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          <div className="border rounded-md p-2">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium">Color</span>
-                              <Button type="button" size="icon" variant="ghost" className="h-6 w-6">
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              <Badge variant="outline" className="text-xs">Red</Badge>
-                              <Badge variant="outline" className="text-xs">Blue</Badge>
-                              <Badge variant="outline" className="text-xs">Black</Badge>
-                              <Button type="button" variant="ghost" size="sm" className="h-5 rounded-sm">
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <Button type="button" variant="outline" size="sm" className="w-full mt-2">
-                          <PlusCircle className="h-4 w-4 mr-2" />
-                          Add Variant Type
-                        </Button>
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium flex items-center gap-2">
+                          <PackageCheck className="h-4 w-4" />
+                          Variant Management
+                        </h3>
+                        <Badge variant="outline" className="text-xs">
+                          {getVariantCombinationsCount()} Combinations
+                        </Badge>
                       </div>
                       
-                      {/* Variant Combinations */}
-                      <div className="space-y-3">
-                        <h4 className="text-xs uppercase text-muted-foreground font-medium">Variant Combinations</h4>
-                        <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-md p-2">
-                          {/* Variant row example */}
-                          <div className="grid grid-cols-[2fr,1fr,1fr,auto] gap-2 items-center border-b pb-2">
-                            <div>
-                              <div className="flex items-center gap-1">
-                                <Badge variant="secondary" className="text-xs">S</Badge>
-                                <Badge variant="secondary" className="text-xs">Red</Badge>
-                              </div>
-                              <Input placeholder="SKU (Optional)" className="mt-1 h-7 text-xs" />
+                      <div className="text-xs text-muted-foreground">
+                        Add variant types like Size or Color to offer different versions of this product.
+                      </div>
+                      
+                      {/* Collapsible Variant Types Section */}
+                      <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
+                        <AccordionItem value="item-1" className="border rounded-md">
+                          <AccordionTrigger className="px-3 py-2 text-sm hover:no-underline">
+                            <span className="flex items-center gap-2">
+                              <PlusCircle className="h-4 w-4" />
+                              Variant Types
+                              <Badge className="ml-2 text-xs">{variantGroups.length}</Badge>
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-3 pb-3 pt-0">
+                            <div className="space-y-3">
+                              {variantGroups.length > 0 ? (
+                                <div className="space-y-3">
+                                  {variantGroups.map((group, groupIndex) => (
+                                    <div key={groupIndex} className="border rounded-md p-3">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <Input 
+                                            value={group.name}
+                                            onChange={(e) => handleVariantGroupNameChange(groupIndex, e.target.value)}
+                                            className="h-7 text-sm w-[120px] font-medium"
+                                            placeholder="Type name..."
+                                          />
+                                          <Badge variant="secondary" className="text-xs">
+                                            {group.values.length} options
+                                          </Badge>
+                                        </div>
+                                        <Button 
+                                          type="button" 
+                                          size="icon" 
+                                          variant="ghost" 
+                                          className="h-6 w-6"
+                                          onClick={() => handleRemoveVariantGroup(groupIndex)}
+                                        >
+                                          <Trash className="h-3.5 w-3.5 text-destructive" />
+                                        </Button>
+                                      </div>
+                                      <div className="space-y-2">
+                                        <div className="flex flex-wrap gap-1">
+                                          {group.values.map((value, valueIndex) => (
+                                            <div key={valueIndex} className="relative group">
+                                              <Badge variant="outline" className="text-xs pr-6">
+                                                {value}
+                                                <Button 
+                                                  type="button" 
+                                                  size="icon" 
+                                                  variant="ghost" 
+                                                  className="absolute right-0 top-0 h-full w-5 p-0 opacity-50 group-hover:opacity-100"
+                                                  onClick={() => handleRemoveVariantValue(groupIndex, valueIndex)}
+                                                >
+                                                  <X className="h-2.5 w-2.5" />
+                                                </Button>
+                                              </Badge>
+                                            </div>
+                                          ))}
+                                          <div className="inline-flex">
+                                            <Input
+                                              value={newVariantValues[groupIndex] || ''}
+                                              onChange={(e) => {
+                                                const updatedValues = [...newVariantValues];
+                                                updatedValues[groupIndex] = e.target.value;
+                                                setNewVariantValues(updatedValues);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && newVariantValues[groupIndex]?.trim()) {
+                                                  handleAddVariantValue(groupIndex, newVariantValues[groupIndex].trim());
+                                                  const updatedValues = [...newVariantValues];
+                                                  updatedValues[groupIndex] = '';
+                                                  setNewVariantValues(updatedValues);
+                                                }
+                                              }}
+                                              className="h-6 text-xs w-24 min-w-0"
+                                              placeholder="Add value..."
+                                            />
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="ghost"
+                                              className="h-6 px-1"
+                                              onClick={() => {
+                                                if (newVariantValues[groupIndex]?.trim()) {
+                                                  handleAddVariantValue(groupIndex, newVariantValues[groupIndex].trim());
+                                                  const updatedValues = [...newVariantValues];
+                                                  updatedValues[groupIndex] = '';
+                                                  setNewVariantValues(updatedValues);
+                                                }
+                                              }}
+                                            >
+                                              <Plus className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                        </div>
+                                        {group.values.length === 0 && (
+                                          <p className="text-xs text-destructive">
+                                            Add at least one value
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                  
+                                  {variantGroups.length < 3 && (
+                                    <Button 
+                                      type="button" 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="w-full"
+                                      onClick={handleAddVariantGroup}
+                                    >
+                                      <PlusCircle className="h-4 w-4 mr-2" />
+                                      Add Another Variant Type
+                                    </Button>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center py-4 space-y-3">
+                                  <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    onClick={handleAddVariantGroup}
+                                  >
+                                    <PlusCircle className="h-4 w-4 mr-2" />
+                                    Add Variant Type
+                                  </Button>
+                                  <p className="text-xs text-muted-foreground text-center max-w-[240px]">
+                                    Example: Size (S, M, L) or Color (Red, Blue, Black)
+                                  </p>
+                                </div>
+                              )}
                             </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground">Price</span>
-                              <Input type="number" defaultValue="19.99" className="h-7 text-xs" />
-                            </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground">Inventory</span>
-                              <Input type="number" defaultValue="10" className="h-7 text-xs" />
-                            </div>
-                            <Button type="button" variant="ghost" size="sm" className="h-7 w-7 self-end">
-                              <Trash className="h-3.5 w-3.5 text-destructive" />
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                      
+                      {/* Variant Combinations Section */}
+                      {hasValidVariantGroups && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium">Variant Combinations</h4>
+                            <Button 
+                              type="button" 
+                              size="sm" 
+                              variant="outline"
+                              onClick={generateVariantCombinations}
+                              className="text-xs h-7"
+                              disabled={!hasValidVariantGroups}
+                            >
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                              Generate All
                             </Button>
                           </div>
                           
-                          {/* Another variant row */}
-                          <div className="grid grid-cols-[2fr,1fr,1fr,auto] gap-2 items-center border-b pb-2">
-                            <div>
-                              <div className="flex items-center gap-1">
-                                <Badge variant="secondary" className="text-xs">M</Badge>
-                                <Badge variant="secondary" className="text-xs">Blue</Badge>
-                              </div>
-                              <Input placeholder="SKU (Optional)" className="mt-1 h-7 text-xs" />
+                          <div className="border rounded-md">
+                            <div className="grid grid-cols-[2fr,1fr,1fr,auto] gap-2 p-2 bg-muted/30 border-b text-xs font-medium">
+                              <div>Variant</div>
+                              <div>Price ($)</div>
+                              <div>Stock</div>
+                              <div></div>
                             </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground">Price</span>
-                              <Input type="number" defaultValue="19.99" className="h-7 text-xs" />
+                            
+                            <div className="max-h-[250px] overflow-y-auto">
+                              {variantCombinations.length > 0 ? (
+                                variantCombinations.map((combo, index) => (
+                                  <div 
+                                    key={index} 
+                                    className={cn(
+                                      "grid grid-cols-[2fr,1fr,1fr,auto] gap-2 p-2 items-center border-b",
+                                      index % 2 === 0 ? "bg-muted/10" : ""
+                                    )}
+                                  >
+                                    <div>
+                                      <div className="flex flex-wrap items-center gap-1 mb-1">
+                                        {combo.options.map((option, i) => (
+                                          <Badge key={i} variant="secondary" className="text-xs">
+                                            {option.value}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                      <Input 
+                                        value={combo.sku || ''} 
+                                        onChange={(e) => handleVariantSkuChange(index, e.target.value)}
+                                        placeholder="SKU (Optional)" 
+                                        className="h-7 text-xs" 
+                                      />
+                                      {skuDuplicates.includes(combo.sku) && (
+                                        <p className="text-xs text-destructive mt-1">Duplicate SKU</p>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <Input 
+                                        type="number" 
+                                        min="0" 
+                                        step="0.01"
+                                        value={combo.price !== undefined ? combo.price : ''} 
+                                        onChange={(e) => handleVariantPriceChange(index, e.target.value ? parseFloat(e.target.value) : undefined)}
+                                        placeholder={`${form.watch("price")}`}
+                                        className="h-7 text-xs" 
+                                      />
+                                    </div>
+                                    <div>
+                                      <Input 
+                                        type="number" 
+                                        min="0" 
+                                        step="1"
+                                        value={combo.inventory} 
+                                        onChange={(e) => handleVariantInventoryChange(index, parseInt(e.target.value) || 0)}
+                                        className="h-7 text-xs" 
+                                      />
+                                    </div>
+                                    <Button 
+                                      type="button" 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-7 w-7"
+                                      onClick={() => handleRemoveVariantCombination(index)}
+                                    >
+                                      <Trash className="h-3.5 w-3.5 text-destructive" />
+                                    </Button>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="p-4 text-center text-sm text-muted-foreground">
+                                  {hasValidVariantGroups ? 
+                                    "Click 'Generate All' to create variant combinations" : 
+                                    "Add valid variant types to generate combinations"}
+                                </div>
+                              )}
                             </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground">Inventory</span>
-                              <Input type="number" defaultValue="15" className="h-7 text-xs" />
-                            </div>
-                            <Button type="button" variant="ghost" size="sm" className="h-7 w-7 self-end">
-                              <Trash className="h-3.5 w-3.5 text-destructive" />
-                            </Button>
                           </div>
+                          
+                          {variantCombinations.length > 0 && (
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <div>
+                                Total variants: <strong>{variantCombinations.length}</strong> | 
+                                Total inventory: <strong>{getTotalVariantInventory()}</strong>
+                              </div>
+                              {skuDuplicates.length > 0 && (
+                                <p className="text-destructive">
+                                  {skuDuplicates.length} duplicate SKUs found
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        
-                        <div className="flex justify-between">
-                          <p className="text-xs text-muted-foreground italic">
-                            Total variants: 8 | Total inventory: 98
-                          </p>
-                          <Button type="button" variant="outline" size="sm">
-                            Generate All Combinations
-                          </Button>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   )}
                   
