@@ -645,6 +645,35 @@ export default function ProductPanel({
       salePrice: values.salePrice ? Math.round(values.salePrice * 100) : undefined, // Convert dollars to cents
       additionalImages: additionalImages,
     };
+    
+    // Add variant data if hasVariants is enabled
+    if (values.hasVariants && hasValidVariantGroups) {
+      // Check if we have any duplicate SKUs before submitting
+      if (skuDuplicates.length > 0) {
+        toast({
+          title: "Duplicate SKUs detected",
+          description: "Please ensure all variant SKUs are unique before saving.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Add variant data to the submission
+      formattedValues.variants = {
+        groups: variantGroups,
+        combinations: variantCombinations.map(combo => ({
+          ...combo,
+          // Convert price from dollars to cents if defined
+          price: combo.price !== undefined ? Math.round(combo.price * 100) : undefined
+        }))
+      };
+      
+      // If we have variants, set the main inventory to the sum of variant inventories
+      if (variantCombinations.length > 0) {
+        formattedValues.inventory = getTotalVariantInventory();
+      }
+    }
+    
     onSubmit(formattedValues);
   };
 
