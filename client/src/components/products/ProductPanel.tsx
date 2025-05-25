@@ -405,7 +405,7 @@ export default function ProductPanel({
           <form id="product-form" onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
             <div className="sticky top-[57px] z-20 bg-background border-b">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="px-4 pt-2 w-full">
+                <TabsList className="px-4 pt-2 pb-1 w-full">
                   <TabsTrigger value="general" className="flex items-center gap-1">
                     <FileText className="h-4 w-4" />
                     <span>General</span>
@@ -424,6 +424,8 @@ export default function ProductPanel({
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
+              {/* Added padding below tabs */}
+              <div className="h-4"></div>
             </div>
             
             <div className="flex-1 overflow-y-auto pb-[70px]">
@@ -452,7 +454,7 @@ export default function ProductPanel({
                         <FormControl>
                           <Textarea 
                             placeholder="Enter product description" 
-                            className="resize-none min-h-[120px]" 
+                            className="resize-y min-h-[80px] max-h-[160px]" 
                             {...field} 
                           />
                         </FormControl>
@@ -467,10 +469,42 @@ export default function ProductPanel({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
-                        <div className="space-y-2">
-                          {showNewCategoryInput ? (
-                            <div className="flex items-end gap-2">
-                              <div className="flex-1">
+                        <div className="space-y-3">
+                          {/* Category selection dropdown - simplified to only show category names */}
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.length > 0 ? (
+                                categories.map((category) => (
+                                  <SelectItem 
+                                    key={category.id} 
+                                    value={category.id.toString()}
+                                  >
+                                    <span>{category.name}</span>
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <div className="flex items-center justify-center p-2">
+                                  <span className="text-sm text-muted-foreground">No categories found</span>
+                                </div>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          
+                          {/* Category Management Section */}
+                          <div className="rounded-md border border-border p-3 space-y-3">
+                            <h4 className="text-sm font-medium mb-2">Category Management</h4>
+                            
+                            {/* Add New Category Section */}
+                            {showNewCategoryInput ? (
+                              <div className="space-y-3">
                                 <Input
                                   placeholder="Enter new category name"
                                   value={newCategoryName}
@@ -480,99 +514,95 @@ export default function ProductPanel({
                                 {categoryError && (
                                   <p className="text-xs text-destructive mt-1">{categoryError}</p>
                                 )}
+                                <div className="flex items-center gap-2">
+                                  <Button 
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setShowNewCategoryInput(false);
+                                      setNewCategoryName("");
+                                      setCategoryError("");
+                                    }}
+                                    disabled={isAddingCategory}
+                                    className="flex-1"
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button 
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (newCategoryName.trim()) {
+                                        addCategoryMutation.mutate(newCategoryName.trim());
+                                      } else {
+                                        setCategoryError("Category name is required");
+                                      }
+                                    }}
+                                    disabled={isAddingCategory}
+                                    className="flex-1"
+                                  >
+                                    {isAddingCategory ? (
+                                      <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Adding...
+                                      </>
+                                    ) : "Add Category"}
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Button 
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setShowNewCategoryInput(false);
-                                    setNewCategoryName("");
-                                    setCategoryError("");
-                                  }}
-                                  disabled={isAddingCategory}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button 
-                                  type="button"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (newCategoryName.trim()) {
-                                      addCategoryMutation.mutate(newCategoryName.trim());
-                                    } else {
-                                      setCategoryError("Category name is required");
-                                    }
-                                  }}
-                                  disabled={isAddingCategory}
-                                >
-                                  {isAddingCategory ? (
-                                    <>
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      Adding...
-                                    </>
-                                  ) : "Add"}
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <Select
-                              value={field.value}
-                              onValueChange={(value) => {
-                                if (value === "add-new") {
-                                  setShowNewCategoryInput(true);
-                                } else {
-                                  field.onChange(value);
-                                }
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories.length > 0 ? (
-                                  categories.map((category) => (
-                                    <SelectItem 
-                                      key={category.id} 
-                                      value={category.id.toString()}
-                                    >
-                                      <div className="flex items-center justify-between w-full">
-                                        <span>{category.name}</span>
-                                        {!category.isDefault && (
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 ml-2"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (confirm(`Are you sure you want to delete the "${category.name}" category? All products in this category will be moved to the "Other" category.`)) {
-                                                deleteCategoryMutation.mutate(category.id);
-                                              }
-                                            }}
-                                            disabled={isDeletingCategory}
-                                          >
-                                            <Trash className="h-4 w-4 text-destructive" />
-                                          </Button>
-                                        )}
+                            ) : (
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                className="w-full flex items-center justify-center gap-1"
+                                onClick={() => setShowNewCategoryInput(true)}
+                              >
+                                <PlusCircle className="h-4 w-4" />
+                                <span>Add New Category</span>
+                              </Button>
+                            )}
+                            
+                            {/* Delete Category Section */}
+                            {categories.length > 1 && !showNewCategoryInput && (
+                              <div className="pt-2 border-t border-border">
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  Delete an existing category:
+                                </p>
+                                <div className="space-y-2 max-h-[120px] overflow-y-auto">
+                                  {categories
+                                    .filter(category => !category.isDefault)
+                                    .map(category => (
+                                      <div 
+                                        key={category.id}
+                                        className="flex items-center justify-between rounded-md border border-border p-2"
+                                      >
+                                        <span className="text-sm">{category.name}</span>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() => {
+                                            if (confirm(`Are you sure you want to delete the "${category.name}" category? All products in this category will be moved to the "Other" category.`)) {
+                                              deleteCategoryMutation.mutate(category.id);
+                                            }
+                                          }}
+                                          disabled={isDeletingCategory}
+                                        >
+                                          <Trash className="h-4 w-4 text-destructive" />
+                                        </Button>
                                       </div>
-                                    </SelectItem>
-                                  ))
-                                ) : (
-                                  <div className="flex items-center justify-center p-2">
-                                    <span className="text-sm text-muted-foreground">No categories found</span>
-                                  </div>
-                                )}
-                                <SelectItem value="add-new">
-                                  <div className="flex items-center text-primary gap-1">
-                                    <PlusCircle className="h-4 w-4" />
-                                    <span>Add New Category</span>
-                                  </div>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
+                                    ))
+                                  }
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-2 italic">
+                                  Note: "Other" category cannot be deleted. Products from deleted categories will be moved to "Other".
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <FormMessage />
                       </FormItem>
