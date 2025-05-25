@@ -345,16 +345,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if there are products using this category
       const productsWithCategory = await storage.getProductsByCategory(categoryId);
       
+      // If there are products using this category, reassign them to the default "Other" category
       if (productsWithCategory.length > 0) {
-        return res.status(400).json({ 
-          message: "Cannot delete category that has products. Please reassign products first."
-        });
+        // Find the default "Other" category
+        const categories = await storage.getProductCategoriesByBusiness(businessId);
+        const defaultCategory = categories.find(c => c.isDefault);
+        
+        if (!defaultCategory) {
+          return res.status(500).json({ 
+            message: "Default category not found. Cannot reassign products."
+          });
+        }
+        
+        // Reassign all products to the default category
+        for (const product of productsWithCategory) {
+          await storage.updateProduct(product.id, {
+            categoryId: defaultCategory.id,
+            category: defaultCategory.name
+          });
+        }
       }
       
       const result = await storage.deleteProductCategory(categoryId);
       
       if (result) {
-        res.status(200).json({ success: true });
+        if (productsWithCategory.length > 0) {
+          res.status(200).json({ 
+            success: true, 
+            message: `Category deleted and ${productsWithCategory.length} product(s) reassigned to 'Other' category`
+          });
+        } else {
+          res.status(200).json({ success: true });
+        }
       } else {
         res.status(500).json({ message: "Failed to delete category" });
       }
