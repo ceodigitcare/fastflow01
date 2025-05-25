@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import {
   Form,
   FormControl,
@@ -730,25 +731,26 @@ export default function ProductPanel({
                     />
                   )}
                   
-                  <FormField
-                    control={form.control}
-                    name="sku"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
-                        <FormDescription>
-                          Optional unique identifier for this product
-                        </FormDescription>
-                        <FormControl>
-                          <Input placeholder="e.g., PROD-001" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* SKU field has been moved to the Inventory tab */}
                 </TabsContent>
                 
                 <TabsContent value="inventory" className="mt-0 p-4 space-y-4">
+                  {/* Added space for better visual separation */}
+                  <div className="h-3"></div>
+                  
+                  {/* Live Available Inventory Display */}
+                  <div className="bg-muted/40 rounded-lg p-3 mb-1 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <PackageCheck className="h-5 w-5 text-primary" />
+                      <span className="font-medium">
+                        Available Inventory: {form.watch("inventory")}
+                      </span>
+                    </div>
+                    <Badge variant={form.watch("inStock") ? "default" : "destructive"}>
+                      {form.watch("inStock") ? "In Stock" : "Out of Stock"}
+                    </Badge>
+                  </div>
+                  
                   <FormField
                     control={form.control}
                     name="inStock"
@@ -766,6 +768,24 @@ export default function ProductPanel({
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {/* SKU field moved from Pricing tab */}
+                  <FormField
+                    control={form.control}
+                    name="sku"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
+                        <FormDescription>
+                          Optional unique identifier for this product
+                        </FormDescription>
+                        <FormControl>
+                          <Input placeholder="e.g., PROD-001" {...field} />
+                        </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -830,13 +850,116 @@ export default function ProductPanel({
                   />
                   
                   {form.watch("hasVariants") && (
-                    <div className="space-y-2">
-                      <Alert className="bg-muted">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>
-                          Variant management will be available after saving the product.
-                        </AlertDescription>
-                      </Alert>
+                    <div className="space-y-4 border rounded-lg p-4">
+                      <h3 className="text-sm font-medium flex items-center gap-2">
+                        <PackageCheck className="h-4 w-4" />
+                        Variant Management
+                      </h3>
+                      
+                      {/* Variant Types Section */}
+                      <div className="space-y-3 border-b pb-4">
+                        <h4 className="text-xs uppercase text-muted-foreground font-medium">Variant Types</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="border rounded-md p-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium">Size</span>
+                              <Button type="button" size="icon" variant="ghost" className="h-6 w-6">
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              <Badge variant="outline" className="text-xs">S</Badge>
+                              <Badge variant="outline" className="text-xs">M</Badge>
+                              <Badge variant="outline" className="text-xs">L</Badge>
+                              <Badge variant="outline" className="text-xs">XL</Badge>
+                              <Button type="button" variant="ghost" size="sm" className="h-5 rounded-sm">
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div className="border rounded-md p-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium">Color</span>
+                              <Button type="button" size="icon" variant="ghost" className="h-6 w-6">
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              <Badge variant="outline" className="text-xs">Red</Badge>
+                              <Badge variant="outline" className="text-xs">Blue</Badge>
+                              <Badge variant="outline" className="text-xs">Black</Badge>
+                              <Button type="button" variant="ghost" size="sm" className="h-5 rounded-sm">
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Button type="button" variant="outline" size="sm" className="w-full mt-2">
+                          <PlusCircle className="h-4 w-4 mr-2" />
+                          Add Variant Type
+                        </Button>
+                      </div>
+                      
+                      {/* Variant Combinations */}
+                      <div className="space-y-3">
+                        <h4 className="text-xs uppercase text-muted-foreground font-medium">Variant Combinations</h4>
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-md p-2">
+                          {/* Variant row example */}
+                          <div className="grid grid-cols-[2fr,1fr,1fr,auto] gap-2 items-center border-b pb-2">
+                            <div>
+                              <div className="flex items-center gap-1">
+                                <Badge variant="secondary" className="text-xs">S</Badge>
+                                <Badge variant="secondary" className="text-xs">Red</Badge>
+                              </div>
+                              <Input placeholder="SKU (Optional)" className="mt-1 h-7 text-xs" />
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground">Price</span>
+                              <Input type="number" defaultValue="19.99" className="h-7 text-xs" />
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground">Inventory</span>
+                              <Input type="number" defaultValue="10" className="h-7 text-xs" />
+                            </div>
+                            <Button type="button" variant="ghost" size="sm" className="h-7 w-7 self-end">
+                              <Trash className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </div>
+                          
+                          {/* Another variant row */}
+                          <div className="grid grid-cols-[2fr,1fr,1fr,auto] gap-2 items-center border-b pb-2">
+                            <div>
+                              <div className="flex items-center gap-1">
+                                <Badge variant="secondary" className="text-xs">M</Badge>
+                                <Badge variant="secondary" className="text-xs">Blue</Badge>
+                              </div>
+                              <Input placeholder="SKU (Optional)" className="mt-1 h-7 text-xs" />
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground">Price</span>
+                              <Input type="number" defaultValue="19.99" className="h-7 text-xs" />
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground">Inventory</span>
+                              <Input type="number" defaultValue="15" className="h-7 text-xs" />
+                            </div>
+                            <Button type="button" variant="ghost" size="sm" className="h-7 w-7 self-end">
+                              <Trash className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between">
+                          <p className="text-xs text-muted-foreground italic">
+                            Total variants: 8 | Total inventory: 98
+                          </p>
+                          <Button type="button" variant="outline" size="sm">
+                            Generate All Combinations
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   )}
                   
