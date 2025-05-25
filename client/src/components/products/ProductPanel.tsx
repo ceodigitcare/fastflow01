@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, PackageCheck, DollarSign, ImageIcon, FileText, Plus, Minus, Upload, Trash, PlusCircle } from "lucide-react";
-import { Product } from "@shared/schema";
+import { X, PackageCheck, DollarSign, ImageIcon, FileText, Plus, Minus, Upload, Trash, PlusCircle, AlertCircle } from "lucide-react";
+import { Product, ProductCategory } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -24,6 +28,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
 } from "@/components/ui/select";
 import {
   Tabs,
@@ -69,6 +76,64 @@ export default function ProductPanel({
   const [activeTab, setActiveTab] = useState("general");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categoryError, setCategoryError] = useState("");
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Fetch product categories
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery<ProductCategory[]>({
+    queryKey: ['/api/product-categories'],
+  });
+  
+  // Add new category mutation
+  const addCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest("POST", "/api/product-categories", { name });
+      return await res.json();
+    },
+    onSuccess: () => {
+      setNewCategoryName("");
+      setShowNewCategoryInput(false);
+      setCategoryError("");
+      queryClient.invalidateQueries({ queryKey: ['/api/product-categories'] });
+      toast({
+        title: "Category added",
+        description: "Product category has been added successfully",
+      });
+    },
+    onError: (error: Error) => {
+      setCategoryError(error.message);
+      toast({
+        title: "Failed to add category",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Delete category mutation
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (categoryId: number) => {
+      await apiRequest("DELETE", `/api/product-categories/${categoryId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/product-categories'] });
+      toast({
+        title: "Category deleted",
+        description: "Product category has been deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete category",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
 
   // Initialize form with product data if editing
   const form = useForm<ProductFormValues>({
