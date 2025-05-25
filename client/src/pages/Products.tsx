@@ -153,14 +153,15 @@ export default function Products() {
     }
   });
   
-  const handleOpenPanel = (product: Product | null = null) => {
-    setEditingProduct(product);
+  const handleOpenPanel = (product?: Product) => {
+    setEditingProduct(product || null);
     setPanelOpen(true);
   };
-  
+
   const handleClosePanel = () => {
-    setEditingProduct(null);
     setPanelOpen(false);
+    // Reset editing product after panel closes
+    setTimeout(() => setEditingProduct(null), 300);
   };
   
   const handleSubmit = (data: any) => {
@@ -441,25 +442,14 @@ export default function Products() {
         </Card>
       )}
       
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[90vw] md:max-w-[80vw] lg:max-w-[900px]">
-          <DialogHeader>
-            <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
-            <DialogDescription>
-              {editingProduct
-                ? "Update your product details below."
-                : "Fill in the details for your new product."}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <ProductForm
-            product={editingProduct}
-            onSubmit={handleSubmit}
-            onCancel={handleCloseDialog}
-            isSubmitting={addProductMutation.isPending || updateProductMutation.isPending}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Sliding panel for adding/editing products */}
+      <ProductPanel
+        product={editingProduct}
+        isOpen={panelOpen}
+        onClose={handleClosePanel}
+        onSubmit={handleSubmit}
+        isSubmitting={addProductMutation.isPending || updateProductMutation.isPending}
+      />
     </MainLayout>
   );
 }
