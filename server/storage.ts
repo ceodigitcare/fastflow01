@@ -1,6 +1,7 @@
 import {
   businesses, Business, InsertBusiness,
   products, Product, InsertProduct,
+  productCategories, ProductCategory, InsertProductCategory,
   templates, Template, InsertTemplate,
   websites, Website, InsertWebsite,
   orders, Order, InsertOrder,
@@ -28,6 +29,13 @@ export interface IStorage {
   createTransactionVersion(version: InsertTransactionVersion): Promise<TransactionVersion>;
   restoreTransactionVersion(transactionId: number, versionId: number, businessId: number, userId: number): Promise<Transaction | undefined>;
   updateVersionImportance(versionId: number, important: boolean): Promise<boolean>;
+  
+  // Product Category methods
+  getProductCategory(id: number): Promise<ProductCategory | undefined>;
+  getProductCategoriesByBusiness(businessId: number): Promise<ProductCategory[]>;
+  createProductCategory(category: InsertProductCategory): Promise<ProductCategory>;
+  deleteProductCategory(id: number): Promise<boolean>;
+  getProductsByCategory(categoryId: number): Promise<Product[]>;
   
   // Product methods
   getProduct(id: number): Promise<Product | undefined>;

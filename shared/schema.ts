@@ -20,6 +20,23 @@ export const insertBusinessSchema = createInsertSchema(businesses).omit({
   createdAt: true,
 });
 
+// Product categories
+export const productCategories = pgTable("product_categories", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull(),
+  name: text("name").notNull(),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertProductCategorySchema = createInsertSchema(productCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type InsertProductCategory = z.infer<typeof insertProductCategorySchema>;
+
 // E-commerce products
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
@@ -28,7 +45,8 @@ export const products = pgTable("products", {
   description: text("description").notNull(),
   price: integer("price").notNull(), // Price in cents
   sku: text("sku"),
-  category: text("category"),
+  category: text("category"), // Legacy category text field
+  categoryId: integer("category_id"), // Reference to product_categories
   imageUrl: text("image_url"),
   additionalImages: jsonb("additional_images").default([]),
   inventory: integer("inventory").default(0),

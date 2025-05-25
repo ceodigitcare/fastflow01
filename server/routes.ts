@@ -279,6 +279,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Product Category routes
+  app.get("/api/product-categories", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const categories = await storage.getProductCategoriesByBusiness(businessId);
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching product categories:", error);
+      res.status(500).json({ message: "Failed to fetch product categories" });
+    }
+  });
+
+  app.post("/api/product-categories", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const { name } = req.body;
+      
+      if (!name || typeof name !== 'string' || name.trim() === '') {
+        return res.status(400).json({ message: "Invalid category name" });
+      }
+      
+      // Check if category already exists
+      const existingCategories = await storage.getProductCategoriesByBusiness(businessId);
+      if (existingCategories.some(cat => cat.name.toLowerCase() === name.toLowerCase())) {
+        return res.status(400).json({ message: "Category already exists" });
+      }
+      
+      const newCategory = await storage.createProductCategory({
+        businessId,
+        name: name.trim(),
+        isDefault: false
+      });
+      
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error("Error creating product category:", error);
+      res.status(500).json({ message: "Failed to create product category" });
+    }
+  });
+
+  app.delete("/api/product-categories/:id", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const categoryId = parseInt(req.params.id);
+      
+      if (isNaN(categoryId)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+      
+      const category = await storage.getProductCategory(categoryId);
+      
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      if (category.businessId !== businessId) {
+        return res.status(403).json({ message: "Unauthorized access to this category" });
+      }
+      
+      if (category.isDefault) {
+        return res.status(403).json({ message: "Default categories cannot be deleted" });
+      }
+      
+      // Check if there are products using this category
+      const productsWithCategory = await storage.getProductsByCategory(categoryId);
+      
+      if (productsWithCategory.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete category that has products. Please reassign products first."
+        });
+      }
+      
+      const result = await storage.deleteProductCategory(categoryId);
+      
+      if (result) {
+        res.status(200).json({ success: true });
+      } else {
+        res.status(500).json({ message: "Failed to delete category" });
+      }
+    } catch (error) {
+      console.error("Error deleting product category:", error);
+      res.status(500).json({ message: "Failed to delete product category" });
+    }
+  });
+
   // Template routes
   app.get("/api/templates", async (req, res) => {
     const templates = await storage.getAllTemplates();
