@@ -350,7 +350,7 @@ export default function ProductPanel({
       )}
     >
       {/* Panel Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-background z-20">
         <h2 className="text-lg font-semibold">
           {product ? "Edit Product" : "Add New Product"}
         </h2>
@@ -359,12 +359,13 @@ export default function ProductPanel({
         </Button>
       </div>
 
-      {/* Tabbed Interface */}
+      {/* Form with scrollable content area */}
       <Form {...form}>
-        <form id="product-form" onSubmit={form.handleSubmit(handleSubmit)}>
-          <div className="flex-1 overflow-hidden flex flex-col">
+        <form id="product-form" onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
+          <div className="flex-1 flex flex-col overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-              <TabsList className="px-4 pt-2 bg-muted/20 border-b">
+              {/* Tabs navigation - Sticky */}
+              <TabsList className="px-4 pt-2 bg-muted/20 border-b sticky top-0 z-10">
                 <TabsTrigger value="general" className="flex items-center gap-1">
                   <FileText className="h-4 w-4" />
                   <span>General</span>
@@ -383,7 +384,8 @@ export default function ProductPanel({
                 </TabsTrigger>
               </TabsList>
               
-              <div className="flex-1 overflow-y-auto">
+              {/* Scrollable tab content */}
+              <div className="flex-1 overflow-y-auto pb-20">
                 {/* General Tab Content */}
                 <TabsContent value="general" className="mt-0 p-4 space-y-4">
                   <FormField
@@ -540,28 +542,85 @@ export default function ProductPanel({
                   <FormField
                     control={form.control}
                     name="seoTags"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>SEO Tags</FormLabel>
-                        <FormDescription>
-                          Add keywords to help customers find your product (comma separated)
-                        </FormDescription>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g., modern, eco-friendly, bestseller"
-                            value={field.value?.join(', ') || ''}
-                            onChange={(e) => {
-                              const tags = e.target.value
-                                .split(',')
-                                .map(tag => tag.trim())
-                                .filter(tag => tag.length > 0);
-                              field.onChange(tags);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const [inputValue, setInputValue] = useState('');
+                      
+                      const addTag = (value: string) => {
+                        // Clean up the input
+                        const tag = value.trim();
+                        if (!tag) return;
+                        
+                        // Check if tag already exists (case insensitive)
+                        const exists = field.value.some(
+                          (t) => t.toLowerCase() === tag.toLowerCase()
+                        );
+                        
+                        if (!exists) {
+                          field.onChange([...field.value, tag]);
+                        }
+                        
+                        // Clear input field
+                        setInputValue('');
+                      };
+                      
+                      const removeTag = (tagToRemove: string) => {
+                        field.onChange(
+                          field.value.filter((tag) => tag !== tagToRemove)
+                        );
+                      };
+                      
+                      const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+                        // Add tag on Enter, comma, or space
+                        if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+                          e.preventDefault();
+                          addTag(inputValue);
+                        }
+                      };
+                      
+                      return (
+                        <FormItem>
+                          <FormLabel>SEO Tags</FormLabel>
+                          <FormDescription>
+                            Add keywords to help customers find your product
+                            (press Enter, comma, or space to add)
+                          </FormDescription>
+                          <div className="space-y-2">
+                            <FormControl>
+                              <Input
+                                placeholder="e.g., modern, eco-friendly, bestseller"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onBlur={() => {
+                                  if (inputValue) addTag(inputValue);
+                                }}
+                              />
+                            </FormControl>
+                            
+                            {field.value?.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {field.value.map((tag, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-full text-sm"
+                                  >
+                                    <span>{tag}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeTag(tag)}
+                                      className="text-secondary-foreground/70 hover:text-secondary-foreground rounded-full w-4 h-4 inline-flex items-center justify-center"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </TabsContent>
                 
