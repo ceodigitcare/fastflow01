@@ -857,6 +857,46 @@ import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
 export class DatabaseStorage implements IStorage {
+  // Product Category methods
+  async getProductCategory(id: number): Promise<ProductCategory | undefined> {
+    const [category] = await db.select().from(productCategories).where(eq(productCategories.id, id));
+    return category || undefined;
+  }
+  
+  async getProductCategoriesByBusiness(businessId: number): Promise<ProductCategory[]> {
+    return await db
+      .select()
+      .from(productCategories)
+      .where(eq(productCategories.businessId, businessId))
+      .orderBy(asc(productCategories.name));
+  }
+  
+  async createProductCategory(category: InsertProductCategory): Promise<ProductCategory> {
+    const [newCategory] = await db
+      .insert(productCategories)
+      .values(category)
+      .returning();
+    return newCategory;
+  }
+  
+  async deleteProductCategory(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(productCategories)
+        .where(eq(productCategories.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting product category:", error);
+      return false;
+    }
+  }
+  
+  async getProductsByCategory(categoryId: number): Promise<Product[]> {
+    return await db
+      .select()
+      .from(products)
+      .where(eq(products.categoryId, categoryId));
+  }
   sessionStore: any; // Fix the type later
   
   constructor() {

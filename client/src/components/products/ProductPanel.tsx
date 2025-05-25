@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, PackageCheck, DollarSign, ImageIcon, FileText, Plus, Minus, Upload } from "lucide-react";
+import { X, PackageCheck, DollarSign, ImageIcon, FileText, Plus, Minus, Upload, Trash, PlusCircle } from "lucide-react";
 import { Product } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
