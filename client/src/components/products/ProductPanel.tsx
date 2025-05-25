@@ -125,6 +125,8 @@ export default function ProductPanel({
   // Delete category mutation
   const deleteCategoryMutation = useMutation({
     mutationFn: async (categoryId: number) => {
+      // When deleting a category, the backend will automatically reassign products 
+      // to the default "Other" category
       await apiRequest("DELETE", `/api/product-categories/${categoryId}`);
     },
     onMutate: () => {
@@ -132,9 +134,22 @@ export default function ProductPanel({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/product-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      
+      // If the current product had the deleted category, update to "Other"
+      const currentCategory = form.getValues("category");
+      if (currentCategory) {
+        // Check if current category matches the deleted one
+        // If it does, reset to the default "Other" category
+        const defaultCategory = categories.find(c => c.isDefault);
+        if (defaultCategory) {
+          form.setValue("category", defaultCategory.id.toString());
+        }
+      }
+      
       toast({
         title: "Category deleted",
-        description: "Product category has been deleted successfully",
+        description: "Category deleted and associated products moved to 'Other' category",
       });
       setIsDeletingCategory(false);
     },
@@ -517,6 +532,33 @@ export default function ProductPanel({
                             </Select>
                           )}
                         </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="seoTags"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SEO Tags</FormLabel>
+                        <FormDescription>
+                          Add keywords to help customers find your product (comma separated)
+                        </FormDescription>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., modern, eco-friendly, bestseller"
+                            value={field.value?.join(', ') || ''}
+                            onChange={(e) => {
+                              const tags = e.target.value
+                                .split(',')
+                                .map(tag => tag.trim())
+                                .filter(tag => tag.length > 0);
+                              field.onChange(tags);
+                            }}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
