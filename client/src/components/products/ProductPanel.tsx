@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -648,7 +649,7 @@ export default function ProductPanel({
   // Main form submission handler
   const handleSubmit = (values: ProductFormValues) => {
     // Convert price to cents for storage
-    const formattedValues = {
+    const formattedValues: any = {
       ...values,
       price: Math.round(values.price * 100), // Convert dollars to cents
       salePrice: values.salePrice ? Math.round(values.salePrice * 100) : undefined, // Convert dollars to cents
@@ -667,7 +668,7 @@ export default function ProductPanel({
         return;
       }
       
-      // Add variant data to the submission
+      // Add variant data to the submission (using any type to avoid TypeScript errors)
       formattedValues.variants = {
         groups: variantGroups,
         combinations: variantCombinations.map(combo => ({
@@ -1160,93 +1161,102 @@ export default function ProductPanel({
                             <PackageCheck className="h-4 w-4" />
                             Variant Management
                           </h3>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 rounded-full"
-                                title="Learn how to use product variants"
-                              >
-                                <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                  <PackageCheck className="h-5 w-5" />
-                                  How to Use Product Variants
-                                </DialogTitle>
-                                <DialogDescription>
-                                  Create different versions of your product with unique pricing and inventory
-                                </DialogDescription>
-                              </DialogHeader>
-                              
-                              <div className="space-y-4 py-2">
-                                <div className="space-y-2">
-                                  <h4 className="font-medium">What are variants?</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    Variants let you sell different versions of the same product (like different sizes or colors) 
-                                    with unique SKUs, prices, and inventory tracking.
-                                  </p>
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <h4 className="font-medium">Quick Start Guide</h4>
-                                  <ol className="text-sm text-muted-foreground space-y-2 ml-5 list-decimal">
-                                    <li>Click <strong>"Add Variant Type"</strong> button</li>
-                                    <li>Enter a variant name (like "Size")</li>
-                                    <li>Add values (like "Small", "Medium", "Large")</li>
-                                    <li>(Optional) Add another variant type (like "Color")</li>
-                                    <li>Click <strong>"Generate All"</strong> to create combinations</li>
-                                  </ol>
-                                </div>
-                                
-                                <div className="bg-muted/40 p-3 rounded-md space-y-2">
-                                  <h4 className="font-medium">Example</h4>
-                                  <div>
-                                    <p className="text-sm">If you add:</p>
-                                    <ul className="text-sm ml-5 list-disc">
-                                      <li><strong>Size</strong>: Small, Medium, Large</li>
-                                      <li><strong>Color</strong>: Red, Blue</li>
-                                    </ul>
-                                    <p className="text-sm mt-2">
-                                      The system generates 6 combinations (3 sizes × 2 colors)
-                                    </p>
-                                  </div>
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <h4 className="font-medium">For each combination, you can set:</h4>
-                                  <ul className="text-sm text-muted-foreground space-y-1 ml-5 list-disc">
-                                    <li><strong>SKU</strong> (optional): A unique identifier for inventory tracking</li>
-                                    <li><strong>Price</strong> (optional): A specific price that overrides the base product price</li>
-                                    <li><strong>Inventory</strong>: How many units are in stock</li>
-                                  </ul>
-                                </div>
-                                
-                                <div className="border-t pt-2">
-                                  <h4 className="font-medium">Tips</h4>
-                                  <ul className="text-sm text-muted-foreground space-y-1 ml-5 list-disc">
-                                    <li>Leave the price field empty to use the main product price</li>
-                                    <li>Each SKU must be unique across all variants</li>
-                                    <li>The total inventory shown on your product page will be the sum of all variant inventories</li>
-                                  </ul>
-                                </div>
-                              </div>
-                              
-                              <DialogFooter>
-                                <DialogClose asChild>
-                                  <Button type="button">Close</Button>
-                                </DialogClose>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+                          
+                          {/* Help button with tooltip */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 rounded-full"
+                            title="Learn how to use product variants"
+                            onClick={() => {
+                              // Open the help modal
+                              document.getElementById('variant-help-modal')?.click();
+                            }}
+                          >
+                            <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                          </Button>
                         </div>
                         <Badge variant="outline" className="text-xs">
                           {getVariantCombinationsCount()} Combinations
                         </Badge>
                       </div>
+                      
+                      {/* Hidden dialog trigger and content - separated to avoid runtime error */}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <button id="variant-help-modal" className="hidden">Open Help</button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                              <PackageCheck className="h-5 w-5" />
+                              How to Use Product Variants
+                            </DialogTitle>
+                            <DialogDescription>
+                              Create different versions of your product with unique pricing and inventory
+                            </DialogDescription>
+                          </DialogHeader>
+                          
+                          <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                              <h4 className="font-medium">What are variants?</h4>
+                              <p className="text-sm text-muted-foreground">
+                                Variants let you sell different versions of the same product (like different sizes or colors) 
+                                with unique SKUs, prices, and inventory tracking.
+                              </p>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <h4 className="font-medium">Quick Start Guide</h4>
+                              <ol className="text-sm text-muted-foreground space-y-2 ml-5 list-decimal">
+                                <li>Click <strong>"Add Variant Type"</strong> button</li>
+                                <li>Enter a variant name (like "Size")</li>
+                                <li>Add values (like "Small", "Medium", "Large")</li>
+                                <li>(Optional) Add another variant type (like "Color")</li>
+                                <li>Click <strong>"Generate All"</strong> to create combinations</li>
+                              </ol>
+                            </div>
+                            
+                            <div className="bg-muted/40 p-3 rounded-md space-y-2">
+                              <h4 className="font-medium">Example</h4>
+                              <div>
+                                <p className="text-sm">If you add:</p>
+                                <ul className="text-sm ml-5 list-disc">
+                                  <li><strong>Size</strong>: Small, Medium, Large</li>
+                                  <li><strong>Color</strong>: Red, Blue</li>
+                                </ul>
+                                <p className="text-sm mt-2">
+                                  The system generates 6 combinations (3 sizes × 2 colors)
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <h4 className="font-medium">For each combination, you can set:</h4>
+                              <ul className="text-sm text-muted-foreground space-y-1 ml-5 list-disc">
+                                <li><strong>SKU</strong> (optional): A unique identifier for inventory tracking</li>
+                                <li><strong>Price</strong> (optional): A specific price that overrides the base product price</li>
+                                <li><strong>Inventory</strong>: How many units are in stock</li>
+                              </ul>
+                            </div>
+                            
+                            <div className="border-t pt-2">
+                              <h4 className="font-medium">Tips</h4>
+                              <ul className="text-sm text-muted-foreground space-y-1 ml-5 list-disc">
+                                <li>Leave the price field empty to use the main product price</li>
+                                <li>Each SKU must be unique across all variants</li>
+                                <li>The total inventory shown on your product page will be the sum of all variant inventories</li>
+                              </ul>
+                            </div>
+                          </div>
+                          
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button type="button">Close</Button>
+                            </DialogClose>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                       
                       <div className="text-xs text-muted-foreground">
                         Add variant types like Size or Color to offer different versions of this product.
