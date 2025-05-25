@@ -526,6 +526,164 @@ export default function ProductPanel({
                       </FormItem>
                     )}
                   />
+                  
+                  {/* Product Variants Section */}
+                  <div className="mt-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium">Product Variants</h3>
+                      <FormField
+                        control={form.control}
+                        name="hasVariants"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormLabel className="text-sm">Enable Variants</FormLabel>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    {form.watch("hasVariants") && (
+                      <div className="space-y-4 rounded-md border p-4">
+                        <p className="text-sm text-muted-foreground">
+                          Create variants for this product (e.g., different sizes, colors)
+                        </p>
+                        
+                        {/* Variant List */}
+                        {Array.isArray(form.watch("variants")) && form.watch("variants")?.length > 0 && (
+                          <div className="space-y-3">
+                            {form.watch("variants").map((variant: any, index: number) => (
+                              <div key={index} className="rounded-md border p-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-sm font-medium">{variant.option ? `${variant.option}: ${variant.value}` : `Variant ${index + 1}`}</h4>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => {
+                                      const currentVariants = form.getValues("variants") || [];
+                                      const updatedVariants = currentVariants.filter((_, i) => i !== index);
+                                      form.setValue("variants", updatedVariants);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-xs font-medium">Option</label>
+                                    <Input
+                                      size="sm"
+                                      className="h-8 mt-1"
+                                      placeholder="e.g., Color, Size"
+                                      value={variant.option || ""}
+                                      onChange={(e) => {
+                                        const currentVariants = [...(form.getValues("variants") || [])];
+                                        currentVariants[index] = {
+                                          ...currentVariants[index],
+                                          option: e.target.value,
+                                        };
+                                        form.setValue("variants", currentVariants);
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium">Value</label>
+                                    <Input
+                                      size="sm"
+                                      className="h-8 mt-1"
+                                      placeholder="e.g., Red, Large"
+                                      value={variant.value || ""}
+                                      onChange={(e) => {
+                                        const currentVariants = [...(form.getValues("variants") || [])];
+                                        currentVariants[index] = {
+                                          ...currentVariants[index],
+                                          value: e.target.value,
+                                        };
+                                        form.setValue("variants", currentVariants);
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-xs font-medium">Price ($)</label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      size="sm"
+                                      className="h-8 mt-1"
+                                      placeholder="0.00"
+                                      value={variant.price !== undefined ? variant.price / 100 : ""}
+                                      onChange={(e) => {
+                                        const currentVariants = [...(form.getValues("variants") || [])];
+                                        currentVariants[index] = {
+                                          ...currentVariants[index],
+                                          price: Math.round(Number(e.target.value) * 100),
+                                        };
+                                        form.setValue("variants", currentVariants);
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium">Stock</label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      size="sm"
+                                      className="h-8 mt-1"
+                                      placeholder="0"
+                                      value={variant.stock || ""}
+                                      onChange={(e) => {
+                                        const currentVariants = [...(form.getValues("variants") || [])];
+                                        currentVariants[index] = {
+                                          ...currentVariants[index],
+                                          stock: Number(e.target.value),
+                                        };
+                                        form.setValue("variants", currentVariants);
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Add Variant Button */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            const currentVariants = form.getValues("variants") || [];
+                            form.setValue("variants", [
+                              ...currentVariants,
+                              { 
+                                option: "", 
+                                value: "", 
+                                price: Math.round((form.getValues("price") || 0) * 100), 
+                                stock: 0 
+                              },
+                            ]);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Variant
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
                 
                 {/* Images Tab Content */}
