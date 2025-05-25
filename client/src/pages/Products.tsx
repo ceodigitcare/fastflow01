@@ -153,14 +153,14 @@ export default function Products() {
     }
   });
   
-  const handleOpenDialog = (product: Product | null = null) => {
+  const handleOpenPanel = (product: Product | null = null) => {
     setEditingProduct(product);
-    setDialogOpen(true);
+    setPanelOpen(true);
   };
   
-  const handleCloseDialog = () => {
+  const handleClosePanel = () => {
     setEditingProduct(null);
-    setDialogOpen(false);
+    setPanelOpen(false);
   };
   
   const handleSubmit = (data: any) => {
@@ -219,7 +219,7 @@ export default function Products() {
           <p className="text-sm text-gray-500">Manage your store's products</p>
         </div>
         
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={() => handleOpenPanel()}>
           <Plus className="mr-2 h-4 w-4" />
           Add Product
         </Button>
@@ -308,7 +308,7 @@ export default function Products() {
               <ProductCard
                 key={product.id}
                 product={product}
-                onEdit={() => handleOpenDialog(product)}
+                onEdit={() => handleOpenPanel(product)}
                 onDelete={() => handleDelete(product.id)}
               />
             ))}
@@ -382,7 +382,7 @@ export default function Products() {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handleOpenDialog(product)}
+                      onClick={() => handleOpenPanel(product)}
                     >
                       Edit
                     </Button>
@@ -431,7 +431,7 @@ export default function Products() {
                 <p className="text-gray-500">
                   Start adding products to your store to showcase them to your customers.
                 </p>
-                <Button className="mt-4" onClick={() => handleOpenDialog()}>
+                <Button className="mt-4" onClick={() => handleOpenPanel()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Your First Product
                 </Button>
