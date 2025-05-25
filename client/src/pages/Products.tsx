@@ -357,7 +357,7 @@ export default function Products() {
                         </div>
                         {product.hasVariants && (
                           <div className="mt-1 text-sm text-muted-foreground">
-                            {product.variants?.length || 0} variants available
+                            {Array.isArray(product.variants) ? product.variants.length : 0} variants available
                           </div>
                         )}
                       </div>
