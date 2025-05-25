@@ -54,6 +54,7 @@ const productFormSchema = z.object({
   price: z.coerce.number().min(0, "Price must be a positive number"),
   sku: z.string().optional(),
   category: z.string().optional(),
+  seoTags: z.array(z.string()).default([]),
   imageUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
   additionalImages: z.array(z.string()).optional(),
   inventory: z.coerce.number().min(0, "Inventory must be a positive number").default(0),
@@ -156,6 +157,7 @@ export default function ProductPanel({
       price: product ? product.price / 100 : 0, // Convert cents to dollars for display
       sku: product?.sku || "",
       category: product?.category || "",
+      seoTags: product?.seoTags || [],
       imageUrl: product?.imageUrl || "",
       inventory: product?.inventory || 0,
       inStock: product?.inStock ?? true,
