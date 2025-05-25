@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { X, PackageCheck, DollarSign, ImageIcon, FileText } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, PackageCheck, DollarSign, ImageIcon, FileText, Plus, Minus, Upload } from "lucide-react";
 import { Product } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -89,15 +89,52 @@ export default function ProductPanel({
     },
   });
   
-  // Set up initial images from product data
+  // Set up initial images and reset form when product changes
   useEffect(() => {
-    if (product?.imageUrl) {
-      setUploadedImage(product.imageUrl);
+    if (product) {
+      // Reset the form with product data
+      form.reset({
+        name: product.name || "",
+        description: product.description || "",
+        price: product.price / 100, // Convert cents to dollars for display
+        sku: product.sku || "",
+        category: product.category || "",
+        imageUrl: product.imageUrl || "",
+        inventory: product.inventory || 0,
+        inStock: product.inStock ?? true,
+        hasVariants: product.hasVariants || false,
+        isFeatured: product.isFeatured || false,
+        isOnSale: product.isOnSale || false,
+        salePrice: product.salePrice ? product.salePrice / 100 : undefined, // Convert cents to dollars
+      });
+      
+      // Set image states
+      setUploadedImage(product.imageUrl || null);
+      if (product.additionalImages && Array.isArray(product.additionalImages)) {
+        setAdditionalImages(product.additionalImages as string[]);
+      } else {
+        setAdditionalImages([]);
+      }
+    } else {
+      // Reset form and images for a new product
+      form.reset({
+        name: "",
+        description: "",
+        price: 0,
+        sku: "",
+        category: "",
+        imageUrl: "",
+        inventory: 0,
+        inStock: true,
+        hasVariants: false,
+        isFeatured: false,
+        isOnSale: false,
+        salePrice: undefined,
+      });
+      setUploadedImage(null);
+      setAdditionalImages([]);
     }
-    if (product?.additionalImages && Array.isArray(product.additionalImages)) {
-      setAdditionalImages(product.additionalImages as string[]);
-    }
-  }, [product]);
+  }, [product, form]);
 
   // Reset tab when opening for a new product
   useEffect(() => {
@@ -105,6 +142,99 @@ export default function ProductPanel({
       setActiveTab("general");
     }
   }, [isOpen, product]);
+
+  // File upload handlers
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const additionalFileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Handle drag events
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  // Handle main image drop event
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
+  // Handle file input change
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      handleFiles(e.target.files);
+    }
+  };
+
+  // Handle processing files for main image
+  const handleFiles = (files: FileList) => {
+    const file = files[0];
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (reader.result) {
+        const imageUrl = reader.result.toString();
+        setUploadedImage(imageUrl);
+        form.setValue("imageUrl", imageUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  // Handle additional image drop
+  const handleAdditionalImageDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleAdditionalImageFiles(e.dataTransfer.files);
+    }
+  };
+  
+  // Handle additional image file input change
+  const handleAdditionalImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleAdditionalImageFiles(e.target.files);
+    }
+  };
+  
+  // Process additional image files
+  const handleAdditionalImageFiles = (files: FileList) => {
+    const file = files[0];
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (reader.result) {
+        const imageUrl = reader.result.toString();
+        const newAdditionalImages = [...additionalImages, imageUrl];
+        setAdditionalImages(newAdditionalImages);
+        form.setValue("additionalImages", newAdditionalImages);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  // Remove an additional image
+  const handleRemoveAdditionalImage = (index: number) => {
+    const newAdditionalImages = additionalImages.filter((_, i) => i !== index);
+    setAdditionalImages(newAdditionalImages);
+    form.setValue("additionalImages", newAdditionalImages);
+  };
+  
+  // Handle inventory adjustment
+  const handleAdjustInventory = (amount: number) => {
+    const currentInventory = form.getValues("inventory") || 0;
+    const newInventory = Math.max(0, currentInventory + amount); // Never go below 0
+    form.setValue("inventory", newInventory);
+  };
 
   // Main form submission handler
   const handleSubmit = (values: ProductFormValues) => {
@@ -341,14 +471,36 @@ export default function ProductPanel({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Inventory Quantity</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min="0"
-                            step="1"
-                            {...field} 
-                          />
-                        </FormControl>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => handleAdjustInventory(-1)}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="0"
+                              step="1"
+                              {...field} 
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => handleAdjustInventory(1)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <FormDescription>
+                          Use buttons to adjust quantity or enter a specific value
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -378,38 +530,133 @@ export default function ProductPanel({
                 
                 {/* Images Tab Content */}
                 <TabsContent value="images" className="mt-0 p-4 space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Product Image URL</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="https://example.com/image.jpg" 
-                            {...field} 
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium">Main Product Image</h3>
+                    
+                    {/* Main Image Upload Area */}
+                    <div 
+                      className={cn(
+                        "border-2 border-dashed rounded-md p-6 transition-colors text-center flex flex-col items-center justify-center gap-2",
+                        dragActive ? "border-primary bg-primary/5" : "border-border",
+                        "hover:border-primary hover:bg-primary/5"
+                      )}
+                      onDragEnter={handleDrag}
+                      onDragOver={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDrop={handleDrop}
+                    >
+                      {uploadedImage ? (
+                        <div className="relative w-full max-w-xs">
+                          <img 
+                            src={uploadedImage} 
+                            alt="Product preview" 
+                            className="max-h-48 mx-auto object-contain rounded-md"
+                            onError={(e) => {
+                              e.currentTarget.src = "https://placehold.co/400x300?text=Image+Not+Found";
+                            }}
                           />
-                        </FormControl>
-                        <FormDescription>
-                          Enter the URL for the main product image
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {form.watch("imageUrl") && (
-                    <div className="border rounded-md p-2 mt-2">
-                      <img 
-                        src={form.watch("imageUrl")} 
-                        alt="Product preview" 
-                        className="max-h-48 mx-auto object-contain"
-                        onError={(e) => {
-                          e.currentTarget.src = "https://placehold.co/400x300?text=Image+Not+Found";
-                        }}
-                      />
+                          <Button 
+                            type="button"
+                            size="icon"
+                            variant="destructive"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                            onClick={() => {
+                              setUploadedImage(null);
+                              form.setValue("imageUrl", "");
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="bg-muted/30 p-4 rounded-full">
+                            <Upload className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                          <img 
+                            src="https://placehold.co/400x300?text=No+Image" 
+                            alt="Placeholder" 
+                            className="max-h-36 mx-auto object-contain rounded-md opacity-30 mt-2"
+                          />
+                          <p className="text-sm text-muted-foreground">
+                            Drag and drop your product image here, or{" "}
+                            <span 
+                              className="text-primary cursor-pointer hover:underline"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              browse
+                            </span>
+                          </p>
+                          <input 
+                            ref={fileInputRef}
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden"
+                            onChange={handleFileChange}
+                          />
+                        </>
+                      )}
                     </div>
-                  )}
+                    
+                    <p className="text-xs text-muted-foreground text-center">
+                      Recommended size: 800x800px. Maximum file size: 2MB.
+                    </p>
+                    
+                    {/* Additional Images Section */}
+                    <div className="mt-8">
+                      <h3 className="text-sm font-medium mb-2">Additional Product Images</h3>
+                      
+                      {/* Additional Images Grid */}
+                      {additionalImages.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                          {additionalImages.map((img, index) => (
+                            <div key={index} className="relative border rounded-md p-2">
+                              <img 
+                                src={img} 
+                                alt={`Product image ${index + 1}`} 
+                                className="h-24 w-full object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.src = "https://placehold.co/400x300?text=Error";
+                                }}
+                              />
+                              <Button 
+                                type="button"
+                                size="icon"
+                                variant="destructive"
+                                className="absolute -top-2 -right-2 h-5 w-5 rounded-full"
+                                onClick={() => handleRemoveAdditionalImage(index)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Add Additional Image Upload */}
+                      <div 
+                        className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                        onClick={() => additionalFileInputRef.current?.click()}
+                        onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDrop={handleAdditionalImageDrop}
+                      >
+                        <Plus className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                        <p className="text-sm text-muted-foreground">Add another image</p>
+                        <input 
+                          ref={additionalFileInputRef}
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden"
+                          onChange={handleAdditionalImageChange}
+                        />
+                      </div>
+                      
+                      <p className="text-xs text-muted-foreground text-center mt-2">
+                        You can add up to 5 additional product images
+                      </p>
+                    </div>
+                  </div>
                 </TabsContent>
               </div>
             </Tabs>
