@@ -295,6 +295,11 @@ export default function PurchaseBillFormSplit({
   // ADDITIONAL DEBUG: Log freeze state changes
   useEffect(() => {
     console.log(`🔒 FREEZE STATE CHANGED: isFrozen is now ${isFrozen} for bill ${editingBill?.id}`);
+    if (isFrozen) {
+      console.log("🧊 FORM LOCKED: All inputs should be disabled and save button should show frozen message");
+    } else {
+      console.log("🔓 FORM UNLOCKED: All inputs should be editable and save button should work normally");
+    }
   }, [isFrozen, editingBill?.id]);
   
   // Get vendors (users of type "vendor")
