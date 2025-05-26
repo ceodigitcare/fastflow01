@@ -2082,9 +2082,10 @@ export default function PurchaseBillFormSplit({
                           <Select 
                             value={item.productId?.toString() || "0"} 
                             onValueChange={(value) => handleProductChange(parseInt(value), index)}
+                            disabled={isFrozen}
                           >
-                            <SelectTrigger className="mb-1">
-                              <SelectValue placeholder="Select product" />
+                            <SelectTrigger className={`mb-1 ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                              <SelectValue placeholder={isFrozen ? "Bill is frozen" : "Select product"} />
                             </SelectTrigger>
                             <SelectContent>
                               {productsLoading ? (
@@ -2105,9 +2106,21 @@ export default function PurchaseBillFormSplit({
                           <SafeNumberInput
                             defaultValue={1}
                             value={item.quantity || 1} // Ensure it's never undefined
-                            onChange={(value) => updateItemQuantity(value || 1, index)}
+                            onChange={(value) => {
+                              if (isFrozen) {
+                                toast({
+                                  title: "Bill is frozen",
+                                  description: "Please unfreeze the bill to modify quantities.",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              updateItemQuantity(value || 1, index);
+                            }}
                             min={1}
                             step={1}
+                            disabled={isFrozen}
+                            className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}
                           />
                         </td>
                         <td className="p-2">
@@ -2115,7 +2128,17 @@ export default function PurchaseBillFormSplit({
                           <SafeNumberInput
                             defaultValue={0}
                             value={item.quantityReceived}
-                            onChange={(value) => updateItemQuantityReceived(value, index)}
+                            onChange={(value) => {
+                              if (isFrozen) {
+                                toast({
+                                  title: "Bill is frozen",
+                                  description: "Please unfreeze the bill to modify received quantities.",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              updateItemQuantityReceived(value, index);
+                            }}
                             onBlur={() => {
                               // Ensure form value is explicitly set on blur
                               const currentValue = item.quantityReceived || 0;
@@ -2131,16 +2154,29 @@ export default function PurchaseBillFormSplit({
                             min={0}
                             max={item.quantity || 1}
                             step={1}
-                            className="w-full"
+                            disabled={isFrozen}
+                            className={`w-full ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
                           />
                         </td>
                         <td className="p-2">
                           <SafeNumberInput
                             defaultValue={0}
                             value={item.unitPrice || 0} // Ensure it's never undefined
-                            onChange={(value) => updateItemPrice(value || 0, index)}
+                            onChange={(value) => {
+                              if (isFrozen) {
+                                toast({
+                                  title: "Bill is frozen",
+                                  description: "Please unfreeze the bill to modify prices.",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              updateItemPrice(value || 0, index);
+                            }}
                             min={0}
                             step={0.01}
+                            disabled={isFrozen}
+                            className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}
                           />
                         </td>
                         <td className="p-2 text-right font-medium">
