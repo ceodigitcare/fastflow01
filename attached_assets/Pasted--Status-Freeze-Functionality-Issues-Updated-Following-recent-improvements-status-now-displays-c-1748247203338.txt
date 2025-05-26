@@ -1,0 +1,57 @@
+ Status & Freeze Functionality Issues (Updated)
+Following recent improvements, status now displays correctly in the Purchase View and List screens. However, several critical issues remain unresolved or have regressed:
+
+❌ Issue 1: Incorrect Status in Edit Mode
+When editing a purchase bill, the status sometimes displays incorrectly or not in sync with the actual payment and receiving data.
+
+In some cases, the status shown during edit does not match what is shown in view or list mode.
+
+✅ Expected Behavior:
+
+Status must be accurately computed and displayed in edit mode, just like in view and list modes.
+
+Ensure consistent logic for status rendering across all modes (Edit, View, List).
+
+Status must reflect:
+
+Draft, Paid, Partial Paid, Received, Partial Received
+
+and their valid combinations (e.g., Paid & Received).
+
+❌ Issue 2: Freeze Button Completely Non-Functional
+Previously, the Freeze button worked instantly, although it did not persist after reload.
+
+Now, the Freeze button does not function at all—clicking it does not lock the fields, and no visual state change occurs.
+
+✅ Expected Behavior:
+
+Clicking "Freeze" should immediately:
+
+Change button state to "Frozen"
+
+Disable all editable fields (vendor, bank/cash, date, items, quantity, payments, etc.)
+
+This frozen state must persist after saving or reloading the bill.
+
+Manual unfreeze (via button) must be required before making any edits.
+
+❌ Issue 3: Remove Icons from Status Badges
+The small icons currently displayed beside status labels should be removed.
+
+The color-coded status badge text is sufficient for visual clarity.
+
+✅ Expected Behavior:
+
+Status badges should show text only, with consistent colors (e.g., green for Paid, yellow for Partial, gray for Draft, etc.)
+
+Remove any status-related icons from all views (edit, view, and list).
+
+Please recheck the related logic, especially:
+
+State handling and reactivity for freeze/unfreeze
+
+Status calculation consistency across modes
+
+Conditional UI rendering of status elements
+
+Let me know once this has been fixed so I can re-test.

@@ -2028,24 +2028,21 @@ export default function PurchaseBillFormSplit({
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                 <div>
                   {(() => {
-                    // Calculate current status based on form data
-                    const currentStatus = editingBill ? editingBill.status : 
-                      calculatePurchaseBillStatus(
-                        form.watch('totalAmount') || 0,
-                        form.watch('paymentMade') || 0,
-                        billItems.map(item => ({
-                          quantity: item.quantity,
-                          quantityReceived: item.quantityReceived || 0
-                        })),
-                        false // No longer using cancelled status
-                      );
+                    // Calculate current status dynamically based on form data
+                    const currentStatus = calculatePurchaseBillStatus(
+                      form.watch('totalAmount') || 0,
+                      form.watch('paymentMade') || 0,
+                      billItems.map(item => ({
+                        quantity: item.quantity,
+                        quantityReceived: item.quantityReceived || 0
+                      })),
+                      false // No longer using cancelled status
+                    );
                     
                     const badge = renderStatusBadge(currentStatus || "draft");
-                    const Icon = badge.Icon;
                     return (
                       <div className="flex items-center space-x-3">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
-                          <Icon className="w-4 h-4 mr-2" />
                           {badge.label}
                         </span>
                         

@@ -466,10 +466,8 @@ export default function PurchaseBillSplitView({
                     );
                     
                     const badge = renderStatusBadge(currentStatus || "draft");
-                    const Icon = badge.Icon;
                     return (
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
-                        <Icon className="w-4 h-4 mr-2" />
                         {badge.label}
                       </span>
                     );
@@ -946,10 +944,8 @@ export default function PurchaseBillSplitView({
                         );
                         
                         const badge = renderStatusBadge(currentStatus || "draft");
-                        const Icon = badge.Icon;
                         return (
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
-                            <Icon className="w-3 h-3 mr-1" />
                             {badge.label}
                           </span>
                         );
