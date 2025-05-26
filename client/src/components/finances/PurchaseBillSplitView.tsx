@@ -20,7 +20,7 @@ import {
   Edit,
   History
 } from "lucide-react";
-import { calculatePurchaseBillStatus, statusColors, statusIcons } from "@/lib/purchase-bill-utils";
+import { calculateTransactionStatus, statusLabels, statusColors } from "@/lib/bill-status-calculator";
 import PurchaseBillFormSplit from "./PurchaseBillFormSplit";
 import TransactionVersionHistory from "./TransactionVersionHistory";
 import { useToast } from "@/hooks/use-toast";
@@ -122,41 +122,19 @@ export default function PurchaseBillSplitView({
   
 
 
-  // Improved status badge rendering with consistent styling (no icons)
-  const renderStatusBadge = (status: string | null, bill?: Transaction) => {
-    // Always recalculate status from bill data when bill is provided
-    const currentStatus = bill ? calculatePurchaseBillStatus(
-      (bill.amount || 0) / 100,  // Convert cents to dollars
-      (bill.paymentMade || 0) / 100,  // Convert cents to dollars
-      Array.isArray(bill.items) ? bill.items.map((item: any) => ({
-        quantity: item.quantity || 0,
-        quantityReceived: item.quantityReceived || 0
-      })) : [],
-      bill.status === "cancelled"
-    ) : status;
+  // UNIFIED STATUS SYSTEM - Single source of truth for all modes
+  const renderStatusBadge = (bill: Transaction) => {
+    // Calculate fresh status from live bill data - never use cached bill.status
+    const calculatedStatus = calculateTransactionStatus(bill);
     
-    // Only return null if we couldn't calculate any status
-    if (!currentStatus) return null;
-    
-    const colorClass = statusColors[currentStatus as keyof typeof statusColors] || statusColors.draft;
-    
-    const statusLabels = {
-      draft: "Draft",
-      cancelled: "Cancelled", 
-      paid: "Paid",
-      partial_paid: "Partially Paid",
-      received: "Received",
-      partial_received: "Partially Received",
-      paid_received: "Paid & Received",
-      paid_partial_received: "Paid & Partially Received",
-      partial_paid_received: "Partially Paid & Received",
-      partial_paid_partial_received: "Partially Paid & Partially Received"
-    };
+    // Get human-readable label and styling
+    const label = statusLabels[calculatedStatus];
+    const colorClass = statusColors[calculatedStatus];
     
     return {
-      label: statusLabels[currentStatus as keyof typeof statusLabels] || "Unknown",
+      label,
       colorClass,
-      currentStatus
+      status: calculatedStatus
     };
   };
   
@@ -456,9 +434,8 @@ export default function PurchaseBillSplitView({
                 <p className="text-sm text-gray-500">Status</p>
                 <div className="font-medium">
                   {(() => {
-                    // Force recalculation - don't pass stored status
-                    const badge = renderStatusBadge(null, selectedBill);
-                    if (!badge) return null;
+                    // Use unified status calculation for consistent results
+                    const badge = renderStatusBadge(selectedBill);
                     return (
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
                         {badge.label}
@@ -925,9 +902,8 @@ export default function PurchaseBillSplitView({
                     <div className="text-right space-y-1">
                       <p className="font-medium">{formatCurrency(bill.amount / 100)}</p>
                       {(() => {
-                        // Force recalculation - don't pass stored status
-                        const badge = renderStatusBadge(null, bill);
-                        if (!badge) return null;
+                        // Use unified status calculation for consistent results
+                        const badge = renderStatusBadge(bill);
                         return (
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
                             {badge.label}
