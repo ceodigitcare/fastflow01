@@ -4,7 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Transaction, Account, Product, InsertUser, User } from "@shared/schema";
-import { purchaseBillSchema, PurchaseBill, PurchaseBillItem } from "@/lib/validation";
+import { purchaseBillSchema, PurchaseBill, PurchaseBillItem, calculatePurchaseBillStatus } from "@/lib/validation";
+import { renderStatusBadge } from "@/lib/purchase-bill-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
@@ -228,6 +229,8 @@ export default function PurchaseBillFormSplit({
     return [];
   });
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(editingBill?.status === "cancelled" || false);
   
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
@@ -1517,7 +1520,23 @@ export default function PurchaseBillFormSplit({
     }
   }, [editingBill, vendors]);
   
-  // Form submission handler
+  // Cancel bill handler
+  const handleCancelBill = () => {
+    if (isCancelled) return; // Already cancelled
+    setShowCancelDialog(true);
+  };
+
+  const confirmCancelBill = () => {
+    setIsCancelled(true);
+    setShowCancelDialog(false);
+    toast({
+      title: "Bill Cancelled",
+      description: "This purchase bill has been marked as cancelled.",
+      variant: "destructive"
+    });
+  };
+
+  // Form submission handler with automated status calculation
   const onSubmit = (data: PurchaseBill) => {
     if (billItems.length === 0) {
       toast({
@@ -1533,11 +1552,23 @@ export default function PurchaseBillFormSplit({
     const totalDiscountValue = Number(data.totalDiscount || 0) * 100;
     const paymentMadeValue = Number(data.paymentMade || 0) * 100;
     
+    // Calculate automated status based on payment and receipt conditions
+    const calculatedStatus = calculatePurchaseBillStatus(
+      data.totalAmount,
+      data.paymentMade || 0,
+      billItems.map(item => ({
+        quantity: item.quantity,
+        quantityReceived: item.quantityReceived || 0
+      })),
+      isCancelled
+    );
+    
     // Log what we're saving
     console.log("Saving bill with data:", {
       totalDiscount: totalDiscountValue,
       totalDiscountType: data.totalDiscountType,
-      dueDate: data.dueDate
+      dueDate: data.dueDate,
+      calculatedStatus: calculatedStatus
     });
     
     // COMPLETELY SIMPLIFIED: Process items with a clean, reliable approach
