@@ -1595,7 +1595,7 @@ export default function PurchaseBillFormSplit({
         quantity: item.quantity,
         quantityReceived: item.quantityReceived || 0
       })),
-      isCancelled
+      false // No longer using cancelled status
     );
     
     // Log what we're saving
@@ -1979,7 +1979,7 @@ export default function PurchaseBillFormSplit({
                           quantity: item.quantity,
                           quantityReceived: item.quantityReceived || 0
                         })),
-                        false // Remove cancelled status
+                        false // No longer using cancelled status
                       );
                     
                     const badge = renderStatusBadge(currentStatus || "draft");
