@@ -20,6 +20,8 @@ import {
   Edit,
   History
 } from "lucide-react";
+import { statusColors, statusIcons } from "@/lib/purchase-bill-utils";
+import { calculatePurchaseBillStatus } from "@/lib/validation";
 import PurchaseBillFormSplit from "./PurchaseBillFormSplit";
 import TransactionVersionHistory from "./TransactionVersionHistory";
 import { useToast } from "@/hooks/use-toast";
@@ -119,9 +121,7 @@ export default function PurchaseBillSplitView({
     }
   };
   
-  // Import status utilities
-  const { statusColors, statusIcons } = require("@/lib/purchase-bill-utils");
-  const { calculatePurchaseBillStatus } = require("@/lib/validation");
+
 
   // Improved status badge rendering with consistent styling
   const renderStatusBadge = (status: string | null, bill?: Transaction) => {
