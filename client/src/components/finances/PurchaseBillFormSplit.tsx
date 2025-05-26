@@ -1528,13 +1528,36 @@ export default function PurchaseBillFormSplit({
         
         console.log('REBUILD - Quantity confirmation complete');
       }, 200);
+
+      // CRITICAL FIX: Re-check freeze state after metadata is loaded
+      setTimeout(() => {
+        if (editingBill?.metadata) {
+          let shouldBeFrozen = false;
+          
+          if (typeof editingBill.metadata === 'string') {
+            try {
+              const metadataObj = JSON.parse(editingBill.metadata);
+              shouldBeFrozen = metadataObj?.isFrozen === true;
+            } catch (e) {
+              console.log("Could not parse metadata for freeze status");
+            }
+          } else if (typeof editingBill.metadata === 'object') {
+            shouldBeFrozen = (editingBill.metadata as any)?.isFrozen === true;
+          }
+          
+          if (shouldBeFrozen !== isFrozen) {
+            console.log(`FREEZE STATE CORRECTION: Setting freeze to ${shouldBeFrozen}`);
+            setIsFrozen(shouldBeFrozen);
+          }
+        }
+      }, 300);
     } else {
       // Add an empty item if creating a new bill
       if (billItems.length === 0) {
         addItem();
       }
     }
-  }, [editingBill, vendors]);
+  }, [editingBill, vendors, isFrozen]);
   
   // Data freeze/unfreeze handlers
   const handleFreezeToggle = () => {

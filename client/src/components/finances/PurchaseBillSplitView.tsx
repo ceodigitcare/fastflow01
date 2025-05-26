@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BillPrintDialog } from "./BillPrint";
+import { calculatePurchaseBillStatus, renderStatusBadge } from "@/lib/purchase-bill-utils";
 
 interface PurchaseBillSplitViewProps {
   businessData?: any;
