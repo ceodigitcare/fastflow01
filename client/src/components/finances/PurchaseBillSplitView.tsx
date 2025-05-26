@@ -123,7 +123,7 @@ export default function PurchaseBillSplitView({
   
 
 
-  // Improved status badge rendering with consistent styling
+  // Improved status badge rendering with consistent styling (no icons)
   const renderStatusBadge = (status: string | null, bill?: Transaction) => {
     if (!status) return null;
     
@@ -139,7 +139,6 @@ export default function PurchaseBillSplitView({
     ) : status;
     
     const colorClass = statusColors[currentStatus as keyof typeof statusColors] || statusColors.draft;
-    const IconComponent = statusIcons[currentStatus as keyof typeof statusIcons] || statusIcons.draft;
     
     const statusLabels = {
       draft: "Draft",
@@ -155,7 +154,6 @@ export default function PurchaseBillSplitView({
     };
     
     return {
-      Icon: IconComponent,
       label: statusLabels[currentStatus as keyof typeof statusLabels] || "Unknown",
       colorClass,
       currentStatus
@@ -169,20 +167,7 @@ export default function PurchaseBillSplitView({
         {selectedBill ? (
           <div className="space-y-6 bg-white p-6 border rounded-lg shadow-sm">
             <div className="flex justify-between items-start">
-              <div className="flex items-center space-x-3">
-                <h2 className="text-2xl font-bold">Bill #{selectedBill.documentNumber}</h2>
-                {(() => {
-                  const badge = renderStatusBadge(selectedBill.status, selectedBill);
-                  if (!badge) return null;
-                  const Icon = badge.Icon;
-                  return (
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
-                      <Icon className="w-4 h-4 mr-2" />
-                      {badge.label}
-                    </span>
-                  );
-                })()}
-              </div>
+              <h2 className="text-2xl font-bold">Bill #{selectedBill.documentNumber}</h2>
               <div className="flex space-x-2">
                 <Button 
                   variant="outline" 
@@ -473,10 +458,8 @@ export default function PurchaseBillSplitView({
                   {(() => {
                     const badge = renderStatusBadge(selectedBill.status, selectedBill);
                     if (!badge) return null;
-                    const Icon = badge.Icon;
                     return (
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
-                        <Icon className="w-3 h-3 mr-1" />
                         {badge.label}
                       </span>
                     );
@@ -943,10 +926,8 @@ export default function PurchaseBillSplitView({
                       {(() => {
                         const badge = renderStatusBadge(bill.status, bill);
                         if (!badge) return null;
-                        const Icon = badge.Icon;
                         return (
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
-                            <Icon className="w-3 h-3 mr-1" />
                             {badge.label}
                           </span>
                         );
