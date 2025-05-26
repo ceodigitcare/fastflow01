@@ -2467,7 +2467,18 @@ export default function PurchaseBillFormSplit({
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium text-sm text-gray-700">Current Status</h4>
-                  <div className="mt-1">{renderStatusBadge(editingBill.status || "draft")}</div>
+                  <div className="mt-1">
+                    {(() => {
+                      const badge = renderStatusBadge(editingBill.status || "draft");
+                      const Icon = badge.Icon;
+                      return (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
+                          <Icon className="w-3 h-3 mr-1" />
+                          {badge.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
                 {!isCancelled && editingBill.status !== "cancelled" && (
                   <Button 
