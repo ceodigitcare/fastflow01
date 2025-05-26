@@ -126,10 +126,10 @@ export default function PurchaseBillSplitView({
   const renderStatusBadge = (status: string | null, bill?: Transaction) => {
     if (!status) return null;
     
-    // Recalculate status to ensure accuracy
+    // Recalculate status to ensure accuracy - convert from cents to dollars
     const currentStatus = bill ? calculatePurchaseBillStatus(
-      bill.amount || 0,
-      bill.paymentMade || 0,
+      (bill.amount || 0) / 100,  // Convert cents to dollars
+      (bill.paymentMade || 0) / 100,  // Convert cents to dollars
       Array.isArray(bill.items) ? bill.items.map((item: any) => ({
         quantity: item.quantity || 0,
         quantityReceived: item.quantityReceived || 0
