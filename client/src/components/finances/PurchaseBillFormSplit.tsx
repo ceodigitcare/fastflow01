@@ -1989,16 +1989,7 @@ export default function PurchaseBillFormSplit({
                   })()}
                   <p className="text-xs text-gray-500 mt-1">Status updates automatically based on payments and receipts</p>
                 </div>
-                {editingBill && !isCancelled && editingBill.status !== "cancelled" && (
-                  <button
-                    type="button"
-                    onClick={handleCancelBill}
-                    className="p-2 rounded-full hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors"
-                    title="Cancel this bill"
-                  >
-                    <XCircle className="w-5 h-5" />
-                  </button>
-                )}
+
               </div>
             </div>
           </div>
@@ -2509,38 +2500,7 @@ export default function PurchaseBillFormSplit({
             )}
           />
           
-          {/* Current Status Display - Redesigned */}
-          {editingBill && (
-            <div className="p-4 bg-gray-50 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-sm text-gray-700">Current Status</h4>
-                  <div className="mt-1">
-                    {(() => {
-                      const badge = renderStatusBadge(editingBill.status || "draft");
-                      const Icon = badge.Icon;
-                      return (
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
-                          <Icon className="w-3 h-3 mr-1" />
-                          {badge.label}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                </div>
-                {!isCancelled && editingBill.status !== "cancelled" && (
-                  <button
-                    type="button"
-                    onClick={handleCancelBill}
-                    className="p-1 rounded-full hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors"
-                    title="Cancel this bill"
-                  >
-                    <XCircle className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+
 
           {/* Form Actions */}
           <div className="flex justify-end space-x-2 pt-4 border-t">

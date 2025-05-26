@@ -119,42 +119,47 @@ export default function PurchaseBillSplitView({
     }
   };
   
-  // Get status badge
-  const getStatusBadge = (status: string | null) => {
+  // Import status utilities
+  const { statusColors, statusIcons } = require("@/lib/purchase-bill-utils");
+  const { calculatePurchaseBillStatus } = require("@/lib/validation");
+
+  // Improved status badge rendering with consistent styling
+  const renderStatusBadge = (status: string | null, bill?: Transaction) => {
     if (!status) return null;
     
-    switch(status) {
-      case "draft":
-        return (
-          <div className="flex items-center text-gray-500">
-            <Clock className="w-3 h-3 mr-1" />
-            <span className="text-xs">Draft</span>
-          </div>
-        );
-      case "received":
-        return (
-          <div className="flex items-center text-blue-500">
-            <MessageCircle className="w-3 h-3 mr-1" />
-            <span className="text-xs">Received</span>
-          </div>
-        );
-      case "paid":
-        return (
-          <div className="flex items-center text-green-500">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            <span className="text-xs">Paid</span>
-          </div>
-        );
-      case "overdue":
-        return (
-          <div className="flex items-center text-red-500">
-            <AlertTriangle className="w-3 h-3 mr-1" />
-            <span className="text-xs">Overdue</span>
-          </div>
-        );
-      default:
-        return null;
-    }
+    // Recalculate status to ensure accuracy
+    const currentStatus = bill ? calculatePurchaseBillStatus(
+      bill.amount || 0,
+      bill.paymentMade || 0,
+      Array.isArray(bill.items) ? bill.items.map((item: any) => ({
+        quantity: item.quantity || 0,
+        quantityReceived: item.quantityReceived || 0
+      })) : [],
+      bill.status === "cancelled"
+    ) : status;
+    
+    const colorClass = statusColors[currentStatus as keyof typeof statusColors] || statusColors.draft;
+    const IconComponent = statusIcons[currentStatus as keyof typeof statusIcons] || statusIcons.draft;
+    
+    const statusLabels = {
+      draft: "Draft",
+      cancelled: "Cancelled", 
+      paid: "Paid",
+      partial_paid: "Partially Paid",
+      received: "Received",
+      partial_received: "Partially Received",
+      paid_received: "Paid & Received",
+      paid_partial_received: "Paid & Partially Received",
+      partial_paid_received: "Partially Paid & Received",
+      partial_paid_partial_received: "Partially Paid & Partially Received"
+    };
+    
+    return {
+      Icon: IconComponent,
+      label: statusLabels[currentStatus as keyof typeof statusLabels] || "Unknown",
+      colorClass,
+      currentStatus
+    };
   };
   
   return (
@@ -164,7 +169,20 @@ export default function PurchaseBillSplitView({
         {selectedBill ? (
           <div className="space-y-6 bg-white p-6 border rounded-lg shadow-sm">
             <div className="flex justify-between items-start">
-              <h2 className="text-2xl font-bold">Bill #{selectedBill.documentNumber}</h2>
+              <div className="flex items-center space-x-3">
+                <h2 className="text-2xl font-bold">Bill #{selectedBill.documentNumber}</h2>
+                {(() => {
+                  const badge = renderStatusBadge(selectedBill.status, selectedBill);
+                  if (!badge) return null;
+                  const Icon = badge.Icon;
+                  return (
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
+                      <Icon className="w-4 h-4 mr-2" />
+                      {badge.label}
+                    </span>
+                  );
+                })()}
+              </div>
               <div className="flex space-x-2">
                 <Button 
                   variant="outline" 
@@ -908,9 +926,19 @@ export default function PurchaseBillSplitView({
                       <p className="font-medium">{bill.documentNumber}</p>
                       <p className="text-sm text-gray-500">{bill.contactName}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-1">
                       <p className="font-medium">{formatCurrency(bill.amount / 100)}</p>
-                      {getStatusBadge(bill.status)}
+                      {(() => {
+                        const badge = renderStatusBadge(bill.status, bill);
+                        if (!badge) return null;
+                        const Icon = badge.Icon;
+                        return (
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
+                            <Icon className="w-3 h-3 mr-1" />
+                            {badge.label}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
