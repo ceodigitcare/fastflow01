@@ -1599,18 +1599,25 @@ export default function PurchaseBillFormSplit({
   
   // Data freeze/unfreeze handlers
   const handleFreezeToggle = () => {
+    console.log(`🔄 FREEZE TOGGLE: Current state isFrozen=${isFrozen}`);
+    
     if (isFrozen) {
-      // Unfreeze immediately without confirmation - NO DATA MUTATIONS
-      console.log("UNFREEZING: Preserving all current data as-is");
+      // CRITICAL FIX: Unfreeze immediately with enhanced logging
+      console.log("🔓 UNFREEZING: Starting unfreeze process...");
+      console.log("🔓 UNFREEZING: Preserving all current data as-is");
+      
       setIsFrozen(false);
       updateBillFreezeStatus(false);
+      
       toast({
-        title: "Bill Unfrozen",
-        description: "This purchase bill is now editable.",
+        title: "✅ Bill Unfrozen Successfully",
+        description: "This purchase bill is now editable again.",
       });
+      
+      console.log("🔓 UNFREEZING: Process completed, bill should now be editable");
     } else {
-      // Show confirmation dialog for freezing - NO DATA MUTATIONS
-      console.log("FREEZING: Will preserve all current data exactly as-is");
+      // Show confirmation dialog for freezing
+      console.log("🔒 FREEZING: Will preserve current data exactly as-is");
       setShowFreezeDialog(true);
     }
   };
@@ -1637,22 +1644,56 @@ export default function PurchaseBillFormSplit({
   const updateBillFreezeStatus = async (frozen: boolean) => {
     if (editingBill?.id) {
       try {
-        // CRITICAL FIX: Only update metadata without triggering data refetch
-        // This prevents unwanted data mutations during freeze operations
-        await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, {
-          metadata: {
-            ...editingBill.metadata,
-            isFrozen: frozen
+        console.log(`🔄 UPDATE FREEZE STATUS: Setting bill ${editingBill.id} freeze to ${frozen}`);
+        console.log(`🔄 UPDATE FREEZE STATUS: Current metadata:`, editingBill.metadata);
+        
+        // CRITICAL FIX: Properly handle metadata object construction
+        let currentMetadata = {};
+        
+        // Parse existing metadata safely
+        if (editingBill.metadata) {
+          if (typeof editingBill.metadata === 'string') {
+            try {
+              currentMetadata = JSON.parse(editingBill.metadata);
+            } catch (e) {
+              console.log("Could not parse existing metadata, using empty object");
+              currentMetadata = {};
+            }
+          } else if (typeof editingBill.metadata === 'object') {
+            currentMetadata = { ...editingBill.metadata };
           }
+        }
+        
+        // Create updated metadata with freeze status
+        const updatedMetadata = {
+          ...currentMetadata,
+          isFrozen: frozen,
+          lastFreezeUpdate: new Date().toISOString()
+        };
+        
+        console.log(`🔄 UPDATE FREEZE STATUS: Sending metadata:`, updatedMetadata);
+        
+        await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, {
+          metadata: updatedMetadata
         });
         
-        // DO NOT invalidate queries during freeze to preserve data integrity
-        // queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+        console.log(`✅ FREEZE STATUS UPDATE: Bill ${editingBill.id} freeze status successfully set to ${frozen}`);
         
-        console.log(`FREEZE STATUS UPDATE: Bill ${editingBill.id} freeze status set to ${frozen}`);
+        // Update local state to reflect the change immediately
+        if (editingBill) {
+          editingBill.metadata = updatedMetadata;
+        }
+        
       } catch (error) {
-        console.error("Failed to update freeze status:", error);
+        console.error("❌ FAILED to update freeze status:", error);
+        toast({
+          title: "Error updating freeze status",
+          description: "Could not save freeze state. Please try again.",
+          variant: "destructive"
+        });
       }
+    } else {
+      console.error("❌ Cannot update freeze status: No bill ID found");
     }
   };
 
