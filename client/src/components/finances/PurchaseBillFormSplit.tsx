@@ -1976,21 +1976,25 @@ export default function PurchaseBillFormSplit({
                       <FormControl>
                         <Button
                           variant="outline"
-                          className="w-full justify-start text-left font-normal"
+                          className={`w-full justify-start text-left font-normal ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={isFrozen}
+                          title={isFrozen ? "This bill is frozen. Please unfreeze to make changes." : ""}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : "Select a date"}
+                          {field.value ? format(field.value, "PPP") : (isFrozen ? "Bill is frozen" : "Select a date")}
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
+                    {!isFrozen && (
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    )}
                   </Popover>
                   <FormMessage />
                 </FormItem>
@@ -2009,21 +2013,25 @@ export default function PurchaseBillFormSplit({
                       <FormControl>
                         <Button
                           variant="outline"
-                          className="w-full justify-start text-left font-normal"
+                          className={`w-full justify-start text-left font-normal ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={isFrozen}
+                          title={isFrozen ? "This bill is frozen. Please unfreeze to make changes." : ""}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : "Select a date"}
+                          {field.value ? format(field.value, "PPP") : (isFrozen ? "Bill is frozen" : "Select a date")}
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
+                    {!isFrozen && (
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    )}
                   </Popover>
                   <FormMessage />
                 </FormItem>
