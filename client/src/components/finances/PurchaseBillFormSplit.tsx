@@ -261,19 +261,14 @@ export default function PurchaseBillFormSplit({
       
       console.log(`🔄 FREEZE INIT: shouldBeFrozen=${shouldBeFrozen}, currentIsFrozen=${isFrozen}`);
       
-      if (shouldBeFrozen !== isFrozen) {
-        console.log(`🚀 FREEZE INIT: UPDATING freeze state to ${shouldBeFrozen} for bill ${editingBill.id}`);
-        setIsFrozen(shouldBeFrozen);
-      } else {
-        console.log(`✓ FREEZE INIT: Freeze state already correct (${isFrozen})`);
-      }
+      // CRITICAL FIX: Always set the freeze state immediately, without comparison
+      console.log(`🚀 FREEZE INIT: SETTING freeze state to ${shouldBeFrozen} for bill ${editingBill.id}`);
+      setIsFrozen(shouldBeFrozen);
     } else {
       console.log(`📝 FREEZE INIT: No metadata found, setting freeze to false`);
-      if (isFrozen) {
-        setIsFrozen(false);
-      }
+      setIsFrozen(false);
     }
-  }, [editingBill?.id, editingBill?.metadata, isFrozen]);
+  }, [editingBill?.id, editingBill?.metadata]); // Remove isFrozen from dependencies to prevent loops
   
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
