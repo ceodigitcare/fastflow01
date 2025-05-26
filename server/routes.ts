@@ -924,25 +924,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionData.date = new Date(transactionData.date);
       }
       
-      // Handle items array - ensure all numeric values are properly formatted
+      // FIX: Server-side NaN validation to prevent database errors
+      const sanitizeNumber = (value: any, defaultValue: number = 0): number => {
+        const num = Number(value);
+        return isNaN(num) ? defaultValue : num;
+      };
+
+      // Handle items array with comprehensive NaN validation
       if (Array.isArray(transactionData.items)) {
         transactionData.items = transactionData.items.map(item => ({
           ...item,
-          quantity: Number(item.quantity),
-          unitPrice: Number(item.unitPrice),
-          taxRate: Number(item.taxRate || 0),
-          discount: Number(item.discount || 0),
-          amount: Number(item.amount)
+          quantity: sanitizeNumber(item.quantity, 0),
+          quantityReceived: sanitizeNumber(item.quantityReceived, 0),
+          unitPrice: sanitizeNumber(item.unitPrice, 0),
+          taxRate: sanitizeNumber(item.taxRate, 0),
+          discount: sanitizeNumber(item.discount, 0),
+          amount: sanitizeNumber(item.amount, 0)
         }));
       }
-      
+
       // Combine the ID with the request body to create a complete transaction object
       const updatedTransaction = await storage.updateTransaction({
         ...transactionData,
         businessId,
         id: transactionId,
-        paymentReceived: transactionData.paymentReceived !== undefined ? Number(transactionData.paymentReceived) : 0,
-        amount: Number(transactionData.amount),
+        paymentReceived: sanitizeNumber(transactionData.paymentReceived, 0),
+        amount: sanitizeNumber(transactionData.amount, 0),
         // Add the authenticated user ID for proper version history attribution
         updatedBy: req.user.id
       });
