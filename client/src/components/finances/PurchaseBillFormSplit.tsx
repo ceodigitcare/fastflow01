@@ -230,45 +230,67 @@ export default function PurchaseBillFormSplit({
   });
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
   const [showFreezeDialog, setShowFreezeDialog] = useState(false);
-  // Data Frozen state - Check metadata for persistent freeze status
+  
+  // REBUILT FREEZE SYSTEM: Complete reliable freeze state management
   const [isFrozen, setIsFrozen] = useState(false);
   
-  // CRITICAL FIX: Initialize freeze state properly when component loads
+  // ROBUST FREEZE STATE INITIALIZATION - Runs on every bill load
   useEffect(() => {
-    console.log("🔍 FREEZE INIT: Starting freeze state check...");
-    console.log("📋 FREEZE INIT: editingBill:", editingBill);
-    console.log("📋 FREEZE INIT: editingBill?.metadata:", editingBill?.metadata);
-    console.log("📋 FREEZE INIT: Current isFrozen state:", isFrozen);
+    console.log("🔒 FREEZE SYSTEM: Initializing freeze state detection...");
     
-    if (editingBill?.metadata) {
-      let shouldBeFrozen = false;
-      
-      // Handle both string and object metadata formats
-      if (typeof editingBill.metadata === 'string') {
-        try {
-          const metadataObj = JSON.parse(editingBill.metadata);
-          shouldBeFrozen = metadataObj?.isFrozen === true;
-          console.log(`✅ FREEZE INIT: Parsed metadata freeze status: ${shouldBeFrozen}`);
-          console.log(`✅ FREEZE INIT: Full parsed metadata:`, metadataObj);
-        } catch (e) {
-          console.log("❌ FREEZE INIT: Could not parse metadata for freeze status", e);
-        }
-      } else if (typeof editingBill.metadata === 'object') {
-        shouldBeFrozen = (editingBill.metadata as any)?.isFrozen === true;
-        console.log(`✅ FREEZE INIT: Object metadata freeze status: ${shouldBeFrozen}`);
-        console.log(`✅ FREEZE INIT: Full object metadata:`, editingBill.metadata);
-      }
-      
-      console.log(`🔄 FREEZE INIT: shouldBeFrozen=${shouldBeFrozen}, currentIsFrozen=${isFrozen}`);
-      
-      // CRITICAL FIX: Always set the freeze state immediately, without comparison
-      console.log(`🚀 FREEZE INIT: SETTING freeze state to ${shouldBeFrozen} for bill ${editingBill.id}`);
-      setIsFrozen(shouldBeFrozen);
-    } else {
-      console.log(`📝 FREEZE INIT: No metadata found, setting freeze to false`);
+    if (!editingBill) {
+      console.log("🔒 FREEZE SYSTEM: No bill to edit, setting freeze to false");
       setIsFrozen(false);
+      return;
     }
-  }, [editingBill?.id, editingBill?.metadata]); // Remove isFrozen from dependencies to prevent loops
+    
+    console.log("🔒 FREEZE SYSTEM: Checking bill metadata for freeze status", {
+      billId: editingBill.id,
+      metadata: editingBill.metadata,
+      metadataType: typeof editingBill.metadata
+    });
+    
+    let frozenStatus = false;
+    
+    // RELIABLE METADATA PARSING - Handle all possible formats
+    if (editingBill.metadata) {
+      try {
+        let metadataObj: any = editingBill.metadata;
+        
+        // Parse string metadata to object
+        if (typeof editingBill.metadata === 'string') {
+          metadataObj = JSON.parse(editingBill.metadata);
+        }
+        
+        // Extract freeze status with strict boolean check
+        frozenStatus = Boolean(metadataObj?.isFrozen);
+        
+        console.log("🔒 FREEZE SYSTEM: Successfully extracted freeze status", {
+          isFrozen: frozenStatus,
+          metadata: metadataObj
+        });
+        
+      } catch (error) {
+        console.error("🔒 FREEZE SYSTEM: Error parsing metadata, defaulting to unfrozen", error);
+        frozenStatus = false;
+      }
+    } else {
+      console.log("🔒 FREEZE SYSTEM: No metadata found, bill is unfrozen");
+      frozenStatus = false;
+    }
+    
+    // IMMEDIATE STATE APPLICATION
+    console.log(`🔒 FREEZE SYSTEM: Setting freeze state to ${frozenStatus} for bill ${editingBill.id}`);
+    setIsFrozen(frozenStatus);
+    
+    // Apply form lock immediately if frozen
+    if (frozenStatus) {
+      console.log("🔒 FREEZE SYSTEM: Bill is frozen - applying form restrictions");
+    } else {
+      console.log("🔒 FREEZE SYSTEM: Bill is unfrozen - form is editable");
+    }
+    
+  }, [editingBill?.id, editingBill?.metadata]); // Trigger on bill change or metadata update
   
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
@@ -1592,44 +1614,82 @@ export default function PurchaseBillFormSplit({
     }
   }, [editingBill, vendors, isFrozen]);
   
-  // Data freeze/unfreeze handlers
-  const handleFreezeToggle = () => {
-    console.log(`🔄 FREEZE TOGGLE: Current state isFrozen=${isFrozen}`);
+  // REBUILT FREEZE/UNFREEZE SYSTEM: Complete reliable toggle functionality
+  const handleFreezeToggle = async () => {
+    console.log("🔒 FREEZE TOGGLE: Starting freeze/unfreeze operation", { 
+      currentState: isFrozen, 
+      billId: editingBill?.id 
+    });
+    
+    if (!editingBill?.id) {
+      console.error("🔒 FREEZE TOGGLE: Cannot toggle freeze - no bill ID");
+      toast({
+        title: "Error",
+        description: "Cannot change freeze status - no bill found.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     if (isFrozen) {
-      // CRITICAL FIX: Unfreeze immediately with enhanced logging
-      console.log("🔓 UNFREEZING: Starting unfreeze process...");
-      console.log("🔓 UNFREEZING: Preserving all current data as-is");
+      // UNFREEZE: Immediate action without confirmation
+      console.log("🔓 UNFREEZING: Starting unfreeze process for bill", editingBill.id);
       
-      setIsFrozen(false);
-      updateBillFreezeStatus(false);
+      try {
+        // Update database first
+        await updateBillFreezeStatus(false);
+        
+        // Update local state
+        setIsFrozen(false);
+        
+        // Success feedback
+        toast({
+          title: "✅ Bill Unfrozen Successfully",
+          description: "This purchase bill is now editable. You can make changes and save.",
+        });
+        
+        console.log("🔓 UNFREEZING: Complete - bill is now fully editable");
+        
+      } catch (error) {
+        console.error("🔓 UNFREEZING: Failed to unfreeze bill", error);
+        toast({
+          title: "Error Unfreezing Bill",
+          description: "Could not unfreeze the bill. Please try again.",
+          variant: "destructive"
+        });
+      }
       
-      toast({
-        title: "✅ Bill Unfrozen Successfully",
-        description: "This purchase bill is now editable again.",
-      });
-      
-      console.log("🔓 UNFREEZING: Process completed, bill should now be editable");
     } else {
-      // Show confirmation dialog for freezing
-      console.log("🔒 FREEZING: Will preserve current data exactly as-is");
+      // FREEZE: Show confirmation dialog
+      console.log("🔒 FREEZING: Showing confirmation dialog");
       setShowFreezeDialog(true);
     }
   };
 
   const confirmFreezeBill = async () => {
+    console.log("🔒 FREEZING: Starting freeze process for bill", editingBill?.id);
+    
     try {
+      // Update database first
+      await updateBillFreezeStatus(true);
+      
+      // Update local state
       setIsFrozen(true);
       setShowFreezeDialog(false);
-      updateBillFreezeStatus(true);
       
+      // Success feedback
       toast({
-        title: "Bill Frozen",
+        title: "🧊 Bill Frozen Successfully",
         description: "This purchase bill is now locked and cannot be edited.",
       });
+      
+      console.log("🔒 FREEZING: Complete - bill is now frozen and protected");
+      
     } catch (error) {
+      console.error("🔒 FREEZING: Failed to freeze bill", error);
+      setShowFreezeDialog(false);
       toast({
-        title: "Error",
+        title: "Error Freezing Bill",
         description: "Failed to freeze bill. Please try again.",
         variant: "destructive"
       });
