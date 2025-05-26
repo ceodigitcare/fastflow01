@@ -231,6 +231,7 @@ export default function PurchaseBillFormSplit({
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelled, setIsCancelled] = useState(editingBill?.status === "cancelled" || false);
+  const [cancelReason, setCancelReason] = useState("");
   
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
