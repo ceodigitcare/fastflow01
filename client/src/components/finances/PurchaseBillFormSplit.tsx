@@ -1,65 +1,38 @@
-import React, { useState, useEffect, forwardRef } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { Transaction, Account, Product, InsertUser, User } from "@shared/schema";
-import { purchaseBillSchema, PurchaseBill, PurchaseBillItem, calculatePurchaseBillStatus } from "@/lib/validation";
-import { renderStatusBadge } from "@/lib/purchase-bill-utils";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { formatCurrency } from "@/lib/utils";
-import { Calendar as CalendarIcon, X, Plus, Save, Lock, Unlock } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import VendorModal from "./VendorModal";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-
-// Create a safe number input component that always stays controlled
-const SafeNumberInput = forwardRef<
-  HTMLInputElement, 
-  Omit<React.ComponentProps<"input">, 'onChange'> & { 
-    onChange?: (value: number) => void,
-    defaultValue?: number
-  }
->(({ onChange, defaultValue = 0, value, ...props }, ref) => {
-  // Always ensure the input has a valid value (never undefined)
-  const safeValue = value !== undefined && value !== null ? value : defaultValue;
-  
-  return (
-    <Input
-      {...props}
-      ref={ref}
-      type="number"
-      value={safeValue}
-      onChange={(e) => {
-        const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-        onChange?.(isNaN(val) ? 0 : val);
-      }}
-    />
-  );
-});
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { CalendarIcon, Plus, X } from "lucide-react";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { formatCurrency } from "@/lib/utils";
+import { type User, type Product, type Account, type Transaction } from "@shared/schema";
+import { purchaseBillSchema } from "@/lib/validation";
+import { z } from "zod";
+import { calculatePurchaseBillStatus } from "@/lib/purchase-bill-utils";
 
-// Helper function to generate a new bill number
+// Generate unique bill number with timestamp
 function generateBillNumber() {
-  const prefix = "BILL";
-  const dateStr = format(new Date(), "yyyyMMdd");
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  return `${prefix}-${dateStr}-${random}`;
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+  const timeStr = Math.floor(now.getTime() / 1000).toString().slice(-4);
+  const randomStr = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `BILL-${dateStr}-${timeStr}${randomStr}`;
 }
+
+type PurchaseBill = z.infer<typeof purchaseBillSchema>;
 
 interface PurchaseBillFormSplitProps {
   onCancel: () => void;
@@ -67,240 +40,213 @@ interface PurchaseBillFormSplitProps {
   editingBill?: Transaction | null;
 }
 
+interface PurchaseBillItem {
+  productId: number;
+  description: string;
+  quantity: number;
+  quantityReceived: number;
+  unitPrice: number;
+  amount: number;
+  taxRate: number;
+  discount: number;
+  taxType: 'flat' | 'percentage';
+  discountType: 'flat' | 'percentage';
+}
+
+// Utility function for extracting quantity received values
+function extractQuantityReceived(editingBill: Transaction, productId: number): number {
+  console.log(`INITIALIZATION: Starting extraction for product ${productId} (${getProductDescription(editingBill, productId)})`);
+  
+  // Primary method: Check direct property on items
+  if (editingBill?.items && Array.isArray(editingBill.items)) {
+    const matchingItem = editingBill.items.find((item: any) => item.productId === productId);
+    if (matchingItem && typeof matchingItem.quantityReceived === 'number' && matchingItem.quantityReceived > 0) {
+      console.log(`EXTRACT: Direct property found with value ${matchingItem.quantityReceived} for product ${productId}`);
+      return matchingItem.quantityReceived;
+    }
+  }
+  
+  // Fallback method: Check metadata
+  if (editingBill?.metadata) {
+    let metadataObj: any = editingBill.metadata;
+    
+    if (typeof editingBill.metadata === 'string') {
+      try {
+        metadataObj = JSON.parse(editingBill.metadata);
+      } catch (e) {
+        console.log("Could not parse metadata for quantity extraction");
+        return 0;
+      }
+    }
+    
+    // Check receivedQuantityMap
+    if (metadataObj?.receivedQuantityMap?.[productId]) {
+      const metadataValue = Number(metadataObj.receivedQuantityMap[productId]);
+      if (!isNaN(metadataValue) && metadataValue > 0) {
+        console.log(`EXTRACT: Metadata receivedQuantityMap found with value ${metadataValue} for product ${productId}`);
+        return metadataValue;
+      }
+    }
+    
+    // Check itemQuantitiesReceived array
+    if (metadataObj?.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
+      const itemEntry = metadataObj.itemQuantitiesReceived.find((item: any) => item.productId === productId);
+      if (itemEntry && typeof itemEntry.quantityReceived === 'number' && itemEntry.quantityReceived > 0) {
+        console.log(`EXTRACT: Metadata itemQuantitiesReceived found with value ${itemEntry.quantityReceived} for product ${productId}`);
+        return itemEntry.quantityReceived;
+      }
+    }
+  }
+  
+  console.log(`EXTRACT: No quantity received found for product ${productId}, returning 0`);
+  return 0;
+}
+
+function getProductDescription(editingBill: Transaction, productId: number): string {
+  if (editingBill?.items && Array.isArray(editingBill.items)) {
+    const item = editingBill.items.find((item: any) => item.productId === productId);
+    return item?.description || `Product ${productId}`;
+  }
+  return `Product ${productId}`;
+}
+
 export default function PurchaseBillFormSplit({ 
   onCancel, 
-  onSave,
-  editingBill = null 
+  onSave, 
+  editingBill 
 }: PurchaseBillFormSplitProps) {
-  const { toast } = useToast();
-  
-  // Local state for line items and dialogs
-  // Initialize bill items with a function to properly handle complex logic
+  const queryClient = useQueryClient();
+
+  // Initialize bill items from editing bill or empty array
   const [billItems, setBillItems] = useState<PurchaseBillItem[]>(() => {
-    // Only process if we're editing a bill with items
-    if (editingBill?.items) {
-      console.log("INIT - Initializing bill items from editing bill:", editingBill);
-      console.log("INIT - Items data to initialize from:", JSON.stringify(editingBill.items, null, 2));
+    console.log("INIT - Initializing bill items from editing bill:", editingBill);
+    console.log("INIT - Items data to initialize from:", editingBill?.items);
+    
+    if (!editingBill?.items || !Array.isArray(editingBill.items)) {
+      console.log("INIT - No items to initialize, starting with empty array");
+      return [];
+    }
+
+    // Initialize quantities from metadata if available
+    let quantityReceivedMap: { [productId: number]: number } = {};
+    
+    if (editingBill.metadata) {
+      console.log("✅ INIT - Bill has metadata property");
+      let metadataObj: any = editingBill.metadata;
       
-      // Extract all possible quantity received values from the metadata first
-      // This is the most reliable source for these values
-      let quantityReceivedMap: Record<number, number> = {};
-      
-      // COMPLETE REDESIGN: Robust metadata extraction with detailed tracing
-      try {
-        // First, examine metadata structure in detail
-        if (editingBill.metadata) {
-          console.log("✅ INIT - Bill has metadata property");
-          let metadataObj: any = null;
-          
-          // Parse metadata with full error handling
-          if (typeof editingBill.metadata === 'string') {
-            try {
-              metadataObj = JSON.parse(editingBill.metadata);
-              console.log("✅ INIT - Successfully parsed metadata string:", JSON.stringify(metadataObj, null, 2));
-            } catch (parseError) {
-              console.error("❌ INIT - Error parsing metadata string:", parseError);
-            }
-          } else if (typeof editingBill.metadata === 'object') {
-            metadataObj = editingBill.metadata;
-            console.log("✅ INIT - Metadata is already an object:", JSON.stringify(metadataObj, null, 2));
-          }
-          
-          // Proceed if we have valid metadata
-          if (metadataObj) {
-            // Check for the new map-based storage (most reliable and fastest)
-            if (metadataObj.receivedQuantityMap && typeof metadataObj.receivedQuantityMap === 'object') {
-              console.log("✅ INIT - Found receivedQuantityMap in metadata:", metadataObj.receivedQuantityMap);
-              
-              // Process the map entries directly
-              Object.entries(metadataObj.receivedQuantityMap).forEach(([key, value]) => {
-                // Extract product ID from the key (format: "product_123")
-                const productIdMatch = key.match(/product_(\d+)/);
-                if (productIdMatch && productIdMatch[1]) {
-                  const productId = Number(productIdMatch[1]);
-                  const quantityValue = Number(value);
-                  
-                  if (!isNaN(productId) && !isNaN(quantityValue)) {
-                    quantityReceivedMap[productId] = quantityValue;
-                    console.log(`✅ INIT - From map: product ${productId} received ${quantityValue} units`);
-                  }
-                }
-              });
-            }
-            
-            // Next check the array-based storage as backup
-            if (metadataObj.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
-              console.log("✅ INIT - Found itemQuantitiesReceived array in metadata:", 
-                JSON.stringify(metadataObj.itemQuantitiesReceived, null, 2));
-                
-              metadataObj.itemQuantitiesReceived.forEach((metaItem: any) => {
-                if (metaItem && typeof metaItem === 'object') {
-                  const productId = Number(metaItem.productId);
-                  const quantityValue = Number(metaItem.quantityReceived);
-                  
-                  // Only use this if we don't already have a value from the map
-                  if (!isNaN(productId) && !isNaN(quantityValue) && quantityReceivedMap[productId] === undefined) {
-                    quantityReceivedMap[productId] = quantityValue;
-                    console.log(`✅ INIT - From array: product ${productId} received ${quantityValue} units`);
-                  }
-                }
-              });
-            }
-            
-            // Check if we found any values in metadata
-            if (Object.keys(quantityReceivedMap).length > 0) {
-              console.log("✅ INIT - Successfully extracted received quantities from metadata:", quantityReceivedMap);
-            } else {
-              console.log("⚠️ INIT - No received quantities found in metadata");
-            }
-          } else {
-            console.log("❌ INIT - Failed to parse or access metadata");
-          }
-        } else {
-          console.log("⚠️ INIT - Bill has no metadata property");
+      // Parse metadata if it's a string
+      if (typeof editingBill.metadata === 'string') {
+        try {
+          metadataObj = JSON.parse(editingBill.metadata);
+          console.log("✅ INIT - Successfully parsed metadata string:", metadataObj);
+        } catch (e) {
+          console.log("⚠️ INIT - Could not parse metadata string:", e);
+          metadataObj = {};
         }
-      } catch (error) {
-        console.error("❌ INIT - Unexpected error processing metadata:", error);
       }
+
+      // Debug metadata content
+      console.log("INIT - Full metadata object:", metadataObj);
       
-      // Step 2: Check if any items directly contain valid quantityReceived values
-      const directQuantityItems = editingBill.items
-        .filter(item => item.quantityReceived !== undefined && item.quantityReceived !== null)
-        .map(item => ({
-          productId: Number(item.productId),
-          quantityReceived: Number(item.quantityReceived)
-        }))
-        .filter(item => !isNaN(item.productId) && !isNaN(item.quantityReceived));
-      
-      // Log the direct quantities found
-      if (directQuantityItems.length > 0) {
-        console.log("INIT - Found direct quantities in items:", directQuantityItems);
+      // Extract receivedQuantityMap if available
+      if (metadataObj?.receivedQuantityMap && typeof metadataObj.receivedQuantityMap === 'object') {
+        console.log("✅ INIT - Found receivedQuantityMap in metadata:", metadataObj.receivedQuantityMap);
         
-        // Supplement metadata quantities with direct values if they don't exist in metadata
-        directQuantityItems.forEach(item => {
-          if (quantityReceivedMap[item.productId] === undefined) {
-            quantityReceivedMap[item.productId] = item.quantityReceived;
-            console.log(`INIT - Adding direct quantity for product ${item.productId}: ${item.quantityReceived}`);
+        // Convert string keys to numbers and ensure values are numbers
+        Object.keys(metadataObj.receivedQuantityMap).forEach(key => {
+          const productId = Number(key);
+          const quantity = Number(metadataObj.receivedQuantityMap[key]);
+          if (!isNaN(productId) && !isNaN(quantity) && quantity > 0) {
+            quantityReceivedMap[productId] = quantity;
+            console.log(`INIT - Mapped product ${productId} to quantity ${quantity}`);
           }
         });
       }
       
-      // Log the final quantity map for debugging
-      console.log("INIT - Final quantityReceivedMap:", quantityReceivedMap);
+      // Also try to extract from itemQuantitiesReceived array format
+      if (metadataObj?.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
+        console.log("✅ INIT - Found itemQuantitiesReceived array in metadata:", metadataObj.itemQuantitiesReceived);
+        
+        metadataObj.itemQuantitiesReceived.forEach((item: any) => {
+          if (item?.productId && item?.quantityReceived) {
+            const productId = Number(item.productId);
+            const quantity = Number(item.quantityReceived);
+            if (!isNaN(productId) && !isNaN(quantity) && quantity > 0) {
+              quantityReceivedMap[productId] = quantity;
+              console.log(`INIT - Mapped product ${productId} to quantity ${quantity} from array`);
+            }
+          }
+        });
+      } else {
+        console.log("⚠️ INIT - No received quantities found in metadata");
+      }
+    }
+
+    // Debug: Check if we found any quantities from metadata
+    console.log("INIT - Metadata quantities found:", quantityReceivedMap);
+    
+    // Process items and also check for direct quantities in items themselves
+    const initialItems: PurchaseBillItem[] = [];
+    
+    // If no metadata quantities, check items for direct quantityReceived properties
+    if (Object.keys(quantityReceivedMap).length === 0) {
+      console.log("INIT - No metadata quantities, checking items for direct properties");
       
-      // Map items with the correct data 
-      return editingBill.items.map(item => {
-        // Safely parse numeric values with fallbacks to avoid NaN
-        const taxRateValue = typeof item.taxRate === 'string' 
-          ? parseFloat(item.taxRate) || 0 
-          : Number(item.taxRate || 0);
-        
-        const discountValue = typeof item.discount === 'string' 
-          ? parseFloat(item.discount) || 0 
-          : Number(item.discount || 0);
-        
-        // Get product ID as a number
-        const productId = Number(item.productId) || 0;
-        
-        // Determine quantity received - PRIORITIZE the map we created above
-        // which combines both metadata and direct values
-        let quantityReceived = quantityReceivedMap[productId] !== undefined 
-          ? quantityReceivedMap[productId] 
-          : 0;
-        
-        // Log the final quantity value used for this product
-        console.log(`INIT - FINAL quantityReceived for product ${productId} (${item.description}): ${quantityReceived}`);
-        
-        return {
-          productId: productId,
-          description: item.description || "",
-          quantity: Number(item.quantity) || 1,
-          quantityReceived: quantityReceived, // Use the extracted quantity received
-          unitPrice: (item.unitPrice || 0) / 100, // Convert from cents to dollars
-          taxRate: taxRateValue,
-          discount: discountValue,
-          taxType: item.taxType || 'percentage', // Default to percentage
-          discountType: item.discountType || 'percentage', // Default to percentage
-          amount: (item.amount || 0) / 100 // Convert from cents to dollars
-        };
+      editingBill.items.forEach((item: any) => {
+        if (item.productId && typeof item.quantityReceived === 'number' && item.quantityReceived > 0) {
+          quantityReceivedMap[item.productId] = item.quantityReceived;
+          console.log(`INIT - Found direct quantity for product ${item.productId}: ${item.quantityReceived}`);
+        }
+      });
+      
+      console.log("INIT - Found direct quantities in items:", Object.keys(quantityReceivedMap));
+      editingBill.items.forEach((item: any) => {
+        if (item.productId && typeof item.quantityReceived === 'number' && item.quantityReceived > 0) {
+          console.log(`INIT - Adding direct quantity for product ${item.productId}: ${item.quantityReceived}`);
+          quantityReceivedMap[item.productId] = item.quantityReceived;
+        }
       });
     }
     
-    // Default to empty array if not editing
-    return [];
-  });
-  const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
-  
-  // REBUILT FREEZE SYSTEM: Complete reliable freeze state management
-  const [isFrozen, setIsFrozen] = useState(false);
-  
-  // ROBUST FREEZE STATE INITIALIZATION - Runs on every bill load
-  useEffect(() => {
-    console.log("🔒 FREEZE SYSTEM: Initializing freeze state detection...");
+    console.log("INIT - Final quantityReceivedMap:", quantityReceivedMap);
     
-    if (!editingBill) {
-      console.log("🔒 FREEZE SYSTEM: No bill to edit, setting freeze to false");
-      setIsFrozen(false);
-      return;
-    }
-    
-    console.log("🔒 FREEZE SYSTEM: Checking bill metadata for freeze status", {
-      billId: editingBill.id,
-      metadata: editingBill.metadata,
-      metadataType: typeof editingBill.metadata
+    // Convert items to the format needed by the form
+    editingBill.items.forEach((item: any, index: number) => {
+      // Get the quantityReceived for this product
+      const quantityReceived = quantityReceivedMap[item.productId] || 0;
+      
+      console.log(`INIT - Processing item ${index}:`, {
+        productId: item.productId,
+        description: item.description,
+        quantity: item.quantity,
+        quantityReceived: quantityReceived,
+        unitPrice: item.unitPrice / 100,
+        amount: item.amount / 100
+      });
+      
+      console.log(`INIT - FINAL quantityReceived for product ${item.productId} (${item.description}): ${quantityReceived}`);
+      
+      initialItems.push({
+        productId: item.productId,
+        description: item.description,
+        quantity: item.quantity,
+        quantityReceived: quantityReceived,
+        unitPrice: item.unitPrice / 100, // Convert from cents to dollars for display
+        amount: item.amount / 100, // Convert from cents to dollars for display
+        taxRate: item.taxRate || 0,
+        discount: item.discount || 0,
+        taxType: item.taxType || 'percentage',
+        discountType: item.discountType || 'percentage'
+      });
     });
     
-    let frozenStatus = false;
+    console.log("INIT - Final initialized items:", initialItems);
     
-    // RELIABLE METADATA PARSING - Handle all possible formats
-    if (editingBill.metadata) {
-      try {
-        let metadataObj: any = editingBill.metadata;
-        
-        // Parse string metadata to object
-        if (typeof editingBill.metadata === 'string') {
-          metadataObj = JSON.parse(editingBill.metadata);
-        }
-        
-        // Extract freeze status with strict boolean check
-        frozenStatus = Boolean(metadataObj?.isFrozen);
-        
-        console.log("🔒 FREEZE SYSTEM: Successfully extracted freeze status", {
-          isFrozen: frozenStatus,
-          metadata: metadataObj
-        });
-        
-      } catch (error) {
-        console.error("🔒 FREEZE SYSTEM: Error parsing metadata, defaulting to unfrozen", error);
-        frozenStatus = false;
-      }
-    } else {
-      console.log("🔒 FREEZE SYSTEM: No metadata found, bill is unfrozen");
-      frozenStatus = false;
-    }
-    
-    // IMMEDIATE STATE APPLICATION
-    console.log(`🔒 FREEZE SYSTEM: Setting freeze state to ${frozenStatus} for bill ${editingBill.id}`);
-    setIsFrozen(frozenStatus);
-    
-    // Apply form lock immediately if frozen
-    if (frozenStatus) {
-      console.log("🔒 FREEZE SYSTEM: Bill is frozen - applying form restrictions");
-    } else {
-      console.log("🔒 FREEZE SYSTEM: Bill is unfrozen - form is editable");
-    }
-    
-  }, [editingBill?.id, editingBill?.metadata]); // Trigger on bill change or metadata update
-  
-  // ADDITIONAL DEBUG: Log freeze state changes
-  useEffect(() => {
-    console.log(`🔒 FREEZE STATE CHANGED: isFrozen is now ${isFrozen} for bill ${editingBill?.id}`);
-    if (isFrozen) {
-      console.log("🧊 FORM LOCKED: All inputs should be disabled and save button should show frozen message");
-    } else {
-      console.log("🔓 FORM UNLOCKED: All inputs should be editable and save button should work normally");
-    }
-  }, [isFrozen, editingBill?.id]);
+    // Default to empty array if not editing
+    return initialItems;
+  });
+  const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
+
   
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
@@ -313,1411 +259,470 @@ export default function PurchaseBillFormSplit({
     name: "",
     email: "",
     phone: "",
-    businessName: "",
     address: ""
   });
-  
-  // Get products
+
+  // Get products for product selection
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products"],
+    queryKey: ["/api/products"]
   });
-  
-  // Get accounts (bank/cash accounts)
+
+  // Get accounts for account selection
   const { data: accounts, isLoading: accountsLoading } = useQuery<Account[]>({
-    queryKey: ["/api/accounts"],
-    select: (accounts) => accounts.filter(account => 
-      // Filter for bank and cash accounts only
-      account.isActive && 
-      (account.name.toLowerCase().includes("bank") || 
-       account.name.toLowerCase().includes("cash") ||
-       account.name.toLowerCase().includes("checking") ||
-       account.name.toLowerCase().includes("savings"))
-    )
+    queryKey: ["/api/accounts"]
   });
-  
-  // Define a complete set of default values to ensure no undefined values
+
+  // Default values for the form
   const defaultEmptyBill: PurchaseBill = {
-    vendorId: 0,
-    accountId: 0,
+    accountId: accounts?.[0]?.id || 1,
+    items: [],
+    status: "draft",
+    vendorId: 1,
     billNumber: generateBillNumber(),
     billDate: new Date(),
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-    status: "draft",
-    items: [],
+    dueDate: new Date(),
     subtotal: 0,
     taxAmount: 0,
     discountAmount: 0,
-    totalDiscount: 0,
-    totalDiscountType: "flat", // Set to flat by default
     totalAmount: 0,
+    totalDiscount: 0,
+    totalDiscountType: "flat",
     paymentMade: 0,
     notes: "",
-    termsAndConditions: "Payment is due within 30 days of the bill date.",
-    vendorNotes: "",
+    vendorNotes: ""
   };
 
-  // Set up form with defaults or pre-fill with editing data
-  const form = useForm<PurchaseBill>({
-    resolver: zodResolver(purchaseBillSchema),
-    // Always use defaultEmptyBill as base to avoid undefined fields
-    defaultValues: editingBill ? {
-      ...defaultEmptyBill,
-      // Pre-fill with existing bill data when editing
-      vendorId: editingBill.contactId ?? 0,
-      accountId: editingBill.accountId ?? 0,
-      billNumber: editingBill.documentNumber ?? generateBillNumber(),
-      billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
-      dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      status: editingBill.status ?? "draft",
-      items: Array.isArray(editingBill.items) ? editingBill.items.map(item => {
-        console.log(`INITIALIZATION: Starting extraction for product ${item.productId} (${item.description || 'Unknown'})`);
-        
-        // Convert tax rate and discount to numbers with safety checks
-        const taxRateValue = item.taxRate !== undefined && item.taxRate !== null 
-          ? (typeof item.taxRate === 'string' ? parseFloat(item.taxRate) : Number(item.taxRate)) 
-          : 0;
-        
-        const discountValue = item.discount !== undefined && item.discount !== null 
-          ? (typeof item.discount === 'string' ? parseFloat(item.discount) : Number(item.discount)) 
-          : 0;
-          
-        // ----- COMPLETE REBUILD -----
-        // INITIALIZATION PHASE: Extract received quantity with all possible sources
-        
-        // Initialize tracking variables for debugging
-        let quantityTracker = {
-          directValue: null as number | null,
-          metadataMapValue: null as number | null,
-          metadataArrayValue: null as number | null,
-          finalValue: null as number | null,
-          source: "none"
-        };
-        
-        // ATTEMPT 1: Direct property extraction (highest priority)
-        if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
-          const directValue = Number(item.quantityReceived);
-          if (!isNaN(directValue)) {
-            quantityTracker.directValue = directValue;
-            quantityTracker.finalValue = directValue;
-            quantityTracker.source = "direct-property";
-            console.log(`EXTRACT: Direct property found with value ${directValue} for product ${item.productId}`);
-          }
-        }
-        
-        // ATTEMPT 2: Metadata map extraction
-        if (editingBill.metadata && (!quantityTracker.finalValue || quantityTracker.finalValue === 0)) {
-          try {
-            // Parse metadata if needed
-            const metaObj = typeof editingBill.metadata === 'string' 
-              ? JSON.parse(editingBill.metadata) 
-              : editingBill.metadata;
-            
-            // Try the map format first (fast lookup by product ID)
-            if (metaObj && metaObj.receivedQuantityMap) {
-              const productKey = `product_${item.productId}`;
-              
-              if (metaObj.receivedQuantityMap[productKey] !== undefined) {
-                const mapValue = Number(metaObj.receivedQuantityMap[productKey]);
-                if (!isNaN(mapValue)) {
-                  quantityTracker.metadataMapValue = mapValue;
-                  
-                  // Only update final value if we haven't found one already
-                  if (!quantityTracker.finalValue || quantityTracker.finalValue === 0) {
-                    quantityTracker.finalValue = mapValue;
-                    quantityTracker.source = "metadata-map";
-                    console.log(`EXTRACT: Metadata map found with value ${mapValue} for product ${item.productId}`);
-                  }
-                }
-              }
-            }
-            
-            // Try the array format if we still need a value
-            if (metaObj && metaObj.itemQuantitiesReceived && 
-                (!quantityTracker.finalValue || quantityTracker.finalValue === 0)) {
-              
-              // Find by ID exact match
-              const matchedItem = metaObj.itemQuantitiesReceived.find(
-                (i: any) => i && Number(i.productId) === Number(item.productId)
-              );
-              
-              if (matchedItem && matchedItem.quantityReceived !== undefined) {
-                const arrayValue = Number(matchedItem.quantityReceived);
-                if (!isNaN(arrayValue)) {
-                  quantityTracker.metadataArrayValue = arrayValue;
-                  
-                  // Only update if we don't have a value yet
-                  if (!quantityTracker.finalValue || quantityTracker.finalValue === 0) {
-                    quantityTracker.finalValue = arrayValue;
-                    quantityTracker.source = "metadata-array";
-                    console.log(`EXTRACT: Metadata array found with value ${arrayValue} for product ${item.productId}`);
-                  }
-                }
-              }
-            }
-          } catch (error) {
-            console.error(`EXTRACT ERROR: Failed to parse metadata for product ${item.productId}:`, error);
-          }
-        }
-        
-        // FINAL DECISION: Ensure we have a valid numeric value
-        // If no value was found, default to 0
-        if (quantityTracker.finalValue === null || isNaN(quantityTracker.finalValue)) {
-          quantityTracker.finalValue = 0;
-          quantityTracker.source = "default-fallback";
-        }
-        
-        // Log the complete extraction process for debugging
-        console.log(`EXTRACTION COMPLETE for product ${item.productId}:`, {
-          directProperty: quantityTracker.directValue, 
-          metadataMap: quantityTracker.metadataMapValue,
-          metadataArray: quantityTracker.metadataArrayValue,
-          finalDecision: quantityTracker.finalValue,
-          source: quantityTracker.source
-        });
-        
-        // Create a clean form item with all required properties and explicit type conversions
-        return {
-          productId: Number(item.productId || 0),
-          description: String(item.description || ""),
-          quantity: Number(item.quantity || 1),
-          unitPrice: Number((item.unitPrice || 0) / 100), // Convert from cents to dollars
-          taxRate: taxRateValue,
-          discount: discountValue,
-          taxType: String(item.taxType || 'percentage'),
-          discountType: String(item.discountType || 'percentage'),
-          // This is our critical field - use the final decision from our tracking
-          quantityReceived: quantityTracker.finalValue,
-          amount: Number((item.amount || 0) / 100) // Convert from cents to dollars
-        };
-      }) : [],
-      subtotal: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
-      taxAmount: 0, // We'll calculate this
-      discountAmount: 0, // We'll calculate this
-      // Parse metadata JSON if it exists, or use direct properties
-      totalDiscount: (() => {
-        // Try to parse metadata if it's a string
-        let metadataObj = null;
-        if (typeof editingBill.metadata === 'string') {
-          try {
-            metadataObj = JSON.parse(editingBill.metadata);
-            console.log("Parsed metadata:", metadataObj);
-            if (metadataObj?.totalDiscount !== undefined) {
-              return Number(metadataObj.totalDiscount) / 100; // Convert from cents to dollars
-            }
-          } catch (e) {
-            console.error("Error parsing metadata:", e);
-          }
-        } 
-        
-        // If metadata parsing failed or totalDiscount wasn't in metadata, try direct property
-        if (editingBill.totalDiscount !== undefined) {
-          return Number(editingBill.totalDiscount);
-        }
-        
-        // Default to 0
-        return 0;
-      })(),
-      
-      // Parse metadata JSON for discount type
-      totalDiscountType: (() => {
-        // Try to parse metadata if it's a string
-        if (typeof editingBill.metadata === 'string') {
-          try {
-            const metadataObj = JSON.parse(editingBill.metadata);
-            if (metadataObj?.totalDiscountType) {
-              return metadataObj.totalDiscountType;
-            }
-          } catch (e) {
-            console.error("Error parsing metadata in discount type:", e);
-          }
-        }
-        
-        // Fallback to direct property or default
-        return editingBill.totalDiscountType || 'flat';
-      })(),
-      totalAmount: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
-      paymentMade: (editingBill.paymentReceived ?? 0) / 100, // Convert from cents to dollars
-      notes: editingBill.notes ?? "",
-      termsAndConditions: "Payment is due within 30 days of the bill date.",
-      vendorNotes: editingBill.description ?? "",
-    } : defaultEmptyBill
-  });
-  
-  // Safety: Reset the form when the editingBill prop changes to ensure all values are properly set
-  useEffect(() => {
-    if (editingBill) {
-      form.reset({
-        ...defaultEmptyBill,
-        vendorId: editingBill.contactId ?? 0,
-        accountId: editingBill.accountId ?? 0,
-        billNumber: editingBill.documentNumber ?? generateBillNumber(),
-        billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
-        dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        status: editingBill.status ?? "draft",
-        items: Array.isArray(editingBill.items) ? editingBill.items.map(item => {
-          const taxRateValue = item.taxRate !== undefined && item.taxRate !== null 
-            ? (typeof item.taxRate === 'string' ? parseFloat(item.taxRate) : Number(item.taxRate)) 
-            : 0;
-          
-          const discountValue = item.discount !== undefined && item.discount !== null 
-            ? (typeof item.discount === 'string' ? parseFloat(item.discount) : Number(item.discount)) 
-            : 0;
-            
-          return {
-            productId: item.productId ?? 0,
-            description: item.description ?? "",
-            quantity: item.quantity ?? 1,
-            unitPrice: (item.unitPrice ?? 0) / 100, // Convert from cents to dollars
-            taxRate: taxRateValue,
-            discount: discountValue,
-            taxType: item.taxType ?? 'percentage', // Default to percentage for tax
-            discountType: item.discountType ?? 'percentage', // Default to percentage for item discount
-            quantityReceived: item.quantityReceived ?? 0, // Add the saved quantityReceived value
-            amount: (item.amount ?? 0) / 100 // Convert from cents to dollars
-          };
-        }) : [],
-        subtotal: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
-        taxAmount: 0, // We'll calculate this
-        discountAmount: 0, // We'll calculate this
-        totalDiscount: editingBill.totalDiscount !== undefined ? (editingBill.totalDiscount / 100) : 0,
-        totalDiscountType: editingBill.totalDiscountType ?? 'flat', // Default to flat for total discount
-        totalAmount: (editingBill.amount ?? 0) / 100, // Convert from cents to dollars
-        paymentMade: (editingBill.paymentReceived ?? 0) / 100, // Convert from cents to dollars
-        notes: editingBill.notes ?? "",
-        termsAndConditions: "Payment is due within 30 days of the bill date.",
-        vendorNotes: editingBill.description ?? "",
-        // Include other fields from editingBill as needed
-      });
-    }
-  }, [editingBill]);
-  
-  // Mutation for creating a new vendor
+  // Create vendor mutation
   const createVendorMutation = useMutation({
-    mutationFn: async (vendorData: Partial<InsertUser>) => {
-      // Generate a temporary random password
-      const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
-      
-      const data = {
+    mutationFn: async (vendorData: { name: string; email: string; phone: string; address: string; }) => {
+      const response = await apiRequest("POST", "/api/users", {
         ...vendorData,
-        type: "vendor",
-        businessId: 1, // Current business ID
-        password: tempPassword, // Temporary password that meets requirements
-      };
-      
-      console.log("Creating new vendor:", vendorData.name);
-      const response = await apiRequest("POST", "/api/users", data);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Success",
-        description: "Vendor has been created successfully.",
+        type: "vendor"
       });
+      return response.json();
+    },
+    onSuccess: (data: User) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setAddVendorDialogOpen(false);
-      setNewVendor({
-        name: "",
-        email: "",
-        phone: "",
-        businessName: "",
-        address: ""
+      setNewVendor({ name: "", email: "", phone: "", address: "" });
+      form.setValue("vendorId", data.id);
+      toast({
+        title: "Success",
+        description: "Vendor created successfully",
       });
-      
-      // Select the newly created vendor
-      if (data && data.id) {
-        form.setValue('vendorId', data.id);
-      }
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: `Failed to create vendor: ${error.message}`,
+        description: error.message,
         variant: "destructive",
       });
     }
   });
-  
-  // Function to add a new line item
-  const addItem = () => {
-    // CRITICAL: Block adding items when frozen
-    if (isFrozen) {
-      console.log("🚫 ADD ITEM BLOCKED: Bill is frozen");
-      toast({
-        title: "Cannot add item - Bill is frozen",
-        description: "Please unfreeze the bill before adding items.",
-        variant: "destructive",
+
+  // Form setup with proper default values
+  const form = useForm<PurchaseBill>({
+    resolver: zodResolver(purchaseBillSchema),
+    defaultValues: editingBill ? {
+      vendorId: editingBill.vendorId || null,
+      accountId: editingBill.accountId || accounts?.[0]?.id || 1,
+      billNumber: editingBill.billNumber || editingBill.documentNumber || generateBillNumber(),
+      billDate: editingBill.billDate ? new Date(editingBill.billDate) : editingBill.date ? new Date(editingBill.date) : new Date(),
+      dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(),
+      status: editingBill.status as any,
+      items: billItems.map(item => ({
+        productId: item.productId,
+        description: item.description,
+        quantity: item.quantity,
+        quantityReceived: item.quantityReceived,
+        unitPrice: item.unitPrice,
+        amount: item.amount,
+        taxRate: item.taxRate,
+        discount: item.discount,
+        taxType: item.taxType as 'flat' | 'percentage',
+        discountType: item.discountType as 'flat' | 'percentage'
+      })),
+      subtotal: 0,
+      taxAmount: 0,
+      discountAmount: 0,
+      totalAmount: 0,
+      totalDiscount: 0,
+      totalDiscountType: "flat",
+      paymentMade: 0,
+      notes: editingBill.notes || "",
+      attachments: [],
+      vendorNotes: ""
+    } : defaultEmptyBill
+  });
+
+  // Function to parse and extract quantities correctly
+  function parseQuantitiesFromTransaction(editingBill: Transaction): { [productId: number]: number } {
+    console.log("INITIALIZATION: Starting extraction for all products in bill");
+    
+    const quantities: { [productId: number]: number } = {};
+    
+    if (!editingBill?.items || !Array.isArray(editingBill.items)) {
+      console.log("EXTRACT: No items array found");
+      return quantities;
+    }
+    
+    // Process each item and extract its quantity received
+    editingBill.items.forEach((item: any) => {
+      if (item.productId) {
+        const extractedQty = extractQuantityReceived(editingBill, item.productId);
+        quantities[item.productId] = extractedQty;
+        
+        const debugInfo = {
+          productId: item.productId,
+          extractedQuantity: extractedQty,
+          directProperty: item.quantityReceived,
+          description: item.description
+        };
+        
+        console.log(`EXTRACTION COMPLETE for product ${item.productId}:`, debugInfo);
+      }
+    });
+    
+    return quantities;
+  }
+
+  // Parse metadata for quantities when editing
+  function parseMetadataQuantities(editingBill: Transaction): { [productId: number]: number } {
+    const quantities: { [productId: number]: number } = {};
+    
+    if (!editingBill?.metadata) {
+      return quantities;
+    }
+    
+    let metadataObj: any = editingBill.metadata;
+    
+    // Parse metadata if string
+    if (typeof editingBill.metadata === 'string') {
+      try {
+        metadataObj = JSON.parse(editingBill.metadata);
+        console.log("Parsed metadata:", metadataObj);
+      } catch (e) {
+        console.log("Failed to parse metadata:", e);
+        return quantities;
+      }
+    }
+    
+    // Extract from receivedQuantityMap
+    if (metadataObj?.receivedQuantityMap) {
+      Object.keys(metadataObj.receivedQuantityMap).forEach(productIdStr => {
+        const productId = Number(productIdStr);
+        const quantity = Number(metadataObj.receivedQuantityMap[productIdStr]);
+        if (!isNaN(productId) && !isNaN(quantity) && quantity > 0) {
+          quantities[productId] = quantity;
+        }
       });
+    }
+    
+    // Extract from itemQuantitiesReceived array
+    if (metadataObj?.itemQuantitiesReceived && Array.isArray(metadataObj.itemQuantitiesReceived)) {
+      metadataObj.itemQuantitiesReceived.forEach((item: any) => {
+        if (item?.productId && item?.quantityReceived) {
+          const productId = Number(item.productId);
+          const quantity = Number(item.quantityReceived);
+          if (!isNaN(productId) && !isNaN(quantity) && quantity > 0) {
+            quantities[productId] = quantity;
+          }
+        }
+      });
+    }
+    
+    return quantities;
+  }
+
+  // Get total discount from bill metadata or bill direct property
+  function getTotalDiscountFromBill(editingBill: Transaction): { amount: number; type: string } {
+    console.log("Getting totalDiscount from bill:", editingBill);
+    
+    // First check if bill has direct totalDiscount property
+    if (editingBill.totalDiscount !== undefined && editingBill.totalDiscount !== null) {
+      console.log("Found totalDiscount in direct property:", editingBill.totalDiscount);
+      const discountType = editingBill.totalDiscountType || "flat";
+      console.log("Setting totalDiscount:", editingBill.totalDiscount, "type:", discountType);
+      return {
+        amount: Number(editingBill.totalDiscount) / 100, // Convert from cents to dollars
+        type: discountType
+      };
+    }
+    
+    // Then check metadata
+    if (editingBill.metadata) {
+      let metadataObj: any = editingBill.metadata;
+      
+      if (typeof editingBill.metadata === 'string') {
+        try {
+          metadataObj = JSON.parse(editingBill.metadata);
+        } catch (e) {
+          console.log("Could not parse metadata for totalDiscount");
+          return { amount: 0, type: "flat" };
+        }
+      }
+      
+      if (metadataObj?.totalDiscount !== undefined) {
+        console.log("Found totalDiscount in metadata:", metadataObj.totalDiscount);
+        return {
+          amount: Number(metadataObj.totalDiscount) / 100, // Convert from cents to dollars
+          type: metadataObj.totalDiscountType || "flat"
+        };
+      }
+    }
+    
+    return { amount: 0, type: "flat" };
+  }
+
+  // Initialize form when editing bill changes
+  useEffect(() => {
+    console.log("BILL EDIT DEBUG - Full bill being edited:", editingBill);
+    
+    if (!editingBill) {
+      // Reset form to defaults for new bill
+      form.reset(defaultEmptyBill);
+      setBillItems([]);
       return;
     }
     
-    const newItem: PurchaseBillItem = {
-      productId: 0,
-      description: "",
-      quantity: 1,
-      quantityReceived: 0, // Explicitly initialize quantityReceived
-      unitPrice: 0,
-      taxRate: 0,
-      discount: 0,
-      // Add new fields
-      taxType: "percentage", 
-      discountType: "percentage",
-      amount: 0
-    };
-    
-    console.log("Adding new item with quantityReceived:", newItem.quantityReceived);
-    setBillItems([...billItems, newItem]);
-  };
-  
-  // Helper function to ensure consistent amount formatting between edit and view modes
-  const ensureProperUnitConversion = (value: number, fromCents: boolean = false): number => {
-    // If the value is from cents (stored in DB), convert to dollars for display
-    if (fromCents && value > 0) {
-      return value / 100;
-    }
-    // If it's in dollars already, just return it
-    return value;
-  };
-  
-  // Function to remove a line item
-  const removeItem = (index: number) => {
-    const newItems = [...billItems];
-    newItems.splice(index, 1);
-    setBillItems(newItems);
-    updateTotals(newItems);
-  };
-  
-  // Function to handle product selection in line items
-  const handleProductChange = (productId: number, index: number) => {
-    const product = products?.find(p => p.id === productId);
-    
-    if (product) {
-      const newItems = [...billItems];
-      // Use the price property from the product (already in cents)
-      const productPrice = (product.price || 0) / 100;
-      
-      newItems[index] = {
-        ...newItems[index],
-        productId: product.id,
-        description: product.description || product.name,
-        unitPrice: productPrice, // Convert from cents to dollars
-        amount: productPrice * newItems[index].quantity
-      };
-      
-      setBillItems(newItems);
-      updateTotals(newItems);
-    }
-  };
-  
-  // Function to update item quantities
-  const updateItemQuantity = (quantity: number, index: number) => {
-    const newItems = [...billItems];
-    
-    // Ensure quantity received doesn't exceed new quantity
-    const currentQuantityReceived = newItems[index].quantityReceived || 0;
-    const newQuantityReceived = currentQuantityReceived > quantity ? quantity : currentQuantityReceived;
-    
-    newItems[index] = {
-      ...newItems[index],
-      quantity,
-      quantityReceived: newQuantityReceived, // Ensure quantityReceived is properly set
-      amount: newItems[index].unitPrice * quantity
-    };
-    
-    // Debug log to verify the quantity update
-    console.log(`Updated item ${index} quantity to ${quantity}, quantityReceived: ${newQuantityReceived}`);
-    
-    // Update both the local state and form state to keep them in sync
-    setBillItems(newItems);
-    
-    // Explicitly update the form values to ensure they're in sync with our state
-    form.setValue(`items.${index}.quantity`, quantity);
-    form.setValue(`items.${index}.quantityReceived`, newQuantityReceived);
-    
-    updateTotals(newItems);
-  };
-  
-  // ===== CRITICAL DATA INTEGRITY FIX: Complete rebuild of received quantity handling =====
-  const updateItemQuantityReceived = (quantityReceived: number, index: number) => {
-    // Step 1: Robust value validation to guarantee a clean numeric value
-    // Handle all edge cases: undefined, null, NaN, empty string
-    const inputValue = quantityReceived !== undefined && quantityReceived !== null ? quantityReceived : 0;
-    const numericValue = isNaN(Number(inputValue)) ? 0 : Number(inputValue);
-    
-    // Step 2: Retrieve current values with proper validation
-    const currentItems = [...billItems];
-    if (!currentItems[index]) {
-      console.error("ERROR: Item at index", index, "doesn't exist");
-      return; // Prevent crashes on non-existent items
-    }
-    
-    const maxReceivable = currentItems[index]?.quantity || 0;
-    // Safety validation - quantity received cannot exceed ordered quantity
-    const safeQuantityReceived = Math.min(Math.max(0, numericValue), maxReceivable);
-    
-    // Step 3: Get product details for logging and metadata
-    const productId = Number(currentItems[index]?.productId) || 0;
-    const productName = currentItems[index]?.description || `Item ${index + 1}`;
-    
-    // Step 4: Create a completely new item object with proper metadata
-    const updatedItem = {
-      ...currentItems[index],
-      // Primary storage location
-      quantityReceived: safeQuantityReceived,
-      // Secondary storage in item metadata (for redundancy)
-      metadata: {
-        ...(currentItems[index].metadata || {}),
-        receivedQuantity: safeQuantityReceived
-      }
-    };
-    
-    // Step 5: Create a new array with the updated item to trigger proper React re-rendering
-    const updatedItems = [...currentItems];
-    updatedItems[index] = updatedItem;
-    
-    // Step 6: CRITICAL - Detailed logging for diagnostic tracing
-    console.log(`🔄 RECEIVED QTY UPDATE - "${productName}" (ID: ${productId}, Index: ${index})`, {
-      originalInput: quantityReceived,
-      validatedValue: numericValue,
-      finalValue: safeQuantityReceived,
-      maxAllowed: maxReceivable,
-      fullItemState: updatedItem
-    });
-    
-    // Step 7: Update all state mechanisms to ensure persistence
-    // 7.1: Update component state for UI rendering
-    setBillItems(updatedItems);
-    
-    // 7.2: Update React Hook Form state for form submission
-    form.setValue(`items.${index}.quantityReceived`, safeQuantityReceived, {
-      shouldDirty: true,    // Mark the field as modified
-      shouldTouch: true,    // Mark the field as touched
-      shouldValidate: true  // Trigger validation
-    });
-    
-    // 7.3: Also store in item metadata field for redundant storage
-    form.setValue(`items.${index}.metadata.receivedQuantity`, safeQuantityReceived, {
-      shouldDirty: true
-    });
-    
-    // 7.4: Create redundant backup map in local storage
-    try {
-      const localBackupKey = 'purchase-bill-received-quantities';
-      const existingBackup = localStorage.getItem(localBackupKey);
-      const backupMap = existingBackup ? JSON.parse(existingBackup) : {};
-      
-      // Use product ID as reliable key
-      if (productId) {
-        backupMap[`product_${productId}`] = safeQuantityReceived;
-        localStorage.setItem(localBackupKey, JSON.stringify(backupMap));
-      }
-    } catch (e) {
-      // Silent catch - local storage is just a backup
-    }
-    
-    // Step 8: Verify the update was applied correctly by reading back values
-    const verifiedValue = form.getValues(`items.${index}.quantityReceived`);
-    console.log(`✅ VERIFICATION: Form state after update for item ${index}:`, {
-      requestedValue: safeQuantityReceived,
-      actualStoredValue: verifiedValue,
-      formItemSnapshot: form.getValues(`items.${index}`)
-    });
-    
-    // Step 9: Return the validated value for potential chaining
-    return safeQuantityReceived;
-  };
-  
-  // Function to update item unit prices
-  const updateItemPrice = (price: number, index: number) => {
-    const newItems = [...billItems];
-    newItems[index] = {
-      ...newItems[index],
-      unitPrice: price,
-      amount: price * newItems[index].quantity
-    };
-    
-    setBillItems(newItems);
-    updateTotals(newItems);
-  };
-  
-  // Function to update item tax rates
-  const updateItemTaxRate = (taxRate: number | string, index: number) => {
-    const parsedTaxRate = typeof taxRate === 'string' ? parseFloat(taxRate) || 0 : taxRate || 0;
-    
-    const newItems = [...billItems];
-    newItems[index] = {
-      ...newItems[index],
-      taxRate: parsedTaxRate
-    };
-    
-    setBillItems(newItems);
-    updateTotals(newItems);
-  };
-  
-  // Function to update item discounts
-  const updateItemDiscount = (discount: number | string, index: number) => {
-    const parsedDiscount = typeof discount === 'string' ? parseFloat(discount) || 0 : discount || 0;
-    
-    const newItems = [...billItems];
-    newItems[index] = {
-      ...newItems[index],
-      discount: parsedDiscount
-    };
-    
-    setBillItems(newItems);
-    updateTotals(newItems);
-  };
-  
-  // Function to update totals based on line items
-  const updateTotals = (items: PurchaseBillItem[]) => {
-    // Ensure all numeric values are properly defined to prevent NaN
-    const sanitizedItems = items.map(item => ({
-      ...item,
-      quantity: item.quantity || 1,
-      unitPrice: item.unitPrice || 0,
-      taxRate: typeof item.taxRate === 'number' ? item.taxRate : 0,
-      discount: typeof item.discount === 'number' ? item.discount : 0,
-      taxType: item.taxType || 'percentage',
-      discountType: item.discountType || 'percentage',
-      amount: item.amount || 0
-    }));
-    
-    // Recalculate item amounts to ensure they reflect current tax/discount settings
-    const recalculatedItems = sanitizedItems.map(item => {
-      const subtotal = item.quantity * item.unitPrice;
-      
-      // Calculate discount based on type
-      let discountAmount = 0;
-      if (item.discountType === 'percentage') {
-        discountAmount = subtotal * (item.discount / 100);
-      } else {
-        // Flat discount
-        discountAmount = Math.min(item.discount, subtotal);
-      }
-      
-      // Calculate tax based on type
-      let taxAmount = 0;
-      if (item.taxType === 'percentage') {
-        taxAmount = (subtotal - discountAmount) * (item.taxRate / 100);
-      } else {
-        // Flat tax
-        taxAmount = item.taxRate;
-      }
-      
-      // Round to 2 decimal places to avoid floating point issues
-      const finalAmount = Math.round((subtotal - discountAmount + taxAmount) * 100) / 100;
-      
-      return {
-        ...item,
-        amount: Math.max(0, finalAmount) // Ensure amount is not negative
-      };
-    });
-    
-    // Calculate totals from updated items
-    const subtotal = recalculatedItems.reduce((total, item) => {
-      return total + (item.quantity * item.unitPrice);
-    }, 0);
-    
-    // Calculate total tax from all items
-    const taxAmount = recalculatedItems.reduce((total, item) => {
-      if (item.taxType === 'percentage') {
-        const itemSubtotal = item.quantity * item.unitPrice;
-        // For percentage, apply discount first if applicable
-        let discountAmount = 0;
-        if (item.discountType === 'percentage') {
-          discountAmount = itemSubtotal * (item.discount / 100);
-        } else {
-          discountAmount = Math.min(item.discount, itemSubtotal);
+    // Parse metadata to object if needed
+    let metadataObj: any = {};
+    if (editingBill.metadata) {
+      if (typeof editingBill.metadata === 'string') {
+        try {
+          metadataObj = JSON.parse(editingBill.metadata);
+          console.log("DEBUG: Successfully parsed metadata from string");
+        } catch (e) {
+          console.log("DEBUG: Failed to parse metadata string");
+          metadataObj = {};
         }
-        return total + ((itemSubtotal - discountAmount) * (item.taxRate / 100));
-      } else {
-        // For flat tax, use the exact amount
-        return total + item.taxRate;
+      } else if (typeof editingBill.metadata === 'object') {
+        metadataObj = editingBill.metadata;
+        console.log("DEBUG: Metadata was already an object");
       }
-    }, 0);
-    
-    // Calculate total discount from all items
-    const discountAmount = recalculatedItems.reduce((total, item) => {
-      const itemSubtotal = item.quantity * item.unitPrice;
-      if (item.discountType === 'percentage') {
-        return total + (itemSubtotal * (item.discount / 100));
-      } else {
-        // For flat discount, use the specified amount
-        return total + Math.min(item.discount, itemSubtotal);
-      }
-    }, 0);
-    
-    // Round all totals to 2 decimal places to avoid floating point issues
-    const roundedSubtotal = Math.round(subtotal * 100) / 100;
-    const roundedTaxAmount = Math.round(taxAmount * 100) / 100;
-    const roundedDiscountAmount = Math.round(discountAmount * 100) / 100;
-    
-    // Set the form values with updated calculations for line items
-    form.setValue('items', recalculatedItems);
-    form.setValue('subtotal', roundedSubtotal);
-    form.setValue('taxAmount', roundedTaxAmount);
-    form.setValue('discountAmount', roundedDiscountAmount);
-    
-    // After updating line item totals, apply the total discount
-    updateTotalsWithTotalDiscount();
-  };
-  
-  // Calculate the total discount amount based on the discount type and value
-  const calculateTotalDiscountAmount = (): number => {
-    const totalDiscount = form.watch('totalDiscount') || 0;
-    const totalDiscountType = form.watch('totalDiscountType');
-    const subtotal = form.watch('subtotal');
-    const itemDiscountAmount = form.watch('discountAmount') || 0;
-    const taxAmount = form.watch('taxAmount') || 0;
-    
-    // The base amount to apply the percentage discount to (subtotal - item discounts + tax)
-    const baseAmount = subtotal - itemDiscountAmount + taxAmount;
-    
-    if (totalDiscountType === 'percentage') {
-      // Calculate percentage discount based on the subtotal after item discounts and taxes
-      return (baseAmount * totalDiscount / 100);
-    } else {
-      // For flat amount, just return the value (capped at the baseAmount to prevent negative totals)
-      return Math.min(totalDiscount, baseAmount);
     }
-  };
-  
-  // Update the final total amount considering both line item discounts and total discount
-  const updateTotalsWithTotalDiscount = () => {
-    const subtotal = form.watch('subtotal');
-    const itemDiscountAmount = form.watch('discountAmount') || 0;
-    const taxAmount = form.watch('taxAmount') || 0;
     
-    // Calculate the total discount amount
-    const totalDiscountAmount = calculateTotalDiscountAmount();
+    console.log("DEBUG: Raw metadata content:", metadataObj);
     
-    // Calculate the final total = subtotal - item discounts + tax - total discount
-    const finalTotal = Math.max(0, subtotal - itemDiscountAmount + taxAmount - totalDiscountAmount);
+    // Parse quantities from metadata first
+    const metadataQuantities = parseMetadataQuantities(editingBill);
+    console.log("DEBUG: Properly validated quantities from metadata:", metadataQuantities);
     
-    // Round to 2 decimal places
-    const roundedFinalTotal = Math.round(finalTotal * 100) / 100;
+    // Create quantities map combining metadata and direct properties
+    const finalQuantities: { [productId: number]: number } = { ...metadataQuantities };
     
-    // Update the form value
-    form.setValue('totalAmount', roundedFinalTotal);
-  };
-  
-  // Mutation for saving the purchase bill
-  const saveBillMutation = useMutation({
-    mutationFn: async (data: PurchaseBill) => {
-      const vendor = vendors?.find(v => v.id === data.vendorId);
+    // Also check direct properties on items as fallback
+    if (editingBill.items && Array.isArray(editingBill.items)) {
+      if (Object.keys(finalQuantities).length === 0) {
+        console.log("DEBUG: Found direct quantities in items:", editingBill.items.length);
+        editingBill.items.forEach((item: any) => {
+          if (item.productId && typeof item.quantityReceived === 'number' && item.quantityReceived > 0) {
+            console.log(`DEBUG: Added direct quantity for product ${item.productId}: ${item.quantityReceived}`);
+            finalQuantities[item.productId] = item.quantityReceived;
+          }
+        });
+      }
       
-      // Format the data for the transaction endpoint - ensuring unit/price amounts are in cents
-      // First, round the total amount to 2 decimal places to ensure consistency
-      const roundedTotalAmount = Math.round(data.totalAmount * 100) / 100;
+      console.log("DEEP DEBUG - Raw transaction items before processing:", editingBill.items);
+      console.log("DEEP DEBUG - Full transaction object:", JSON.stringify(editingBill).substring(0, 500) + "...[Truncated]");
       
-      const transactionData: any = {
-        type: "expense",
-        accountId: data.accountId,
-        amount: Math.round(roundedTotalAmount * 100), // Convert to cents after ensuring consistent decimal places
-        date: data.billDate, // Use the bill date for the transaction date
-        description: `Bill #${data.billNumber}`,
-        category: "Purchases",
-        documentType: "bill",
-        documentNumber: data.billNumber,
-        status: data.status || "draft", // Ensure status is provided (and make optional per request)
-        contactId: data.vendorId, // Add contactId for the vendor relationship
-        contactName: vendor?.name || "",
-        contactEmail: vendor?.email || "",
-        contactPhone: vendor?.phone || "",
-        contactAddress: vendor?.address || "",
-        notes: data.notes,
-        paymentReceived: Math.round((data.paymentMade || 0) * 100), // Convert payment to cents
-        items: data.items.map(item => ({
+      editingBill.items.forEach((item: any, index: number) => {
+        console.log(`DEEP DEBUG - Raw item data for product ${item.productId}:`, item);
+        
+        // Check for direct quantityReceived property
+        if (typeof item.quantityReceived === 'number') {
+          console.log(`DEEP DEBUG - Found direct quantityReceived=${item.quantityReceived} on item for product ${item.productId}`);
+          
+          // Log all properties of the item for debugging
+          Object.keys(item).forEach(key => {
+            console.log(`DEEP DEBUG - Item property [${key}] = ${item[key]}`);
+          });
+          
+          const finalDecision = {
+            productId: item.productId,
+            finalQuantity: item.quantityReceived,
+            source: "direct-property"
+          };
+          
+          console.log(`DEEP DEBUG - Final processing decision for ${item.description} (ID: ${item.productId})`, finalDecision);
+        }
+      });
+    }
+    
+    // Get totalDiscount information
+    const totalDiscountInfo = getTotalDiscountFromBill(editingBill);
+    console.log("Found totalDiscount in direct property:", totalDiscountInfo.amount);
+    console.log("Setting totalDiscount:", totalDiscountInfo.amount, "type:", totalDiscountInfo.type);
+    
+    // Convert items to the format needed by the form
+    const formattedItems: PurchaseBillItem[] = [];
+    
+    if (editingBill.items && Array.isArray(editingBill.items)) {
+      editingBill.items.forEach((item: any) => {
+        // CRITICAL: Get the correct quantityReceived value
+        let quantityReceived = 0;
+        
+        // Priority 1: Direct property
+        if (typeof item.quantityReceived === 'number') {
+          quantityReceived = item.quantityReceived;
+        } 
+        // Priority 2: From finalQuantities map (metadata)
+        else if (finalQuantities[item.productId]) {
+          quantityReceived = finalQuantities[item.productId];
+        }
+        
+        // DEBUG: Track how we got this value
+        const debugInfo = {
+          productId: item.productId,
+          description: item.description,
+          directProperty: item.quantityReceived,
+          fromMetadata: finalQuantities[item.productId],
+          finalValue: quantityReceived,
+          source: typeof item.quantityReceived === 'number' ? 'direct' : 'metadata'
+        };
+        
+        console.log("DEBUG: Checking for metadata in editingBill:", !!editingBill.metadata);
+        
+        // Get totalDiscount from metadata if available
+        if (editingBill.metadata) {
+          let metadataObj: any = editingBill.metadata;
+          
+          if (typeof editingBill.metadata === 'string') {
+            try {
+              metadataObj = JSON.parse(editingBill.metadata);
+            } catch (e) {
+              metadataObj = {};
+            }
+          }
+          
+          console.log("Using totalDiscount from direct property:", totalDiscountInfo.amount);
+        }
+        
+        console.log("⚠️ FIXED: Quantity for product", item.productId, `(${item.description}):`, debugInfo);
+        
+        formattedItems.push({
           productId: item.productId,
           description: item.description,
           quantity: item.quantity,
-          // CRITICAL FIX #1: Explicitly include quantityReceived in item data
-          quantityReceived: item.quantityReceived || 0,
-          unitPrice: Math.round(item.unitPrice * 100), // Convert to cents
+          quantityReceived: quantityReceived,
+          unitPrice: (item.unitPrice || 0) / 100, // Convert from cents
+          amount: (item.amount || 0) / 100, // Convert from cents
           taxRate: item.taxRate || 0,
           discount: item.discount || 0,
           taxType: item.taxType || 'percentage',
-          discountType: item.discountType || 'percentage',
-          amount: Math.round(item.amount * 100) // Convert to cents
-        })),
-        // CRITICAL FIX #2: Store received quantities in metadata as an actual object, not a string
-        metadata: {
-          // Keep existing metadata if present
-          ...(editingBill && editingBill.metadata ? 
-              (typeof editingBill.metadata === 'string' ? 
-                JSON.parse(editingBill.metadata) : editingBill.metadata) 
-              : {}),
-          // Add a map of product IDs to received quantities for reliable storage
-          receivedQuantityMap: data.items.reduce((map, item) => {
-            if (item.productId) {
-              map[`product_${item.productId}`] = item.quantityReceived || 0;
-            }
-            return map;
-          }, {} as Record<string, number>),
-          // Also store as array for backward compatibility
-          itemQuantitiesReceived: data.items.map(item => ({
-            productId: item.productId,
-            quantityReceived: item.quantityReceived || 0
-          }))
-        }
-      };
-      
-      // Include ID property if editing an existing bill
-      if (editingBill && editingBill.id) {
-        transactionData.id = editingBill.id;
-      }
-      
-      // If editing an existing bill, use PATCH to update; otherwise POST to create a new bill
-      if (editingBill && editingBill.id) {
-        // For updates, we need to be explicit about the fields we're updating to avoid "No values to set" error
-        // Only include fields that are actually changing
-        const updateData = {
-          id: editingBill.id,
-          accountId: data.accountId,
-          amount: Math.round(data.totalAmount * 100),
-          date: data.billDate,
-          documentNumber: data.billNumber,
-          status: data.status || "draft",
-          contactId: data.vendorId,
-          contactName: vendor?.name || "",
-          contactEmail: vendor?.email || "",
-          contactPhone: vendor?.phone || "",
-          contactAddress: vendor?.address || "",
-          notes: data.notes,
-          paymentReceived: Math.round((data.paymentMade || 0) * 100),
-          items: data.items.map(item => ({
-            productId: item.productId,
-            description: item.description,
-            quantity: item.quantity,
-            // CRITICAL FIX #3: Also include quantityReceived in updates to existing bills
-            quantityReceived: item.quantityReceived || 0,
-            unitPrice: Math.round(item.unitPrice * 100),
-            taxRate: Number(parseFloat(String(item.taxRate || 0))),
-            discount: Number(parseFloat(String(item.discount || 0))),
-            taxType: item.taxType || 'percentage',
-            discountType: item.discountType || 'percentage',
-            amount: Math.round(item.amount * 100)
-          })),
-          // CRITICAL FIX #4: Also update metadata for existing bills - as an object, not a string
-          metadata: {
-            // Keep existing metadata if present
-            ...(editingBill && editingBill.metadata ? 
-                (typeof editingBill.metadata === 'string' ? 
-                  JSON.parse(editingBill.metadata) : editingBill.metadata) 
-                : {}),
-            // Add a map of product IDs to received quantities
-            receivedQuantityMap: data.items.reduce((map, item) => {
-              if (item.productId) {
-                map[`product_${item.productId}`] = item.quantityReceived || 0;
-              }
-              return map;
-            }, {} as Record<string, number>),
-            // Also store as array
-            itemQuantitiesReceived: data.items.map(item => ({
-              productId: item.productId,
-              quantityReceived: item.quantityReceived || 0
-            }))
-          }
+          discountType: item.discountType || 'percentage'
+        });
+      });
+    }
+    
+    console.log("🔍 FINAL ITEMS FOR FORM:", formattedItems.map(item => ({
+      productId: item.productId,
+      description: item.description,
+      quantityReceived: item.quantityReceived
+    })));
+    
+    // Update bill items state
+    setBillItems(formattedItems);
+    
+    // Update form with the correct values
+    const formData: PurchaseBill = {
+      vendorId: editingBill.vendorId || null,
+      accountId: editingBill.accountId || 1,
+      billNumber: editingBill.billNumber || editingBill.documentNumber || generateBillNumber(),
+      billDate: editingBill.billDate ? new Date(editingBill.billDate) : new Date(editingBill.date || Date.now()),
+      dueDate: editingBill.dueDate ? new Date(editingBill.dueDate) : new Date(editingBill.dueDate || Date.now()),
+      status: editingBill.status as any,
+      items: formattedItems.map((item, index) => {
+        console.log(`🔧 EXPLICITLY set form item ${index} (${item.productId}) quantityReceived to: ${item.quantityReceived}`);
+        return {
+          productId: item.productId,
+          description: item.description,
+          quantity: item.quantity,
+          quantityReceived: item.quantityReceived, // This should be the correct value
+          unitPrice: item.unitPrice,
+          amount: item.amount,
+          taxRate: item.taxRate,
+          discount: item.discount,
+          taxType: item.taxType as 'flat' | 'percentage',
+          discountType: item.discountType as 'flat' | 'percentage'
         };
+      }),
+      subtotal: 0,
+      taxAmount: 0,
+      discountAmount: 0,
+      totalAmount: 0,
+      totalDiscount: totalDiscountInfo.amount,
+      totalDiscountType: totalDiscountInfo.type as 'flat' | 'percentage',
+      paymentMade: (editingBill.paymentReceived || 0) / 100, // Convert from cents
+      notes: editingBill.notes || "",
+      attachments: [],
+      vendorNotes: ""
+    };
+    
+    formattedItems.forEach((item, index) => {
+      console.log(`Final form reset - Product ${item.productId}: Quantity ${item.quantityReceived}`);
+    });
+    
+    console.log("REBUILD - Initializing form with complete bill data and quantities");
+    
+    // Reset form with proper data
+    form.reset(formData);
+    
+    // Verify the quantities were set correctly
+    setTimeout(() => {
+      formattedItems.forEach((item, index) => {
+        console.log(`INIT ITEM ${index}: ${item.description} (ID: ${item.productId})`, {
+          quantityReceived: item.quantityReceived,
+          source: 'final-verification'
+        });
         
-        const response = await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, updateData);
-        return await response.json();
-      } else {
-        // POST is used to create new records
-        const response = await apiRequest("POST", "/api/transactions", transactionData);
-        return await response.json();
-      }
+        // Get the actual form value to verify
+        const formItems = form.getValues('items');
+        if (formItems && formItems[index]) {
+          const formQuantity = formItems[index].quantityReceived;
+          console.log(`FORM VERIFICATION: Item ${index} form quantityReceived = ${formQuantity}`);
+        }
+      });
+      
+      console.log("REBUILD - Quantity confirmation complete");
+      
+    }, 200);
+    
+  }, [editingBill, vendors]);
+
+  // Calculate totals whenever bill items change
+  useEffect(() => {
+    calculateTotals();
+  }, [billItems]);
+
+  // Mutation for saving/updating the bill
+  const mutation = useMutation({
+    mutationFn: async (data: PurchaseBill) => {
+      const url = editingBill ? `/api/transactions/${editingBill.id}` : "/api/transactions";
+      const method = editingBill ? "PATCH" : "POST";
+      
+      const response = await apiRequest(method, url, data);
+      return response.json();
     },
     onSuccess: (data: Transaction) => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      onSave(data);
       toast({
         title: "Success",
-        description: editingBill ? "Purchase bill has been updated successfully." : "Purchase bill has been created successfully.",
+        description: editingBill ? "Purchase bill updated successfully" : "Purchase bill created successfully",
       });
-      
-      onSave(data);
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: `Failed to save purchase bill: ${error.message}`,
+        description: error.message,
         variant: "destructive",
       });
     }
   });
-  
-  // Add fields for total discount tracking - these are separate from form.values and help us preserve values
-  const [totalDiscountField, setTotalDiscountField] = useState<string>("0");
-  const [totalDiscountType, setTotalDiscountType] = useState<"flat" | "percentage">("flat");
-  const [totalDiscountDebug, setTotalDiscountDebug] = useState({
-    source: "initial",
-    value: 0,
-    type: "flat"
-  });
-  
-  // Initialize form if editing an existing bill
-  useEffect(() => {
-    if (editingBill) {
-      // Extract items from the transaction
-      let items = editingBill.items as any[] || [];
-      
-      // CRITICAL DEBUGGING: Log the entire bill first to understand what we're working with
-      console.log("BILL EDIT DEBUG - Full bill being edited:", JSON.stringify(editingBill, null, 2));
-      
-      // Extract and parse metadata if it exists - but let's be much more thorough
-      let savedItemQuantities: {productId: number, quantityReceived: number}[] = [];
-      let rawMetadata: any = null;
-      
-      try {
-        // Depending on how the editingBill is provided, metadata could be a string or already parsed
-        if (editingBill.metadata) {
-          if (typeof editingBill.metadata === 'string') {
-            try {
-              rawMetadata = JSON.parse(editingBill.metadata);
-              console.log("DEBUG: Successfully parsed metadata from string");
-            } catch (e) {
-              console.error("DEBUG: Failed to parse metadata string:", e);
-              rawMetadata = null;
-            }
-          } else if (typeof editingBill.metadata === 'object') {
-            // It's already an object
-            rawMetadata = editingBill.metadata;
-            console.log("DEBUG: Metadata was already an object");
-          }
-          
-          // Now extract the quantities if we have valid metadata
-          if (rawMetadata) {
-            console.log("DEBUG: Raw metadata content:", rawMetadata);
-            
-            if (rawMetadata.itemQuantitiesReceived && Array.isArray(rawMetadata.itemQuantitiesReceived)) {
-              // Found quantities array, validate each entry and convert to proper numbers
-              savedItemQuantities = rawMetadata.itemQuantitiesReceived
-                .filter((item: any) => item && typeof item === 'object' && item.productId !== undefined)
-                .map((item: any) => ({
-                  productId: Number(item.productId),
-                  quantityReceived: Number(item.quantityReceived || 0)
-                }));
-              
-              console.log("DEBUG: Properly validated quantities from metadata:", 
-                JSON.stringify(savedItemQuantities, null, 2));
-            } else {
-              console.log("DEBUG: No valid itemQuantitiesReceived array in metadata");
-            }
-          }
-        } else {
-          console.log("DEBUG: No metadata found in bill");
-        }
-      } catch (error) {
-        console.error("DEBUG: Critical error in metadata processing:", error);
-      }
-      
-      // Extract quantities directly from the items array as a fallback
-      // Sometimes the quantities might be stored directly on items rather than in metadata
-      if (editingBill.items && Array.isArray(editingBill.items)) {
-        const directQuantities = editingBill.items
-          .filter((item: any) => 
-            item && item.productId !== undefined && item.quantityReceived !== undefined && 
-            item.quantityReceived !== null && Number(item.quantityReceived) > 0
-          )
-          .map((item: any) => ({
-            productId: Number(item.productId),
-            quantityReceived: Number(item.quantityReceived),
-            source: 'direct'
-          }));
-          
-        if (directQuantities.length > 0) {
-          console.log("DEBUG: Found direct quantities in items:", directQuantities);
-          
-          // Add these to our quantities if they don't already exist in the metadata
-          directQuantities.forEach((dq: any) => {
-            if (!savedItemQuantities.some(sq => Number(sq.productId) === Number(dq.productId))) {
-              savedItemQuantities.push({
-                productId: dq.productId,
-                quantityReceived: dq.quantityReceived
-              });
-              console.log(`DEBUG: Added direct quantity for product ${dq.productId}: ${dq.quantityReceived}`);
-            }
-          });
-        }
-      }
-      
-      // DEEP DEBUGGING: Process items with extensive tracing for quantity received
-      console.log("DEEP DEBUG - Raw transaction items before processing:", JSON.stringify(editingBill.items));
-      console.log("DEEP DEBUG - Full transaction object:", JSON.stringify(editingBill));
-      
-      items = items.map(item => {
-        // Always ensure product ID is a number for consistent operations
-        const productId = Number(item.productId);
-        
-        // DEEP DEBUGGING TRACE: Capture the exact state of this item before processing
-        console.log(`DEEP DEBUG - Raw item data for product ${productId}:`, JSON.stringify(item));
-        
-        // Extract quantity received with comprehensive validation
-        let quantityReceived = 0;
-        
-        // Check each possible location for the quantity received value
-        if (item.quantityReceived !== undefined && item.quantityReceived !== null) {
-          quantityReceived = Number(item.quantityReceived);
-          console.log(`DEEP DEBUG - Found direct quantityReceived=${quantityReceived} on item for product ${productId}`);
-        } 
-        
-        // DEEP DEBUGGING: Log the exact nested path and value
-        if (typeof item === 'object') {
-          Object.keys(item).forEach(key => {
-            console.log(`DEEP DEBUG - Item property [${key}] =`, item[key]);
-          });
-        }
-          
-        // Add exhaustive debugging
-        console.log(`DEEP DEBUG - Final processing decision for ${item.description || 'Unknown item'} (ID: ${productId})`, {
-          finalQuantityReceived: quantityReceived,
-          itemRawValue: item.quantityReceived,
-          rawItemType: typeof item.quantityReceived,
-          itemKeys: Object.keys(item),
-          fullItemData: item
-        });
-        
-        return {
-          ...item,
-          // Ensure required properties have default values if missing
-          taxType: item.taxType || 'percentage',
-          discountType: item.discountType || 'percentage',
-          // Explicitly set quantityReceived using our prioritized value
-          quantityReceived: quantityReceived,
-          // Convert amounts from cents to dollars if needed
-          amount: typeof item.amount === 'number' && item.amount > 100 ? item.amount / 100 : item.amount,
-          unitPrice: typeof item.unitPrice === 'number' && item.unitPrice > 100 ? item.unitPrice / 100 : item.unitPrice
-        };
-      });
-      
-      setBillItems(items);
-      
-      // CRITICAL FIX: Get total discount and type from either metadata or direct props
-      let discountValue = 0;
-      let discountSource = "none";
-      
-      // First check metadata field, which should be the preferred source after our fixes
-      if (editingBill.metadata?.totalDiscount !== undefined) {
-        discountValue = Number(editingBill.metadata.totalDiscount) / 100;
-        discountSource = "metadata";
-        console.log("Found totalDiscount in metadata:", discountValue);
-      } 
-      // Fallback to direct property if needed
-      else if (editingBill.totalDiscount !== undefined) {
-        discountValue = Number(editingBill.totalDiscount) / 100;
-        discountSource = "direct";
-        console.log("Found totalDiscount in direct property:", discountValue);
-      }
-      
-      // Get discount type with similar fallback logic
-      const discountType = editingBill.metadata?.totalDiscountType || 
-                          editingBill.totalDiscountType || 'flat';
-      
-      // Update both the form field values and our controlled input state
-      console.log("Setting totalDiscount:", discountValue, "type:", discountType);
-      
-      // Update form values
-      form.setValue('totalDiscount', discountValue);
-      form.setValue('totalDiscountType', discountType as "flat" | "percentage");
-      
-      // Update state for controlled inputs
-      setTotalDiscountField(discountValue.toString());
-      setTotalDiscountType(discountType as "flat" | "percentage");
-      
-      // Track debug info
-      setTotalDiscountDebug({
-        source: discountSource,
-        value: discountValue,
-        type: discountType as "flat" | "percentage"
-      });
-      
-      // Find the vendor
-      const vendorId = vendors?.find(v => v.name === editingBill.contactName)?.id || 0;
-      
-      // Recalculate subtotal and tax based on the processed items
-      const subtotal = items.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
-      
-      // Calculate tax based on type for each item
-      const taxAmount = items.reduce((total, item) => {
-        if (item.taxType === 'percentage') {
-          const itemSubtotal = item.quantity * item.unitPrice;
-          let discountAmount = 0;
-          if (item.discountType === 'percentage') {
-            discountAmount = itemSubtotal * (item.discount / 100);
-          } else {
-            discountAmount = Math.min(item.discount, itemSubtotal);
-          }
-          return total + ((itemSubtotal - discountAmount) * (item.taxRate / 100));
-        } else {
-          return total + item.taxRate;
-        }
-      }, 0);
-      
-      // Calculate discount based on type for each item
-      const discountAmount = items.reduce((total, item) => {
-        const itemSubtotal = item.quantity * item.unitPrice;
-        if (item.discountType === 'percentage') {
-          return total + (itemSubtotal * (item.discount / 100));
-        } else {
-          return total + Math.min(item.discount, itemSubtotal);
-        }
-      }, 0);
-      
-      // Get values from metadata with extensive logging for debugging
-      console.log("Checking for metadata in editingBill:", {
-        hasMetadata: Boolean(editingBill.metadata),
-        metadata: editingBill.metadata,
-        directTotalDiscount: editingBill.totalDiscount,
-        metadataTotalDiscount: editingBill.metadata?.totalDiscount
-      });
-      
-      // Get total discount - check both metadata and direct properties with proper fallbacks
-      let totalDiscount = 0;
-      if (editingBill.metadata?.totalDiscount !== undefined) {
-        // If in metadata (preferred), convert from cents to dollars
-        totalDiscount = Number(editingBill.metadata.totalDiscount) / 100;
-        console.log("Using totalDiscount from metadata:", totalDiscount);
-      } else if (editingBill.totalDiscount !== undefined) {
-        // Fallback to direct property if available
-        totalDiscount = Number(editingBill.totalDiscount) / 100;
-        console.log("Using totalDiscount from direct property:", totalDiscount);
-      }
-      
-      // Get discount type from metadata or direct property
-      const totalDiscountType = 
-        editingBill.metadata?.totalDiscountType || 
-        editingBill.totalDiscountType || 
-        'flat';
-      
-      // Get due date from metadata if available
-      const dueDate = editingBill.metadata?.dueDate 
-        ? new Date(editingBill.metadata.dueDate) 
-        : new Date(new Date(editingBill.date || new Date()).getTime() + 30 * 24 * 60 * 60 * 1000);
-      
-      // Calculate total amount with discount applied
-      let totalAmount = subtotal + taxAmount - discountAmount;
-      
-      // Apply total discount if it exists
-      if (totalDiscount > 0) {
-        if (totalDiscountType === 'percentage') {
-          totalAmount -= subtotal * (totalDiscount / 100);
-        } else {
-          totalAmount -= totalDiscount;
-        }
-      }
-      
-      // DEFINITIVE FIX: Create an absolutely reliable system for quantity received values
-      // This is the final, comprehensive solution to the persistent issue
-      const itemsWithQuantities = items.map(item => {
-        const productId = Number(item.productId);
-        
-        // STEP 1: Create a prioritized fallback chain for quantityReceived
-        // These sources are checked in order of reliability
-        
-        // Check raw items in transaction first (might have quantities)
-        const rawItem = editingBill.items.find((i: any) => 
-          Number(i.productId) === productId
-        );
-        
-        // Check metadata quantities next
-        const metadataQty = savedItemQuantities.find(sq => 
-          Number(sq.productId) === productId
-        );
-        
-        // Determine final quantity with clear fallback chain
-        let finalQuantityReceived = 0;
-        let source = 'default';
-        
-        // Priority 1: Metadata (most reliable for editing)
-        if (metadataQty && typeof metadataQty.quantityReceived === 'number') {
-          finalQuantityReceived = metadataQty.quantityReceived;
-          source = 'metadata';
-        }
-        // Priority 2: Direct item property on raw transaction item
-        else if (rawItem && rawItem.quantityReceived !== undefined && 
-                 rawItem.quantityReceived !== null && Number(rawItem.quantityReceived) > 0) {
-          finalQuantityReceived = Number(rawItem.quantityReceived);
-          source = 'rawItem';
-        }
-        // Priority 3: Current item (already processed, less reliable)
-        else if (item.quantityReceived !== undefined && item.quantityReceived !== null && 
-                 Number(item.quantityReceived) > 0) {
-          finalQuantityReceived = Number(item.quantityReceived);
-          source = 'currentItem';
-        }
-        
-        // Priority 4 (not needed): If all else fails, it stays 0
-        
-        // Log each item's quantity resolution with clarity
-        console.log(`⚠️ FIXED: Quantity for product ${productId} (${item.description}):`, {
-          final: finalQuantityReceived,
-          source: source,
-          metadata: metadataQty ? metadataQty.quantityReceived : 'not found',
-          rawItem: rawItem?.quantityReceived,
-          currentItem: item.quantityReceived
-        });
-        
-        // Create a properly sanitized item with consistent types
-        return {
-          ...item,
-          productId: productId,
-          quantity: Number(item.quantity || 1),
-          // DEFINITIVE FIX: Use our explicitly determined quantity
-          quantityReceived: finalQuantityReceived,
-          unitPrice: Number(item.unitPrice || 0),
-          taxRate: Number(item.taxRate || 0),
-          discount: Number(item.discount || 0)
-        };
-      });
-      
-      // Log the final items array that will be used in the form
-      console.log("🔍 FINAL ITEMS FOR FORM:", 
-        JSON.stringify(itemsWithQuantities.map(i => ({
-          productId: i.productId,
-          description: i.description,
-          quantityReceived: i.quantityReceived
-        })), null, 2)
-      );
-      
-      // Update both the billItems state and explicit form values
-      setBillItems(itemsWithQuantities);
-      
-      // CRITICAL: For each item, also explicitly set the form value for quantityReceived
-      // This ensures the form state has the correct values - THE KEY FIX
-      itemsWithQuantities.forEach((item, index) => {
-        // This direct form setValue is what makes the fix work
-        form.setValue(`items.${index}.quantityReceived`, item.quantityReceived);
-        
-        // Log to verify we're setting the right value
-        console.log(`🔧 EXPLICITLY set form item ${index} (${item.productId}) quantityReceived to: ${item.quantityReceived}`);
-      });
-      
-      // Before form reset, ensure our state values are updated
-      setTotalDiscountField(discountValue.toString());
-      setTotalDiscountType(discountType as "flat" | "percentage");
-      
-      // CORE FIX: We need to ensure the complete integrity of quantities when resetting the form
-      // Create a special copy of our items array with quantities guaranteed to be preserved
-      const preservedItems = itemsWithQuantities.map(item => {
-        // Log each item's final quantity for verification before form reset
-        console.log(`Final form reset - Product ${item.productId}: Quantity ${item.quantityReceived}`);
-        
-        // Replace any undefined or null quantityReceived with explicit zeros
-        return {
-          ...item,
-          quantityReceived: item.quantityReceived !== undefined && item.quantityReceived !== null 
-            ? Number(item.quantityReceived) 
-            : 0
-        };
-      });
-      
-      // COMPLETELY REBUILT: Form initialization with reliable received quantity handling
-      console.log('REBUILD - Initializing form with complete bill data and quantities');
-      
-      // First, guarantee that all quantities are properly normalized
-      const guaranteedItems = preservedItems.map(item => {
-        // Ensure quantityReceived is explicitly a number value - convert any nullish value to zero
-        const safeQuantityReceived = item.quantityReceived !== undefined && item.quantityReceived !== null 
-          ? Number(item.quantityReceived) 
-          : 0;
-          
-        return {
-          ...item,
-          quantityReceived: safeQuantityReceived
-        };
-      });
-      
-      // Log the prepared items for verification
-      guaranteedItems.forEach((item, idx) => {
-        console.log(`INIT ITEM ${idx}: ${item.description || 'Unknown'} (ID: ${item.productId})`, {
-          quantityReceived: item.quantityReceived,
-          ordered: item.quantity
-        });
-      });
-      
-      // Reset form with complete data
-      form.reset({
-        vendorId,
-        accountId: editingBill.accountId,
-        billNumber: editingBill.documentNumber || generateBillNumber(),
-        billDate: editingBill.date ? new Date(editingBill.date) : new Date(),
-        dueDate: dueDate,
-        status: editingBill.status as any || "draft",
-        // Use guaranteed items with normalized quantities
-        items: guaranteedItems,
-        subtotal,
-        taxAmount,
-        discountAmount,
-        totalDiscount: discountValue, 
-        totalDiscountType: discountType as "flat" | "percentage",
-        totalAmount: totalAmount,
-        paymentMade: editingBill.paymentReceived ? editingBill.paymentReceived / 100 : 0,
-        notes: editingBill.notes || "",
-        termsAndConditions: "Payment is due within 30 days of the bill date.",
-        vendorNotes: editingBill.description || "",
-      });
-      
-      // Apply a DUAL-PHASE QUANTITY CONFIRMATION to ensure 100% reliable quantity preservation
-      // Phase 1: Immediate form value updates
-      guaranteedItems.forEach((item, index) => {
-        form.setValue(`items.${index}.quantityReceived`, item.quantityReceived, {
-          shouldValidate: true,
-          shouldDirty: true,
-          shouldTouch: true
-        });
-      });
-      
-      // Phase 2: Delayed confirmation after form stabilization
-      setTimeout(() => {
-        // Get current form values for comparison
-        const currentValues = form.getValues();
-        
-        // Verify and correct each item's quantity if needed
-        guaranteedItems.forEach((item, index) => {
-          const currentFormValue = currentValues.items?.[index]?.quantityReceived;
-          
-          // Check if the form value matches the expected value
-          if (currentFormValue !== item.quantityReceived) {
-            console.log(`CORRECTION NEEDED: Item ${index} (${item.productId}) quantity mismatch:`, {
-              expected: item.quantityReceived,
-              current: currentFormValue
-            });
-            
-            // Apply correction
-            form.setValue(`items.${index}.quantityReceived`, item.quantityReceived, {
-              shouldValidate: true,
-              shouldDirty: true,
-              shouldTouch: true
-            });
-          }
-        });
-        
-        console.log('REBUILD - Quantity confirmation complete');
-      }, 200);
-
-      // CRITICAL FIX: Re-check freeze state after metadata is loaded
-      setTimeout(() => {
-        if (editingBill?.metadata) {
-          let shouldBeFrozen = false;
-          
-          if (typeof editingBill.metadata === 'string') {
-            try {
-              const metadataObj = JSON.parse(editingBill.metadata);
-              shouldBeFrozen = metadataObj?.isFrozen === true;
-            } catch (e) {
-              console.log("Could not parse metadata for freeze status");
-            }
-          } else if (typeof editingBill.metadata === 'object') {
-            shouldBeFrozen = (editingBill.metadata as any)?.isFrozen === true;
-          }
-          
-          if (shouldBeFrozen !== isFrozen) {
-            console.log(`FREEZE STATE CORRECTION: Setting freeze to ${shouldBeFrozen}`);
-            setIsFrozen(shouldBeFrozen);
-          }
-        }
-      }, 300);
-    } else {
-      // Add an empty item if creating a new bill
-      if (billItems.length === 0) {
-        addItem();
-      }
-    }
-  }, [editingBill, vendors, isFrozen]);
-  
-  // SIMPLIFIED FREEZE TOGGLE: Direct instant toggle without confirmations
-  const handleFreezeToggle = async (newFreezeState: boolean) => {
-    if (!editingBill?.id) {
-      console.error("🔒 TOGGLE: Cannot change freeze state - no bill ID");
-      return;
-    }
-    
-    console.log(`🔒 TOGGLE: Switching from ${isFrozen} to ${newFreezeState} for bill ${editingBill.id}`);
-    
-    try {
-      // Update database immediately
-      await updateBillFreezeStatus(newFreezeState);
-      
-      // Update local state
-      setIsFrozen(newFreezeState);
-      
-      console.log(`🔒 TOGGLE: Successfully updated freeze state to ${newFreezeState}`);
-      
-    } catch (error) {
-      console.error("🔒 TOGGLE: Failed to update freeze state", error);
-      // Revert toggle if database update fails
-      setIsFrozen(!newFreezeState);
-    }
-  };
-
-  const updateBillFreezeStatus = async (frozen: boolean) => {
-    if (editingBill?.id) {
-      try {
-        console.log(`🔄 UPDATE FREEZE STATUS: Setting bill ${editingBill.id} freeze to ${frozen}`);
-        console.log(`🔄 UPDATE FREEZE STATUS: Current metadata:`, editingBill.metadata);
-        
-        // CRITICAL FIX: Properly handle metadata object construction
-        let currentMetadata = {};
-        
-        // Parse existing metadata safely
-        if (editingBill.metadata) {
-          if (typeof editingBill.metadata === 'string') {
-            try {
-              currentMetadata = JSON.parse(editingBill.metadata);
-            } catch (e) {
-              console.log("Could not parse existing metadata, using empty object");
-              currentMetadata = {};
-            }
-          } else if (typeof editingBill.metadata === 'object') {
-            currentMetadata = { ...editingBill.metadata };
-          }
-        }
-        
-        // Create updated metadata with freeze status
-        const updatedMetadata = {
-          ...currentMetadata,
-          isFrozen: frozen,
-          lastFreezeUpdate: new Date().toISOString()
-        };
-        
-        console.log(`🔄 UPDATE FREEZE STATUS: Sending metadata:`, updatedMetadata);
-        
-        await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, {
-          metadata: updatedMetadata
-        });
-        
-        console.log(`✅ FREEZE STATUS UPDATE: Bill ${editingBill.id} freeze status successfully set to ${frozen}`);
-        
-        // Update local state to reflect the change immediately
-        if (editingBill) {
-          editingBill.metadata = updatedMetadata;
-        }
-        
-      } catch (error) {
-        console.error("❌ FAILED to update freeze status:", error);
-        toast({
-          title: "Error updating freeze status",
-          description: "Could not save freeze state. Please try again.",
-          variant: "destructive"
-        });
-      }
-    } else {
-      console.error("❌ Cannot update freeze status: No bill ID found");
-    }
-  };
 
   // Form submission handler with automated status calculation
-  const onSubmit = (data: PurchaseBill) => {
-    // CRITICAL: Block all saves when frozen
-    if (isFrozen) {
-      console.log("🚫 SAVE BLOCKED: Bill is frozen");
-      toast({
-        title: "Cannot save - Bill is frozen",
-        description: "Please unfreeze the bill before making changes.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+  const onSubmit = (data: PurchaseBill) => {    
     if (billItems.length === 0) {
       toast({
         title: "Error",
@@ -1787,1011 +792,1030 @@ export default function PurchaseBillFormSplit({
       
       // ATTEMPT 2: Item state is fallback if form state is unavailable
       if ((!qtySourceTracker.finalValue || qtySourceTracker.finalValue === 0) && 
-          item.quantityReceived !== undefined) {
-        const stateValue = Number(item.quantityReceived);
-        if (!isNaN(stateValue)) {
-          qtySourceTracker.stateValue = stateValue;
-          
-          // Only use if we don't have a form value
-          if (!qtySourceTracker.finalValue || qtySourceTracker.finalValue === 0) {
-            qtySourceTracker.finalValue = stateValue;
-            qtySourceTracker.source = "state-value";
-            console.log(`SUBMIT EXTRACTION: State value ${stateValue} for product ${item.productId}`);
-          }
-        }
+          item.quantityReceived !== undefined && item.quantityReceived > 0) {
+        qtySourceTracker.stateValue = item.quantityReceived;
+        qtySourceTracker.finalValue = item.quantityReceived;
+        qtySourceTracker.source = "item-state";
+        console.log(`SUBMIT EXTRACTION: Item state value ${item.quantityReceived} for product ${item.productId}`);
       }
       
-      // Ensure we have a valid number, default to 0 if nothing found
-      if (qtySourceTracker.finalValue === null || isNaN(qtySourceTracker.finalValue)) {
+      // ATTEMPT 3: Default to 0 if nothing found
+      if (!qtySourceTracker.finalValue) {
         qtySourceTracker.finalValue = 0;
         qtySourceTracker.source = "default-zero";
-        console.log(`SUBMIT EXTRACTION: Using default 0 for product ${item.productId} - no valid values found`);
       }
       
-      // Log all possible sources and the final decision for debugging
-      console.log(`SUBMIT DECISION for product ${item.productId}:`, { 
-        formValue: qtySourceTracker.formValue,
-        stateValue: qtySourceTracker.stateValue,
-        finalDecision: qtySourceTracker.finalValue,
-        source: qtySourceTracker.source
-      });
+      console.log(`FINAL SUBMIT QUANTITY for product ${item.productId}:`, qtySourceTracker);
       
-      // Create a clean, explicitly typed item object with guaranteed values
-      // FIX: Comprehensive NaN validation for all numeric fields
-      const processedItem = {
-        productId: isNaN(Number(item.productId)) ? 0 : Number(item.productId),
-        description: String(item.description || ""),
-        quantity: isNaN(Number(item.quantity)) ? 0 : Number(item.quantity || 0),
-        // CRITICAL FIELD: Always use a specific numeric value with explicit conversion
-        quantityReceived: isNaN(Number(qtySourceTracker.finalValue)) ? 0 : Number(qtySourceTracker.finalValue),
-        unitPrice: isNaN(Number(item.unitPrice)) ? 0 : Number(item.unitPrice || 0),
-        amount: isNaN(Number(item.amount)) ? 0 : Number(item.amount || 0),
-        taxRate: isNaN(Number(item.taxRate)) ? 0 : Number(item.taxRate || 0),
-        discount: isNaN(Number(item.discount)) ? 0 : Number(item.discount || 0),
-        taxType: String(item.taxType || "flat"),
-        discountType: String(item.discountType || "flat")
+      return {
+        productId: item.productId,
+        description: item.description,
+        quantity: Number(item.quantity) || 0,
+        quantityReceived: qtySourceTracker.finalValue,
+        unitPrice: Math.round((isUnitPriceInCents ? Number(item.unitPrice) : Number(item.unitPrice) * 100) || 0), // Convert to cents
+        amount: Math.round(Number(item.amount) * 100 || 0), // Convert to cents
+        taxRate: Number(item.taxRate) || 0,
+        discount: Number(item.discount) || 0,
+        taxType: item.taxType || 'percentage',
+        discountType: item.discountType || 'percentage'
       };
-      
-      // CRITICAL TRACING: Log the processed item to verify its structure
-      console.log(`LIFECYCLE TRACE - Final processed item for product ${processedItem.productId}:`, {
-        quantityReceived: processedItem.quantityReceived,
-        quantity: processedItem.quantity,
-        sources: {
-          formValue: formItem?.quantityReceived,
-          itemDirectValue: item.quantityReceived
-        },
-        fullItem: processedItem
-      });
-      
-      return processedItem;
     });
     
-    // CRITICAL FIX: Prepare transaction data with direct quantityReceived values
-    const billData = {
+    console.log("Processing items for submission:", processedItems);
+    
+    // Create the final data object for submission
+    const submissionData = {
+      type: "expense" as const,
+      category: "Purchases",
+      businessId: 1, // This should come from context or props
       ...data,
-      // Preserve original ID and created date when editing
-      ...(editingBill ? { 
-        id: editingBill.id,
-        createdAt: editingBill.createdAt 
-      } : {}),
-      // Use the processed items array containing explicit quantityReceived values
-      items: processedItems,
-      // CRITICAL FIX: Metadata must be sent as an object, not a stringified JSON
-      metadata: {
-        // Essential bill metadata
-        totalDiscount: totalDiscountValue,
-        totalDiscountType: data.totalDiscountType || "flat",
-        dueDate: data.dueDate ? data.dueDate.toISOString() : new Date().toISOString(),
-        contactId: data.vendorId,
-        
-        // NEW IMPLEMENTATION: Ultra reliable storage of received quantities
-        // We store in both formats for maximum reliability and backward compatibility
-        
-        // Format 1: Map for fast lookup - Primary storage method
-        receivedQuantityMap: processedItems.reduce((map: Record<string, number>, item) => {
-          // Enforce number type and use explicit keys for product IDs
-          map[`product_${item.productId}`] = Number(item.quantityReceived);
-          return map;
-        }, {}),
-        
-        // Format 2: Array with complete item details - Secondary storage method
-        itemQuantitiesReceived: processedItems.map(item => ({
-          productId: Number(item.productId),
-          quantityReceived: Number(item.quantityReceived),
-          orderedQuantity: Number(item.quantity),
-          description: String(item.description || ""),
-          lastUpdated: new Date().toISOString()
-        })),
-        
-        // Add direct property for quick access to total received
-        totalQuantityReceived: processedItems.reduce((sum, item) => 
-          sum + Number(item.quantityReceived || 0), 0),
-          
-        // Version tracking for debugging and future compatibility
-        version: "purchase-bill-v3.0",
-        receivedQtyImplementation: "complete-rebuild-2023",
-        saveTimestamp: new Date().toISOString(),
-      },
-      // Calculate the total amount correctly
-      amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
-      status: calculatedStatus, // Use automatically calculated status
+      amount: Math.round(data.totalAmount * 100), // Convert to cents
+      date: data.billDate,
+      documentNumber: data.billNumber,
+      description: `Bill #${data.billNumber}`,
+      contactName: data.vendorId ? vendors?.find(v => v.id === data.vendorId)?.name || "Unknown Vendor" : "No Vendor Selected",
       paymentReceived: paymentMadeValue,
-      type: "purchase",
-      category: "Bills"
+      totalDiscount: totalDiscountValue,
+      status: calculatedStatus,
+      items: processedItems,
+      metadata: {
+        totalDiscount: totalDiscountValue,
+        totalDiscountType: data.totalDiscountType,
+        dueDate: data.dueDate?.toISOString(),
+        // Store item quantities in metadata for reliable retrieval
+        itemQuantitiesReceived: processedItems.map(item => ({
+          productId: item.productId,
+          quantityReceived: item.quantityReceived
+        })),
+        receivedQuantityMap: processedItems.reduce((acc, item) => {
+          acc[item.productId] = item.quantityReceived;
+          return acc;
+        }, {} as { [key: number]: number })
+      }
     };
     
-    console.log("Saving bill:", billData);
-    saveBillMutation.mutate(billData);
-  };
-  
-  // Handle add vendor form submission
-  const handleAddVendor = () => {
-    if (!newVendor.name || !newVendor.email) {
-      toast({
-        title: "Error",
-        description: "Vendor name and email are required",
-        variant: "destructive",
-      });
-      return;
-    }
+    console.log("Final submission data:", submissionData);
     
-    createVendorMutation.mutate(newVendor);
+    mutation.mutate(submissionData);
   };
 
-  return (
-    <>
-      {/* Render the vendor modal outside of the form context */}
-      <VendorModal
-        open={addVendorDialogOpen}
-        onOpenChange={setAddVendorDialogOpen}
-        onSuccess={(newVendor) => {
-          // When a new vendor is created, select it in the form
-          if (newVendor && newVendor.id) {
-            form.setValue('vendorId', newVendor.id);
-            
-            // Force a refresh of the vendors query
-            queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-          }
-        }}
-      />
+  // Helper functions for managing bill items
+  const addItem = () => {
+    const newItem: PurchaseBillItem = {
+      productId: 0,
+      description: "",
+      quantity: 1,
+      quantityReceived: 0,
+      unitPrice: 0,
+      amount: 0,
+      taxRate: 0,
+      discount: 0,
+      taxType: 'percentage',
+      discountType: 'percentage'
+    };
+    
+    setBillItems([...billItems, newItem]);
+    
+    // Add to form array as well
+    const currentItems = form.getValues("items") || [];
+    form.setValue("items", [...currentItems, {
+      productId: 0,
+      description: "",
+      quantity: 1,
+      quantityReceived: 0,
+      unitPrice: 0,
+      amount: 0,
+      taxRate: 0,
+      discount: 0,
+      taxType: 'percentage' as const,
+      discountType: 'percentage' as const
+    }]);
+    
+    calculateTotals();
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = billItems.filter((_, i) => i !== index);
+    setBillItems(newItems);
+    
+    // Update form array
+    const currentItems = form.getValues("items") || [];
+    const newFormItems = currentItems.filter((_, i) => i !== index);
+    form.setValue("items", newFormItems);
+    
+    calculateTotals();
+  };
+
+  const handleProductChange = (productId: number, index: number) => {
+    const product = products?.find(p => p.id === productId);
+    if (product) {
+      const updatedItems = [...billItems];
+      updatedItems[index] = {
+        ...updatedItems[index],
+        productId: product.id,
+        description: product.description || product.name,
+        unitPrice: product.price / 100, // Convert from cents to dollars
+      };
+      setBillItems(updatedItems);
       
+      // Update form
+      form.setValue(`items.${index}.productId`, productId);
+      form.setValue(`items.${index}.description`, product.description || product.name);
+      form.setValue(`items.${index}.unitPrice`, product.price / 100);
+      
+      // Recalculate line amount
+      updateLineAmount(index, updatedItems[index]);
+    }
+  };
+
+  const updateLineAmount = (index: number, item: PurchaseBillItem) => {
+    const quantity = Number(item.quantity) || 0;
+    const unitPrice = Number(item.unitPrice) || 0;
+    const discount = Number(item.discount) || 0;
+    const taxRate = Number(item.taxRate) || 0;
+    
+    let lineTotal = quantity * unitPrice;
+    
+    // Apply discount
+    if (item.discountType === 'percentage') {
+      lineTotal = lineTotal * (1 - discount / 100);
+    } else {
+      lineTotal = lineTotal - discount;
+    }
+    
+    // Apply tax
+    if (item.taxType === 'percentage') {
+      lineTotal = lineTotal * (1 + taxRate / 100);
+    } else {
+      lineTotal = lineTotal + taxRate;
+    }
+    
+    const updatedItems = [...billItems];
+    updatedItems[index] = { ...item, amount: lineTotal };
+    setBillItems(updatedItems);
+    
+    // Update form
+    form.setValue(`items.${index}.amount`, lineTotal);
+    
+    calculateTotals();
+  };
+
+  const calculateTotals = () => {
+    const subtotal = billItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalDiscountValue = Number(form.getValues("totalDiscount")) || 0;
+    const totalDiscountType = form.getValues("totalDiscountType") || "flat";
+    
+    let discountAmount = 0;
+    if (totalDiscountType === 'percentage') {
+      discountAmount = subtotal * (totalDiscountValue / 100);
+    } else {
+      discountAmount = totalDiscountValue;
+    }
+    
+    const totalAmount = Math.max(0, subtotal - discountAmount);
+    
+    // Update form with calculated values
+    form.setValue("subtotal", subtotal);
+    form.setValue("discountAmount", discountAmount);
+    form.setValue("totalAmount", totalAmount);
+  };
+
+  // Get status information for display
+  const getStatusInfo = () => {
+    if (!editingBill) {
+      return { label: "Draft", colorClass: "text-gray-600 bg-gray-100 border-gray-200" };
+    }
+    
+    const status = editingBill.status;
+    switch (status) {
+      case "draft":
+        return { label: "Draft", colorClass: "text-gray-600 bg-gray-100 border-gray-200" };
+      case "received":
+        return { label: "Fully Received", colorClass: "text-green-600 bg-green-100 border-green-200" };
+      case "paid":
+        return { label: "Paid", colorClass: "text-blue-600 bg-blue-100 border-blue-200" };
+      case "partial_paid":
+        return { label: "Partially Paid", colorClass: "text-yellow-600 bg-yellow-100 border-yellow-200" };
+      case "partial_received":
+        return { label: "Partially Received", colorClass: "text-orange-600 bg-orange-100 border-orange-200" };
+      case "paid_received":
+        return { label: "Paid & Received", colorClass: "text-green-600 bg-green-100 border-green-200" };
+      case "paid_partial_received":
+        return { label: "Paid & Partially Received", colorClass: "text-blue-600 bg-blue-100 border-blue-200" };
+      case "partial_paid_received":
+        return { label: "Partially Paid & Received", colorClass: "text-indigo-600 bg-indigo-100 border-indigo-200" };
+      case "partial_paid_partial_received":
+        return { label: "Partially Paid & Partially Received", colorClass: "text-purple-600 bg-purple-100 border-purple-200" };
+      case "cancelled":
+        return { label: "Cancelled", colorClass: "text-red-600 bg-red-100 border-red-200" };
+      default:
+        return { label: status || "Unknown", colorClass: "text-gray-600 bg-gray-100 border-gray-200" };
+    }
+  };
+
+  if (vendorsLoading || productsLoading || accountsLoading) {
+    return <div>Loading...</div>;
+  }
+
+  const badge = getStatusInfo();
+
+  return (
+    <div className="space-y-6">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className={`space-y-6 ${isFrozen ? 'opacity-75' : ''}`} title={isFrozen ? "This bill is frozen. Unfreeze to make changes." : ""}>
-          <div className="grid grid-cols-2 gap-4">
-            {/* Vendor Selection */}
-            <FormField
-              control={form.control}
-              name="vendorId"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex justify-between items-center">
-                    <FormLabel>Vendor</FormLabel>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      className={`h-7 px-2 text-xs ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={isFrozen}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (isFrozen) {
-                          toast({
-                            title: "Bill is frozen",
-                            description: "Please unfreeze the bill to add vendors.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        setAddVendorDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" />
-                      Add Vendor
-                    </Button>
-                  </div>
-                  <Select 
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value.toString()}
-                    disabled={isFrozen}
-                  >
-                    <FormControl>
-                      <SelectTrigger className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}>
-                        <SelectValue placeholder={isFrozen ? "Bill is frozen" : "Select a vendor"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {vendorsLoading ? (
-                        <SelectItem value="loading" disabled>Loading vendors...</SelectItem>
-                      ) : vendors && vendors.length > 0 ? (
-                        vendors.map((vendor) => (
-                          <SelectItem key={vendor.id} value={vendor.id.toString()}>
-                            {vendor.name}
-                            {vendor.balance !== undefined && vendor.balance !== null && vendor.balance !== 0 && (
-                              <span className={`ml-2 text-xs ${(vendor.balance || 0) > 0 ? 'text-green-500' : 'text-amber-500'}`}>
-                                {(vendor.balance || 0) > 0 
-                                  ? `(Advance: ${formatCurrency((vendor.balance || 0) / 100)})` 
-                                  : `(Due: ${formatCurrency(Math.abs((vendor.balance || 0)) / 100)})`}
-                              </span>
-                            )}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>No vendors found</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Account Selection */}
-            <FormField
-              control={form.control}
-              name="accountId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Pay From Account</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value.toString()}
-                    disabled={isFrozen}
-                  >
-                    <FormControl>
-                      <SelectTrigger className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}>
-                        <SelectValue placeholder={isFrozen ? "Bill is frozen" : "Select an account"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accountsLoading ? (
-                        <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
-                      ) : accounts && accounts.length > 0 ? (
-                        accounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id.toString()}>
-                            {account.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>No accounts found</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Bill Number */}
-            <FormField
-              control={form.control}
-              name="billNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bill Number</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      disabled={isFrozen}
-                      className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}
-                      title={isFrozen ? "This bill is frozen. Please unfreeze to make changes." : ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Bill Date */}
-            <FormField
-              control={form.control}
-              name="billDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bill Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={`w-full justify-start text-left font-normal ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          disabled={isFrozen}
-                          title={isFrozen ? "This bill is frozen. Please unfreeze to make changes." : ""}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : (isFrozen ? "Bill is frozen" : "Select a date")}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    {!isFrozen && (
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    )}
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Due Date */}
-            <FormField
-              control={form.control}
-              name="dueDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Due Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={`w-full justify-start text-left font-normal ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          disabled={isFrozen}
-                          title={isFrozen ? "This bill is frozen. Please unfreeze to make changes." : ""}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : (isFrozen ? "Bill is frozen" : "Select a date")}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    {!isFrozen && (
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    )}
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Automated Status Display */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Status</label>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                <div>
-                  {(() => {
-                    // Calculate current status dynamically based on form data
-                    const currentStatus = calculatePurchaseBillStatus(
-                      form.watch('totalAmount') || 0,
-                      form.watch('paymentMade') || 0,
-                      billItems.map(item => ({
-                        quantity: item.quantity,
-                        quantityReceived: item.quantityReceived || 0
-                      })),
-                      false // No longer using cancelled status
-                    );
-                    
-                    const badge = renderStatusBadge(currentStatus || "draft");
-                    return (
-                      <div className="flex items-center space-x-3">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
-                          {badge.label}
-                        </span>
-                        
-                        {/* SIMPLIFIED FREEZE TOGGLE SWITCH */}
-                        {editingBill && (
-                          <div className="flex items-center space-x-2 px-3 py-1 bg-gray-50 rounded-full border">
-                            <span className="text-sm font-medium text-gray-600">
-                              {isFrozen ? (
-                                <>
-                                  <Lock className="w-4 h-4 inline mr-1" />
-                                  🧊 Frozen
-                                </>
-                              ) : (
-                                <>
-                                  <Unlock className="w-4 h-4 inline mr-1" />
-                                  🔓 Editable
-                                </>
-                              )}
-                            </span>
-                            <Switch
-                              checked={isFrozen}
-                              onCheckedChange={handleFreezeToggle}
-                              className="data-[state=checked]:bg-blue-600"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                  <p className="text-xs text-gray-500 mt-1">
-                    {isFrozen ? "This bill is frozen and cannot be edited" : "Status updates automatically based on payments and receipts"}
-                  </p>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Header */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">
+                {editingBill ? "Edit Purchase Bill" : "Create Purchase Bill"}
+              </h2>
+              {editingBill && (
+                <div className="flex items-center space-x-3">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
+                    {badge.label}
+                  </span>
                 </div>
-              </div>
+              )}
             </div>
-          </div>
-          
-          {/* Line Items */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Items</h3>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  if (isFrozen) {
-                    toast({
-                      title: "Bill is frozen",
-                      description: "Please unfreeze the bill to add items.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  addItem();
-                }}
-                disabled={isFrozen}
-                className={`h-8 ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={isFrozen ? "This bill is frozen. Please unfreeze to add items." : ""}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Item
+            <div className="flex space-x-2">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? "Saving..." : editingBill ? "Update Bill" : "Create Bill"}
               </Button>
             </div>
-            
-            {/* Desktop Table View */}
-            <div className="hidden md:block border rounded-md overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="text-left p-2">Product</th>
-                    <th className="w-20 p-2">Qty</th>
-                    <th className="w-20 p-2">Received</th>
-                    <th className="w-24 p-2">Unit Price</th>
-                    <th className="w-24 p-2">Amount</th>
-                    <th className="w-10 p-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {billItems.map((item, index) => {
-                    // Use a different approach to avoid React.Fragment with data-replit-metadata issue
-                    return [
-                      // Main line with Product name, Quantity, Unit Price, Line Amount
-                      <tr key={`item-${index}-main`} className="border-t">
-                        <td className="p-2">
-                          <Select 
-                            value={item.productId?.toString() || "0"} 
-                            onValueChange={(value) => handleProductChange(parseInt(value), index)}
-                            disabled={isFrozen}
-                          >
-                            <SelectTrigger className={`mb-1 ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                              <SelectValue placeholder={isFrozen ? "Bill is frozen" : "Select product"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {productsLoading ? (
-                                <SelectItem value="loading" disabled>Loading products...</SelectItem>
-                              ) : products && products.length > 0 ? (
-                                products.map((product) => (
-                                  <SelectItem key={product.id} value={product.id.toString()}>
-                                    {product.name}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="none" disabled>No products found</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="p-2">
-                          <SafeNumberInput
-                            defaultValue={1}
-                            value={item.quantity || 1} // Ensure it's never undefined
-                            onChange={(value) => {
-                              if (isFrozen) {
-                                toast({
-                                  title: "Bill is frozen",
-                                  description: "Please unfreeze the bill to modify quantities.",
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
-                              updateItemQuantity(value || 1, index);
-                            }}
-                            min={1}
-                            step={1}
-                            disabled={isFrozen}
-                            className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}
-                          />
-                        </td>
-                        <td className="p-2">
-                          {/* REBUILT: Quantity Received Input with explicit handling */}
-                          <SafeNumberInput
-                            defaultValue={0}
-                            value={item.quantityReceived}
-                            onChange={(value) => {
-                              if (isFrozen) {
-                                toast({
-                                  title: "Bill is frozen",
-                                  description: "Please unfreeze the bill to modify received quantities.",
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
-                              updateItemQuantityReceived(value, index);
-                            }}
-                            onBlur={() => {
-                              // Ensure form value is explicitly set on blur
-                              const currentValue = item.quantityReceived || 0;
-                              console.log(`BLUR EVENT: Setting quantity received for ${item.description} (index ${index}) to ${currentValue}`);
-                              
-                              // Update form value with full validation options
-                              form.setValue(`items.${index}.quantityReceived`, currentValue, {
-                                shouldDirty: true,
-                                shouldTouch: true,
-                                shouldValidate: true
-                              });
-                            }}
-                            min={0}
-                            max={item.quantity || 1}
-                            step={1}
-                            disabled={isFrozen}
-                            className={`w-full ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          />
-                        </td>
-                        <td className="p-2">
-                          <SafeNumberInput
-                            defaultValue={0}
-                            value={item.unitPrice || 0} // Ensure it's never undefined
-                            onChange={(value) => {
-                              if (isFrozen) {
-                                toast({
-                                  title: "Bill is frozen",
-                                  description: "Please unfreeze the bill to modify prices.",
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
-                              updateItemPrice(value || 0, index);
-                            }}
-                            min={0}
-                            step={0.01}
-                            disabled={isFrozen}
-                            className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}
-                          />
-                        </td>
-                        <td className="p-2 text-right font-medium">
-                          {formatCurrency(item.amount)}
-                        </td>
-                        <td className="p-2 text-center" rowSpan={2}>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeItem(index)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>,
-                      
-                      // Second line with Description, Tax, and Discount
-                      <tr key={`item-${index}-details`} className="bg-gray-50 border-b">
-                        <td colSpan={4} className="px-2 pb-2">
-                          <div className="grid grid-cols-3 gap-2">
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block">Description</label>
-                              <Input
-                                value={item.description || ""} 
-                                onChange={(e) => {
-                                  const newItems = [...billItems];
-                                  newItems[index].description = e.target.value;
-                                  setBillItems(newItems);
-                                }}
-                                placeholder="Item description"
-                              />
-                            </div>
-                            
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block">Tax</label>
-                              <div className="flex items-center space-x-1">
-                                <Input
-                                  type="number"
-                                  value={item.taxRate ?? 0}
-                                  onChange={(e) => updateItemTaxRate(parseFloat(e.target.value) || 0, index)}
-                                  min={0}
-                                  max={item.taxType === 'percentage' ? 100 : undefined}
-                                  step={0.1}
-                                  className="min-w-[60px]"
-                                />
-                                <Select 
-                                  value={item.taxType || "flat"} 
-                                  onValueChange={(value) => {
-                                    const newItems = [...billItems];
-                                    newItems[index].taxType = value as 'percentage' | 'flat';
-                                    setBillItems(newItems);
-                                    updateTotals(newItems);
-                                  }}
-                                >
-                                  <SelectTrigger className="w-[70px] h-9">
-                                    <SelectValue>{item.taxType === 'percentage' ? '%' : '$'}</SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="percentage">%</SelectItem>
-                                    <SelectItem value="flat">$</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block">Discount</label>
-                              <div className="flex items-center space-x-1">
-                                <SafeNumberInput
-                                  defaultValue={0}
-                                  value={item.discount ?? 0}
-                                  onChange={(value) => updateItemDiscount(value || 0, index)}
-                                  min={0}
-                                  max={item.discountType === 'percentage' ? 100 : undefined}
-                                  step={0.1}
-                                  className="min-w-[60px]"
-                                />
-                                <Select 
-                                  value={item.discountType || "flat"} 
-                                  onValueChange={(value) => {
-                                    const newItems = [...billItems];
-                                    newItems[index].discountType = value as 'percentage' | 'flat';
-                                    setBillItems(newItems);
-                                    updateTotals(newItems);
-                                  }}
-                                >
-                                  <SelectTrigger className="w-[70px] h-9">
-                                    <SelectValue>{item.discountType === 'percentage' ? '%' : '$'}</SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="percentage">%</SelectItem>
-                                    <SelectItem value="flat">$</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ];
-                  }).flat()}
-                </tbody>
-              </table>
-            </div>
-            
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-4">
-              {billItems.map((item, index) => (
-                <div key={index} className="border rounded-md overflow-hidden">
-                  {/* Main section - Product, Quantity, Price, Amount, Remove button */}
-                  <div className="p-4 bg-card">
-                    {/* Product */}
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="w-5/6">
-                        <label className="text-xs text-gray-500 mb-1 block">Product</label>
-                        <Select 
-                          value={item.productId.toString()} 
-                          onValueChange={(value) => handleProductChange(parseInt(value), index)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select product" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {productsLoading ? (
-                              <SelectItem value="loading" disabled>Loading products...</SelectItem>
-                            ) : products && products.length > 0 ? (
-                              products.map((product) => (
-                                <SelectItem key={product.id} value={product.id.toString()}>
-                                  {product.name}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="none" disabled>No products found</SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeItem(index)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    {/* Quantity, Received, and Price */}
-                    <div className="grid grid-cols-3 gap-3 mb-3">
-                      <div>
-                        <label className="text-xs text-gray-500 mb-1 block">Quantity</label>
-                        <SafeNumberInput
-                          defaultValue={1}
-                          value={item.quantity || 1}
-                          onChange={(value) => updateItemQuantity(value || 1, index)}
-                          min={1}
-                          step={1}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500 mb-1 block">Received</label>
-                        <SafeNumberInput
-                          defaultValue={0}
-                          value={item.quantityReceived || 0}
-                          onChange={(value) => updateItemQuantityReceived(value || 0, index)}
-                          min={0}
-                          max={item.quantity || 1}
-                          step={1}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500 mb-1 block">Unit Price</label>
-                        <SafeNumberInput
-                          defaultValue={0}
-                          value={item.unitPrice || 0}
-                          onChange={(value) => updateItemPrice(value || 0, index)}
-                          min={0}
-                          step={0.01}
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Amount */}
-                    <div className="flex justify-between items-center pt-2 border-t mt-2">
-                      <span className="font-medium">Line Total:</span>
-                      <span className="text-right font-semibold">
-                        {formatCurrency(item.amount)}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Secondary section - Description, Tax, Discount */}
-                  <div className="p-4 bg-gray-50 border-t">
-                    {/* Description */}
-                    <div className="mb-3">
-                      <label className="text-xs text-gray-500 mb-1 block">Description</label>
-                      <Input
-                        value={item.description}
-                        onChange={(e) => {
-                          const newItems = [...billItems];
-                          newItems[index].description = e.target.value;
-                          setBillItems(newItems);
-                        }}
-                        placeholder="Item description"
-                      />
-                    </div>
-                    
-                    {/* Tax and Discount */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-gray-500 mb-1 block">Tax</label>
-                        <div className="flex items-center space-x-1">
-                          <SafeNumberInput
-                            defaultValue={0}
-                            value={item.taxRate ?? 0}
-                            onChange={(value) => updateItemTaxRate(value || 0, index)}
-                            min={0}
-                            max={item.taxType === 'percentage' ? 100 : undefined}
-                            step={0.1}
-                            className="min-w-[60px]"
-                          />
-                          <Select 
-                            value={item.taxType} 
-                            onValueChange={(value) => {
-                              const newItems = [...billItems];
-                              newItems[index].taxType = value as 'percentage' | 'flat';
-                              setBillItems(newItems);
-                              updateTotals(newItems);
-                            }}
-                          >
-                            <SelectTrigger className="w-[60px] h-9">
-                              <SelectValue>{item.taxType === 'percentage' ? '%' : '$'}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="percentage">%</SelectItem>
-                              <SelectItem value="flat">$</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500 mb-1 block">Discount</label>
-                        <div className="flex items-center space-x-1">
-                          <SafeNumberInput
-                            defaultValue={0}
-                            value={item.discount ?? 0}
-                            onChange={(value) => updateItemDiscount(value || 0, index)}
-                            min={0}
-                            max={item.discountType === 'percentage' ? 100 : undefined}
-                            step={0.1}
-                            className="min-w-[60px]"
-                          />
-                          <Select 
-                            value={item.discountType} 
-                            onValueChange={(value) => {
-                              const newItems = [...billItems];
-                              newItems[index].discountType = value as 'percentage' | 'flat';
-                              setBillItems(newItems);
-                              updateTotals(newItems);
-                            }}
-                          >
-                            <SelectTrigger className="w-[60px] h-9">
-                              <SelectValue>{item.discountType === 'percentage' ? '%' : '$'}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="percentage">%</SelectItem>
-                              <SelectItem value="flat">$</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
           
-          {/* Totals */}
-          <div className="flex justify-end">
-            <div className="w-80 space-y-2">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span className="font-medium">{formatCurrency(form.watch('subtotal'))}</span>
-              </div>
-              
-              {/* Item Discounts Summary - Only show if there are item discounts */}
-              {form.watch('discountAmount') > 0 && (
-                <div className="flex justify-between">
-                  <span>Item Discounts:</span>
-                  <span className="text-red-500">-{formatCurrency(form.watch('discountAmount') || 0)}</span>
-                </div>
-              )}
-              
-              {/* Tax Summary - Only show if there are taxes */}
-              {form.watch('taxAmount') > 0 && (
-                <div className="flex justify-between">
-                  <span>Tax:</span>
-                  <span>{formatCurrency(form.watch('taxAmount'))}</span>
-                </div>
-              )}
-              
-              {/* Total Discount */}
-              <div className="border-t pt-2 pb-2">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium">Total Discount:</span>
-                  <div className="flex items-center space-x-2">
-                    <SafeNumberInput
-                      defaultValue={0}
-                      value={totalDiscountField !== "0" ? totalDiscountField : form.watch('totalDiscount')}
-                      onChange={(value) => {
-                        // Update both state variable and form field
-                        setTotalDiscountField(value?.toString() || "0");
-                        form.setValue('totalDiscount', value || 0);
-                        updateTotalsWithTotalDiscount();
-                      }}
-                      min={0}
-                      max={totalDiscountType === 'percentage' ? 100 : undefined}
-                      step={0.1}
-                      className="w-20 h-8 text-right"
-                    />
-                    <Select 
-                      value={totalDiscountType || "flat"} 
-                      defaultValue="flat"
-                      onValueChange={(value) => {
-                        // Update both state variable and form field
-                        const discountType = value as 'percentage' | 'flat';
-                        setTotalDiscountType(discountType);
-                        form.setValue('totalDiscountType', discountType);
-                        updateTotalsWithTotalDiscount();
-                      }}
-                    >
-                      <SelectTrigger className="w-[60px] h-8">
-                        <SelectValue>
-                          {totalDiscountType === 'percentage' ? '%' : '$'}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="flat">Flat ($)</SelectItem>
-                        <SelectItem value="percentage">Percentage (%)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                {/* Display calculated total discount amount if percentage */}
-                {form.watch('totalDiscount') > 0 && (
-                  <div className="flex justify-between text-sm text-red-500">
-                    <span>Discount Amount:</span>
-                    <span>-{formatCurrency(calculateTotalDiscountAmount())}</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total:</span>
-                <span>{formatCurrency(form.watch('totalAmount'))}</span>
-              </div>
-              
-              {/* Payment Made */}
-              <div className="pt-4">
+          {/* Basic Information */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Vendor Selection */}
                 <FormField
                   control={form.control}
-                  name="paymentMade"
+                  name="vendorId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Payment Made</FormLabel>
+                      <FormLabel>Vendor</FormLabel>
+                      <div className="flex gap-2">
+                        <Select value={field.value?.toString() || ""} onValueChange={(value) => field.onChange(parseInt(value) || null)}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select vendor" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="0">No Vendor Selected</SelectItem>
+                            {vendors?.map((vendor) => (
+                              <SelectItem key={vendor.id} value={vendor.id.toString()}>
+                                {vendor.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAddVendorDialogOpen(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Account Selection */}
+                <FormField
+                  control={form.control}
+                  name="accountId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account</FormLabel>
+                      <Select value={field.value?.toString() || ""} onValueChange={(value) => field.onChange(parseInt(value))}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select account" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {accounts?.map((account) => (
+                            <SelectItem key={account.id} value={account.id.toString()}>
+                              {account.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Bill Number */}
+                <FormField
+                  control={form.control}
+                  name="billNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bill Number</FormLabel>
                       <FormControl>
-                        <SafeNumberInput 
-                          defaultValue={0}
-                          value={field.value ?? 0} // Ensure value is never undefined
-                          onChange={(value) => {
-                            if (isFrozen) {
-                              toast({
-                                title: "Bill is frozen",
-                                description: "Please unfreeze the bill to modify payments.",
-                                variant: "destructive",
-                              });
-                              return;
-                            }
-                            field.onChange(value);
-                          }}
-                          min={0}
-                          step={0.01}
-                          disabled={isFrozen}
-                          className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}
-                        />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
+                {/* Bill Date */}
+                <FormField
+                  control={form.control}
+                  name="billDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bill Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(field.value, "PPP") : "Select a date"}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Due Date */}
+                <FormField
+                  control={form.control}
+                  name="dueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Due Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(field.value, "PPP") : "Select a date"}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Status - Read Only Display */}
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <div className="text-sm text-gray-600">
+                    {badge.label}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Status updates automatically based on payments and receipts
+                  </p>
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           
-          {/* Notes */}
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notes</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Enter any additional notes or details about this bill" 
-                    className="h-24"
-                    {...field} 
+          {/* Line Items */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Items</h3>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={addItem}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Item
+                  </Button>
+                </div>
+                
+                {/* Desktop Table View */}
+                <div className="hidden md:block border rounded-md overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left p-2">Product</th>
+                        <th className="w-20 p-2">Qty</th>
+                        <th className="w-20 p-2">Received</th>
+                        <th className="w-24 p-2">Unit Price</th>
+                        <th className="w-24 p-2">Amount</th>
+                        <th className="w-10 p-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {billItems.map((item, index) => {
+                        // Use a different approach to avoid React.Fragment with data-replit-metadata issue
+                        return [
+                          // Main line with Product name, Quantity, Unit Price, Line Amount
+                          <tr key={`item-${index}-main`} className="border-t">
+                            <td className="p-2">
+                              <Select 
+                                value={item.productId?.toString() || "0"} 
+                                onValueChange={(value) => handleProductChange(parseInt(value), index)}
+                              >
+                                <SelectTrigger className="mb-1">
+                                  <SelectValue placeholder="Select product" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">Select a product</SelectItem>
+                                  {products?.map((product) => (
+                                    <SelectItem key={product.id} value={product.id.toString()}>
+                                      {product.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="p-2">
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const newQuantity = Number(e.target.value);
+                                  const updatedItems = [...billItems];
+                                  updatedItems[index] = { ...item, quantity: newQuantity };
+                                  setBillItems(updatedItems);
+                                  form.setValue(`items.${index}.quantity`, newQuantity);
+                                  updateLineAmount(index, updatedItems[index]);
+                                }}
+                                min={0}
+                                step={1}
+                                className="w-20"
+                              />
+                            </td>
+                            <td className="p-2">
+                              <Input
+                                type="number"
+                                value={item.quantityReceived || 0}
+                                onChange={(e) => {
+                                  const newQuantityReceived = Number(e.target.value);
+                                  const updatedItems = [...billItems];
+                                  updatedItems[index] = { ...item, quantityReceived: newQuantityReceived };
+                                  setBillItems(updatedItems);
+                                  form.setValue(`items.${index}.quantityReceived`, newQuantityReceived);
+                                }}
+                                min={0}
+                                max={item.quantity}
+                                step={1}
+                                className="w-20"
+                              />
+                            </td>
+                            <td className="p-2">
+                              <Input
+                                type="number"
+                                value={item.unitPrice}
+                                onChange={(e) => {
+                                  const newUnitPrice = Number(e.target.value);
+                                  const updatedItems = [...billItems];
+                                  updatedItems[index] = { ...item, unitPrice: newUnitPrice };
+                                  setBillItems(updatedItems);
+                                  form.setValue(`items.${index}.unitPrice`, newUnitPrice);
+                                  updateLineAmount(index, updatedItems[index]);
+                                }}
+                                min={0}
+                                step={0.01}
+                                className="w-24"
+                              />
+                            </td>
+                            <td className="p-2 text-right font-medium">
+                              {formatCurrency(item.amount)}
+                            </td>
+                            <td className="p-2 text-center" rowSpan={2}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeItem(index)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>,
+                          
+                          // Second line with Description, Tax, and Discount
+                          <tr key={`item-${index}-details`} className="bg-gray-50 border-b">
+                            <td colSpan={4} className="px-2 pb-2">
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block">Description</label>
+                                  <Input
+                                    value={item.description}
+                                    onChange={(e) => {
+                                      const updatedItems = [...billItems];
+                                      updatedItems[index] = { ...item, description: e.target.value };
+                                      setBillItems(updatedItems);
+                                      form.setValue(`items.${index}.description`, e.target.value);
+                                    }}
+                                    placeholder="Item description"
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block">Tax</label>
+                                  <div className="flex gap-1">
+                                    <Input
+                                      type="number"
+                                      value={item.taxRate}
+                                      onChange={(e) => {
+                                        const newTaxRate = Number(e.target.value);
+                                        const updatedItems = [...billItems];
+                                        updatedItems[index] = { ...item, taxRate: newTaxRate };
+                                        setBillItems(updatedItems);
+                                        form.setValue(`items.${index}.taxRate`, newTaxRate);
+                                        updateLineAmount(index, updatedItems[index]);
+                                      }}
+                                      min={0}
+                                      step={0.01}
+                                      className="h-8 flex-1"
+                                    />
+                                    <Select 
+                                      value={item.taxType} 
+                                      onValueChange={(value: 'flat' | 'percentage') => {
+                                        const updatedItems = [...billItems];
+                                        updatedItems[index] = { ...item, taxType: value };
+                                        setBillItems(updatedItems);
+                                        form.setValue(`items.${index}.taxType`, value);
+                                        updateLineAmount(index, updatedItems[index]);
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 w-16">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="percentage">%</SelectItem>
+                                        <SelectItem value="flat">$</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block">Discount</label>
+                                  <div className="flex gap-1">
+                                    <Input
+                                      type="number"
+                                      value={item.discount}
+                                      onChange={(e) => {
+                                        const newDiscount = Number(e.target.value);
+                                        const updatedItems = [...billItems];
+                                        updatedItems[index] = { ...item, discount: newDiscount };
+                                        setBillItems(updatedItems);
+                                        form.setValue(`items.${index}.discount`, newDiscount);
+                                        updateLineAmount(index, updatedItems[index]);
+                                      }}
+                                      min={0}
+                                      step={0.01}
+                                      className="h-8 flex-1"
+                                    />
+                                    <Select 
+                                      value={item.discountType}
+                                      onValueChange={(value: 'flat' | 'percentage') => {
+                                        const updatedItems = [...billItems];
+                                        updatedItems[index] = { ...item, discountType: value };
+                                        setBillItems(updatedItems);
+                                        form.setValue(`items.${index}.discountType`, value);
+                                        updateLineAmount(index, updatedItems[index]);
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 w-16">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="percentage">%</SelectItem>
+                                        <SelectItem value="flat">$</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td></td>
+                          </tr>
+                        ];
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                  {billItems.map((item, index) => (
+                    <div key={index} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <Select 
+                            value={item.productId?.toString() || "0"} 
+                            onValueChange={(value) => handleProductChange(parseInt(value), index)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0">Select a product</SelectItem>
+                              {products?.map((product) => (
+                                <SelectItem key={product.id} value={product.id.toString()}>
+                                  {product.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeItem(index)}
+                          className="ml-2"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <Input
+                        value={item.description}
+                        onChange={(e) => {
+                          const updatedItems = [...billItems];
+                          updatedItems[index] = { ...item, description: e.target.value };
+                          setBillItems(updatedItems);
+                          form.setValue(`items.${index}.description`, e.target.value);
+                        }}
+                        placeholder="Item description"
+                      />
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-gray-500">Quantity</Label>
+                          <Input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const newQuantity = Number(e.target.value);
+                              const updatedItems = [...billItems];
+                              updatedItems[index] = { ...item, quantity: newQuantity };
+                              setBillItems(updatedItems);
+                              form.setValue(`items.${index}.quantity`, newQuantity);
+                              updateLineAmount(index, updatedItems[index]);
+                            }}
+                            min={0}
+                            step={1}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">Received</Label>
+                          <Input
+                            type="number"
+                            value={item.quantityReceived || 0}
+                            onChange={(e) => {
+                              const newQuantityReceived = Number(e.target.value);
+                              const updatedItems = [...billItems];
+                              updatedItems[index] = { ...item, quantityReceived: newQuantityReceived };
+                              setBillItems(updatedItems);
+                              form.setValue(`items.${index}.quantityReceived`, newQuantityReceived);
+                            }}
+                            min={0}
+                            max={item.quantity}
+                            step={1}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">Unit Price</Label>
+                          <Input
+                            type="number"
+                            value={item.unitPrice}
+                            onChange={(e) => {
+                              const newUnitPrice = Number(e.target.value);
+                              const updatedItems = [...billItems];
+                              updatedItems[index] = { ...item, unitPrice: newUnitPrice };
+                              setBillItems(updatedItems);
+                              form.setValue(`items.${index}.unitPrice`, newUnitPrice);
+                              updateLineAmount(index, updatedItems[index]);
+                            }}
+                            min={0}
+                            step={0.01}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">Amount</Label>
+                          <div className="text-lg font-medium">
+                            {formatCurrency(item.amount)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-gray-500">Tax</Label>
+                          <div className="flex gap-1">
+                            <Input
+                              type="number"
+                              value={item.taxRate}
+                              onChange={(e) => {
+                                const newTaxRate = Number(e.target.value);
+                                const updatedItems = [...billItems];
+                                updatedItems[index] = { ...item, taxRate: newTaxRate };
+                                setBillItems(updatedItems);
+                                form.setValue(`items.${index}.taxRate`, newTaxRate);
+                                updateLineAmount(index, updatedItems[index]);
+                              }}
+                              min={0}
+                              step={0.01}
+                              className="flex-1"
+                            />
+                            <Select 
+                              value={item.taxType} 
+                              onValueChange={(value: 'flat' | 'percentage') => {
+                                const updatedItems = [...billItems];
+                                updatedItems[index] = { ...item, taxType: value };
+                                setBillItems(updatedItems);
+                                form.setValue(`items.${index}.taxType`, value);
+                                updateLineAmount(index, updatedItems[index]);
+                              }}
+                            >
+                              <SelectTrigger className="w-16">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="percentage">%</SelectItem>
+                                <SelectItem value="flat">$</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">Discount</Label>
+                          <div className="flex gap-1">
+                            <Input
+                              type="number"
+                              value={item.discount}
+                              onChange={(e) => {
+                                const newDiscount = Number(e.target.value);
+                                const updatedItems = [...billItems];
+                                updatedItems[index] = { ...item, discount: newDiscount };
+                                setBillItems(updatedItems);
+                                form.setValue(`items.${index}.discount`, newDiscount);
+                                updateLineAmount(index, updatedItems[index]);
+                              }}
+                              min={0}
+                              step={0.01}
+                              className="flex-1"
+                            />
+                            <Select 
+                              value={item.discountType}
+                              onValueChange={(value: 'flat' | 'percentage') => {
+                                const updatedItems = [...billItems];
+                                updatedItems[index] = { ...item, discountType: value };
+                                setBillItems(updatedItems);
+                                form.setValue(`items.${index}.discountType`, value);
+                                updateLineAmount(index, updatedItems[index]);
+                              }}
+                            >
+                              <SelectTrigger className="w-16">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="percentage">%</SelectItem>
+                                <SelectItem value="flat">$</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Totals and Payment */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Payment Information</h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="paymentMade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment Made</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            {...field}
+                            value={field.value || 0}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                            min={0}
+                            step={0.01}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-
-
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Close
-            </Button>
-            {!isFrozen ? (
-              <Button 
-                type="submit" 
-                disabled={saveBillMutation.isPending}
-              >
-                {saveBillMutation.isPending ? "Saving..." : "Save Purchase Bill"}
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  disabled
-                  className="opacity-50 cursor-not-allowed"
-                >
-                  🧊 Bill Frozen - Cannot Save
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Unfreeze to enable saving
-                </span>
+                  
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Totals</h3>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Subtotal:</span>
+                      <span>{formatCurrency(form.watch("subtotal") || 0)}</span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <FormField
+                        control={form.control}
+                        name="totalDiscount"
+                        render={({ field }) => (
+                          <div className="flex justify-between items-center">
+                            <span>Total Discount:</span>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                {...field}
+                                value={field.value || 0}
+                                onChange={(e) => {
+                                  field.onChange(Number(e.target.value) || 0);
+                                  calculateTotals();
+                                }}
+                                min={0}
+                                step={0.01}
+                                className="w-24 h-8"
+                              />
+                              <FormField
+                                control={form.control}
+                                name="totalDiscountType"
+                                render={({ field: discountTypeField }) => (
+                                  <Select
+                                    value={discountTypeField.value}
+                                    onValueChange={(value) => {
+                                      discountTypeField.onChange(value);
+                                      calculateTotals();
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-16 h-8">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="flat">$</SelectItem>
+                                      <SelectItem value="percentage">%</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span>Discount Amount:</span>
+                      <span>-{formatCurrency(form.watch("discountAmount") || 0)}</span>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>Total:</span>
+                      <span>{formatCurrency(form.watch("totalAmount") || 0)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         </form>
       </Form>
 
-
-    </>
+      {/* Add Vendor Dialog */}
+      <Dialog open={addVendorDialogOpen} onOpenChange={setAddVendorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Vendor</DialogTitle>
+            <DialogDescription>
+              Create a new vendor that can be used for purchase bills.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="vendor-name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="vendor-name"
+                value={newVendor.name}
+                onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="vendor-email" className="text-right">
+                Email
+              </Label>
+              <Input
+                id="vendor-email"
+                type="email"
+                value={newVendor.email}
+                onChange={(e) => setNewVendor({ ...newVendor, email: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="vendor-phone" className="text-right">
+                Phone
+              </Label>
+              <Input
+                id="vendor-phone"
+                value={newVendor.phone}
+                onChange={(e) => setNewVendor({ ...newVendor, phone: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="vendor-address" className="text-right">
+                Address
+              </Label>
+              <Input
+                id="vendor-address"
+                value={newVendor.address}
+                onChange={(e) => setNewVendor({ ...newVendor, address: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAddVendorDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => createVendorMutation.mutate(newVendor)}
+              disabled={createVendorMutation.isPending || !newVendor.name}
+            >
+              {createVendorMutation.isPending ? "Creating..." : "Create Vendor"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
