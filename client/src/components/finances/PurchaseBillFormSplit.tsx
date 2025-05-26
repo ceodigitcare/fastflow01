@@ -612,6 +612,17 @@ export default function PurchaseBillFormSplit({
   
   // Function to add a new line item
   const addItem = () => {
+    // CRITICAL: Block adding items when frozen
+    if (isFrozen) {
+      console.log("🚫 ADD ITEM BLOCKED: Bill is frozen");
+      toast({
+        title: "Cannot add item - Bill is frozen",
+        description: "Please unfreeze the bill before adding items.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const newItem: PurchaseBillItem = {
       productId: 0,
       description: "",
@@ -1647,6 +1658,17 @@ export default function PurchaseBillFormSplit({
 
   // Form submission handler with automated status calculation
   const onSubmit = (data: PurchaseBill) => {
+    // CRITICAL: Block all saves when frozen
+    if (isFrozen) {
+      console.log("🚫 SAVE BLOCKED: Bill is frozen");
+      toast({
+        title: "Cannot save - Bill is frozen",
+        description: "Please unfreeze the bill before making changes.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (billItems.length === 0) {
       toast({
         title: "Error",
