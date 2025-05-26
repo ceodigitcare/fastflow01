@@ -1711,7 +1711,7 @@ export default function PurchaseBillFormSplit({
       },
       // Calculate the total amount correctly
       amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
-      status: data.status || "draft",
+      status: calculatedStatus, // Use automatically calculated status
       paymentReceived: paymentMadeValue,
       type: "purchase",
       category: "Bills"
@@ -2461,20 +2461,63 @@ export default function PurchaseBillFormSplit({
             )}
           />
           
+          {/* Current Status Display */}
+          {editingBill && (
+            <div className="p-4 bg-gray-50 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-sm text-gray-700">Current Status</h4>
+                  <div className="mt-1">{renderStatusBadge(editingBill.status || "draft")}</div>
+                </div>
+                {!isCancelled && editingBill.status !== "cancelled" && (
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleCancelBill}
+                  >
+                    Cancel Bill
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Form Actions */}
           <div className="flex justify-end space-x-2 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
+              Close
             </Button>
             <Button 
               type="submit" 
-              disabled={saveBillMutation.isPending}
+              disabled={saveBillMutation.isPending || isCancelled}
             >
               {saveBillMutation.isPending ? "Saving..." : "Save Purchase Bill"}
             </Button>
           </div>
         </form>
       </Form>
+
+      {/* Cancel Bill Confirmation Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Purchase Bill</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this purchase bill? This action cannot be undone.
+              The bill status will be marked as cancelled and it will no longer be editable.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+              Keep Bill
+            </Button>
+            <Button variant="destructive" onClick={confirmCancelBill}>
+              Cancel Bill
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
