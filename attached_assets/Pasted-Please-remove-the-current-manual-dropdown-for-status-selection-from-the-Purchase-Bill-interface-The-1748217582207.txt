@@ -1,0 +1,95 @@
+Please remove the current manual dropdown for status selection from the Purchase Bill interface. The status should now be automatically handled by the system based on payment and item receipt conditions.
+
+🧠 Status Logic (Automated):
+Draft
+
+Set by default when a new purchase bill is created.
+
+If no payment is made and no items are received, keep the status as Draft.
+
+Cancel
+
+If the bill is edited and marked as canceled, update the status to Cancelled.
+
+A confirmation warning must appear before allowing cancellation (e.g., "Are you sure you want to cancel this bill? This action cannot be undone.").
+
+Paid
+
+When the purchase bill is fully paid.
+
+Partial Paid
+
+When the purchase bill is partially paid.
+
+Received
+
+When all items on the bill are fully received.
+
+Partial Received
+
+When some (but not all) items on the bill are received.
+
+🧩 Combination Status Handling:
+Paid, Received
+(Fully paid + Fully received)
+
+Paid, Partial Received
+(Fully paid + Partially received)
+
+Partial Paid, Received
+(Partially paid + Fully received)
+
+Partial Paid, Partial Received
+(Partially paid + Partially received)
+
+❗ Note: Status combinations should not include Draft if payment or receipt occurs.
+
+🎨 Status Design:
+Each status should have a distinct color both in:
+
+The purchase bill detail view, and
+
+The purchase bill list/table view
+
+Suggested color mapping:
+
+Draft – Gray
+
+Cancelled – Red
+
+Paid – Green
+
+Partial Paid – Orange
+
+Received – Blue
+
+Partial Received – Teal
+
+Combined statuses – Use a dual-tag or badge system (e.g., one for payment, one for receipt)
+
+🛑 Cancel Logic:
+Add a “Cancel Bill” button inside the Purchase Bill Edit interface.
+
+On click, show a warning dialog asking for confirmation before cancellation.
+
+If confirmed, set status to Cancelled, and disable further edits/payments/receiving for that bill.
+
+📌 Important Notes:
+Status should always reflect the latest real-time state of both payments and inventory receipt.
+
+Disable manual override of status to maintain data integrity.
+
+Ensure all statuses are correctly spelled as follows:
+
+Draft
+
+Cancelled
+
+Paid
+
+Partial Paid
+
+Received
+
+Partial Received
+

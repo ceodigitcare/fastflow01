@@ -152,7 +152,8 @@ export const purchaseBillSchema = z.object({
   billNumber: z.string().min(1, "Bill number is required"),
   billDate: z.date(),
   dueDate: z.date(),
-  status: z.enum(["draft", "received", "paid", "overdue", "cancelled"]).optional().default("draft"),
+  // Status is now calculated automatically, but we keep it for compatibility
+  status: z.enum(["draft", "cancelled", "paid", "partial_paid", "received", "partial_received"]).optional().default("draft"),
   items: z.array(purchaseBillItemSchema).min(1, "At least one item is required"),
   subtotal: z.number().min(0, "Subtotal cannot be negative"),
   taxAmount: z.number().default(0),
@@ -182,4 +183,57 @@ export type SalesInvoiceItem = z.infer<typeof salesInvoiceItemSchema>;
 export type SalesInvoice = z.infer<typeof salesInvoiceSchema>;
 export type PurchaseBillItem = z.infer<typeof purchaseBillItemSchema>;
 export type PurchaseBill = z.infer<typeof purchaseBillSchema>;
+
+// Automated status calculation function for Purchase Bills
+export function calculatePurchaseBillStatus(
+  totalAmount: number,
+  paymentMade: number = 0,
+  items: Array<{ quantity: number; quantityReceived: number }> = [],
+  isCancelled: boolean = false
+): string {
+  // If bill is cancelled, return cancelled status
+  if (isCancelled) {
+    return "cancelled";
+  }
+
+  // Calculate payment status
+  const isFullyPaid = paymentMade >= totalAmount;
+  const isPartiallyPaid = paymentMade > 0 && paymentMade < totalAmount;
+  const isNotPaid = paymentMade === 0;
+
+  // Calculate receipt status
+  const totalQuantityOrdered = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalQuantityReceived = items.reduce((sum, item) => sum + (item.quantityReceived || 0), 0);
+  
+  const isFullyReceived = totalQuantityReceived >= totalQuantityOrdered && totalQuantityOrdered > 0;
+  const isPartiallyReceived = totalQuantityReceived > 0 && totalQuantityReceived < totalQuantityOrdered;
+  const isNotReceived = totalQuantityReceived === 0;
+
+  // If no payment and no receipt, it's draft
+  if (isNotPaid && isNotReceived) {
+    return "draft";
+  }
+
+  // Determine combined status based on payment and receipt conditions
+  if (isFullyPaid && isFullyReceived) {
+    return "paid_received"; // Fully paid + Fully received
+  } else if (isFullyPaid && isPartiallyReceived) {
+    return "paid_partial_received"; // Fully paid + Partially received
+  } else if (isPartiallyPaid && isFullyReceived) {
+    return "partial_paid_received"; // Partially paid + Fully received
+  } else if (isPartiallyPaid && isPartiallyReceived) {
+    return "partial_paid_partial_received"; // Partially paid + Partially received
+  } else if (isFullyPaid && isNotReceived) {
+    return "paid"; // Fully paid but not received
+  } else if (isPartiallyPaid && isNotReceived) {
+    return "partial_paid"; // Partially paid but not received
+  } else if (isNotPaid && isFullyReceived) {
+    return "received"; // Fully received but not paid
+  } else if (isNotPaid && isPartiallyReceived) {
+    return "partial_received"; // Partially received but not paid
+  }
+
+  // Default fallback
+  return "draft";
+}
 export type InvoicePdfConfig = z.infer<typeof invoicePdfConfigSchema>;
