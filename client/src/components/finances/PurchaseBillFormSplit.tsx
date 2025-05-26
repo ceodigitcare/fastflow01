@@ -9,7 +9,7 @@ import { renderStatusBadge } from "@/lib/purchase-bill-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar as CalendarIcon, X, Plus, Save } from "lucide-react";
+import { Calendar as CalendarIcon, X, Plus, Save, XCircle } from "lucide-react";
 import VendorModal from "./VendorModal";
 import {
   Dialog,
@@ -2461,7 +2461,7 @@ export default function PurchaseBillFormSplit({
             )}
           />
           
-          {/* Current Status Display */}
+          {/* Current Status Display - Redesigned */}
           {editingBill && (
             <div className="p-4 bg-gray-50 rounded-lg border">
               <div className="flex items-center justify-between">
@@ -2481,14 +2481,14 @@ export default function PurchaseBillFormSplit({
                   </div>
                 </div>
                 {!isCancelled && editingBill.status !== "cancelled" && (
-                  <Button 
-                    type="button" 
-                    variant="destructive" 
-                    size="sm"
+                  <button
+                    type="button"
                     onClick={handleCancelBill}
+                    className="p-1 rounded-full hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors"
+                    title="Cancel this bill"
                   >
-                    Cancel Bill
-                  </Button>
+                    <XCircle className="w-4 h-4" />
+                  </button>
                 )}
               </div>
             </div>

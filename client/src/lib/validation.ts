@@ -153,7 +153,18 @@ export const purchaseBillSchema = z.object({
   billDate: z.date(),
   dueDate: z.date(),
   // Status is now calculated automatically, but we keep it for compatibility
-  status: z.enum(["draft", "cancelled", "paid", "partial_paid", "received", "partial_received"]).optional().default("draft"),
+  status: z.enum([
+    "draft", 
+    "cancelled", 
+    "paid", 
+    "partial_paid", 
+    "received", 
+    "partial_received",
+    "paid_received",
+    "paid_partial_received", 
+    "partial_paid_received",
+    "partial_paid_partial_received"
+  ]).optional().default("draft"),
   items: z.array(purchaseBillItemSchema).min(1, "At least one item is required"),
   subtotal: z.number().min(0, "Subtotal cannot be negative"),
   taxAmount: z.number().default(0),
