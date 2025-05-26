@@ -124,9 +124,7 @@ export default function PurchaseBillSplitView({
 
   // Improved status badge rendering with consistent styling (no icons)
   const renderStatusBadge = (status: string | null, bill?: Transaction) => {
-    if (!status) return null;
-    
-    // Recalculate status to ensure accuracy - convert from cents to dollars
+    // Always recalculate status from bill data when bill is provided
     const currentStatus = bill ? calculatePurchaseBillStatus(
       (bill.amount || 0) / 100,  // Convert cents to dollars
       (bill.paymentMade || 0) / 100,  // Convert cents to dollars
@@ -136,6 +134,9 @@ export default function PurchaseBillSplitView({
       })) : [],
       bill.status === "cancelled"
     ) : status;
+    
+    // Only return null if we couldn't calculate any status
+    if (!currentStatus) return null;
     
     const colorClass = statusColors[currentStatus as keyof typeof statusColors] || statusColors.draft;
     
