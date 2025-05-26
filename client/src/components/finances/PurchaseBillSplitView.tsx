@@ -469,7 +469,19 @@ export default function PurchaseBillSplitView({
               </div>
               <div>
                 <p className="text-sm text-gray-500">Status</p>
-                <div className="font-medium">{getStatusBadge(selectedBill.status)}</div>
+                <div className="font-medium">
+                  {(() => {
+                    const badge = renderStatusBadge(selectedBill.status, selectedBill);
+                    if (!badge) return null;
+                    const Icon = badge.Icon;
+                    return (
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
+                        <Icon className="w-3 h-3 mr-1" />
+                        {badge.label}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
             
