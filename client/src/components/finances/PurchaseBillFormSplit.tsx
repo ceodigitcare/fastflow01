@@ -73,6 +73,22 @@ export default function PurchaseBillFormSplit({
 }: PurchaseBillFormSplitProps) {
   const { toast } = useToast();
   
+  // UNIFIED STATUS SYSTEM - Same function used across all modes
+  const renderStatusBadge = (transaction: Transaction) => {
+    // Calculate fresh status from live transaction data
+    const calculatedStatus = calculateTransactionStatus(transaction);
+    
+    // Get human-readable label and styling
+    const label = statusLabels[calculatedStatus];
+    const colorClass = statusColors[calculatedStatus];
+    
+    return {
+      label,
+      colorClass,
+      status: calculatedStatus
+    };
+  };
+  
   // Local state for line items and dialogs
   // Initialize bill items with a function to properly handle complex logic
   const [billItems, setBillItems] = useState<PurchaseBillItem[]>(() => {
@@ -1583,16 +1599,15 @@ export default function PurchaseBillFormSplit({
     const totalDiscountValue = Number(data.totalDiscount || 0) * 100;
     const paymentMadeValue = Number(data.paymentMade || 0) * 100;
     
-    // Calculate automated status based on payment and receipt conditions
-    const calculatedStatus = calculatePurchaseBillStatus(
-      data.totalAmount,
-      data.paymentMade || 0,
-      billItems.map(item => ({
-        quantity: item.quantity,
-        quantityReceived: item.quantityReceived || 0
-      })),
-      isCancelled
-    );
+    // Calculate automated status using unified system
+    const transactionData = {
+      amount: data.totalAmount * 100, // Convert to cents
+      paymentMade: paymentMadeValue, // Already in cents
+      items: billItems,
+      status: isCancelled ? "cancelled" : "draft"
+    } as Transaction;
+    
+    const calculatedStatus = calculateTransactionStatus(transactionData);
     
     // Log what we're saving
     console.log("Saving bill with data:", {
@@ -1966,24 +1981,20 @@ export default function PurchaseBillFormSplit({
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                 <div>
                   {(() => {
-                    // Calculate current status based on form data
-                    const currentStatus = editingBill ? editingBill.status : 
-                      calculatePurchaseBillStatus(
-                        form.watch('totalAmount') || 0,
-                        form.watch('paymentMade') || 0,
-                        billItems.map(item => ({
-                          quantity: item.quantity,
-                          quantityReceived: item.quantityReceived || 0
-                        })),
-                        isCancelled
+                    // Use unified status calculation for consistent results
+                    if (editingBill) {
+                      const badge = renderStatusBadge(editingBill);
+                      return (
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
+                          {badge.label}
+                        </span>
                       );
+                    }
                     
-                    const badge = renderStatusBadge(currentStatus || "draft");
-                    const Icon = badge.Icon;
+                    // For new bills, show draft status
                     return (
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
-                        <Icon className="w-4 h-4 mr-2" />
-                        {badge.label}
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border bg-gray-50 text-gray-600 border-gray-200">
+                        Draft
                       </span>
                     );
                   })()}
