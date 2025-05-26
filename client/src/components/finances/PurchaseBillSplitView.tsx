@@ -26,7 +26,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BillPrintDialog } from "./BillPrint";
-import { calculatePurchaseBillStatus, renderStatusBadge } from "@/lib/purchase-bill-utils";
 
 interface PurchaseBillSplitViewProps {
   businessData?: any;
@@ -452,27 +451,7 @@ export default function PurchaseBillSplitView({
               </div>
               <div>
                 <p className="text-sm text-gray-500">Status</p>
-                <div className="font-medium">
-                  {(() => {
-                    // Calculate current status dynamically
-                    const currentStatus = calculatePurchaseBillStatus(
-                      selectedBill.amount / 100,
-                      (selectedBill.paymentReceived || 0) / 100,
-                      Array.isArray(selectedBill.items) ? selectedBill.items.map((item: any) => ({
-                        quantity: item.quantity || 0,
-                        quantityReceived: item.quantityReceived || 0
-                      })) : [],
-                      false
-                    );
-                    
-                    const badge = renderStatusBadge(currentStatus || "draft");
-                    return (
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
-                        {badge.label}
-                      </span>
-                    );
-                  })()}
-                </div>
+                <div className="font-medium">{getStatusBadge(selectedBill.status)}</div>
               </div>
             </div>
             
@@ -931,25 +910,7 @@ export default function PurchaseBillSplitView({
                     </div>
                     <div className="text-right">
                       <p className="font-medium">{formatCurrency(bill.amount / 100)}</p>
-                      {(() => {
-                        // Calculate status for bill list
-                        const currentStatus = calculatePurchaseBillStatus(
-                          bill.amount / 100,
-                          (bill.paymentReceived || 0) / 100,
-                          Array.isArray(bill.items) ? bill.items.map((item: any) => ({
-                            quantity: item.quantity || 0,
-                            quantityReceived: item.quantityReceived || 0
-                          })) : [],
-                          false
-                        );
-                        
-                        const badge = renderStatusBadge(currentStatus || "draft");
-                        return (
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
-                            {badge.label}
-                          </span>
-                        );
-                      })()}
+                      {getStatusBadge(bill.status)}
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
