@@ -9,7 +9,7 @@ import { renderStatusBadge } from "@/lib/purchase-bill-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar as CalendarIcon, X, Plus, Save, XCircle } from "lucide-react";
+import { Calendar as CalendarIcon, X, Plus, Save, Lock, Unlock } from "lucide-react";
 import VendorModal from "./VendorModal";
 import {
   Dialog,
@@ -229,9 +229,8 @@ export default function PurchaseBillFormSplit({
     return [];
   });
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [isCancelled, setIsCancelled] = useState(editingBill?.status === "cancelled" || false);
-  const [cancelReason, setCancelReason] = useState("");
+  const [showFreezeDialog, setShowFreezeDialog] = useState(false);
+  const [isFrozen, setIsFrozen] = useState(editingBill?.metadata?.isFrozen || false);
   
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
@@ -1521,49 +1520,54 @@ export default function PurchaseBillFormSplit({
     }
   }, [editingBill, vendors]);
   
-  // Cancel bill handler
-  const handleCancelBill = () => {
-    if (isCancelled) return; // Already cancelled
-    setShowCancelDialog(true);
+  // Data freeze/unfreeze handlers
+  const handleFreezeToggle = () => {
+    if (isFrozen) {
+      // Unfreeze immediately without confirmation
+      setIsFrozen(false);
+      updateBillFreezeStatus(false);
+      toast({
+        title: "Bill Unfrozen",
+        description: "This purchase bill is now editable.",
+      });
+    } else {
+      // Show confirmation dialog for freezing
+      setShowFreezeDialog(true);
+    }
   };
 
-  const confirmCancelBill = async () => {
-    if (!cancelReason.trim()) {
-      toast({
-        title: "Reason Required",
-        description: "Please provide a reason for cancelling this bill.",
-        variant: "destructive"
-      });
-      return;
-    }
-
+  const confirmFreezeBill = async () => {
     try {
-      if (editingBill?.id) {
-        await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, {
-          status: "cancelled",
-          notes: (editingBill.notes || "") + `\n\nCANCELLED: ${cancelReason}` 
-        });
-        
-        queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
-      }
-      
-      setIsCancelled(true);
-      setShowCancelDialog(false);
-      setCancelReason("");
+      setIsFrozen(true);
+      setShowFreezeDialog(false);
+      updateBillFreezeStatus(true);
       
       toast({
-        title: "Bill Cancelled",
-        description: "This purchase bill has been successfully cancelled.",
-        variant: "destructive"
+        title: "Bill Frozen",
+        description: "This purchase bill is now locked and cannot be edited.",
       });
-      
-      onCancel(); // Close the form
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to cancel bill. Please try again.",
+        description: "Failed to freeze bill. Please try again.",
         variant: "destructive"
       });
+    }
+  };
+
+  const updateBillFreezeStatus = async (frozen: boolean) => {
+    if (editingBill?.id) {
+      try {
+        await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, {
+          metadata: {
+            ...editingBill.metadata,
+            isFrozen: frozen
+          }
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      } catch (error) {
+        console.error("Failed to update freeze status:", error);
+      }
     }
   };
 
@@ -1975,30 +1979,50 @@ export default function PurchaseBillFormSplit({
                           quantity: item.quantity,
                           quantityReceived: item.quantityReceived || 0
                         })),
-                        isCancelled
+                        false // Remove cancelled status
                       );
                     
                     const badge = renderStatusBadge(currentStatus || "draft");
                     const Icon = badge.Icon;
                     return (
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
-                        <Icon className="w-4 h-4 mr-2" />
-                        {badge.label}
-                      </span>
+                      <div className="flex items-center space-x-3">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
+                          <Icon className="w-4 h-4 mr-2" />
+                          {badge.label}
+                        </span>
+                        
+                        {/* Data Frozen Toggle */}
+                        {editingBill && (
+                          <button
+                            type="button"
+                            onClick={handleFreezeToggle}
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
+                              isFrozen 
+                                ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" 
+                                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                            }`}
+                            title={isFrozen ? "Click to unfreeze and allow editing" : "Click to freeze and prevent editing"}
+                          >
+                            {isFrozen ? (
+                              <>
+                                <Lock className="w-4 h-4 mr-2" />
+                                Frozen
+                              </>
+                            ) : (
+                              <>
+                                <Unlock className="w-4 h-4 mr-2" />
+                                Unlocked
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     );
                   })()}
-                  <p className="text-xs text-gray-500 mt-1">Status updates automatically based on payments and receipts</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {isFrozen ? "This bill is frozen and cannot be edited" : "Status updates automatically based on payments and receipts"}
+                  </p>
                 </div>
-                {editingBill && !isCancelled && editingBill.status !== "cancelled" && (
-                  <button
-                    type="button"
-                    onClick={handleCancelBill}
-                    className="p-2 rounded-full hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors"
-                    title="Cancel this bill"
-                  >
-                    <XCircle className="w-5 h-5" />
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -2509,38 +2533,7 @@ export default function PurchaseBillFormSplit({
             )}
           />
           
-          {/* Current Status Display - Redesigned */}
-          {editingBill && (
-            <div className="p-4 bg-gray-50 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-sm text-gray-700">Current Status</h4>
-                  <div className="mt-1">
-                    {(() => {
-                      const badge = renderStatusBadge(editingBill.status || "draft");
-                      const Icon = badge.Icon;
-                      return (
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
-                          <Icon className="w-3 h-3 mr-1" />
-                          {badge.label}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                </div>
-                {!isCancelled && editingBill.status !== "cancelled" && (
-                  <button
-                    type="button"
-                    onClick={handleCancelBill}
-                    className="p-1 rounded-full hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors"
-                    title="Cancel this bill"
-                  >
-                    <XCircle className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+
 
           {/* Form Actions */}
           <div className="flex justify-end space-x-2 pt-4 border-t">
@@ -2549,46 +2542,40 @@ export default function PurchaseBillFormSplit({
             </Button>
             <Button 
               type="submit" 
-              disabled={saveBillMutation.isPending || isCancelled}
+              disabled={saveBillMutation.isPending || isFrozen}
+              title={isFrozen ? "This bill is frozen and cannot be edited" : ""}
             >
-              {saveBillMutation.isPending ? "Saving..." : "Save Purchase Bill"}
+              {saveBillMutation.isPending ? "Saving..." : isFrozen ? "Bill Frozen" : "Save Purchase Bill"}
             </Button>
           </div>
         </form>
       </Form>
 
-      {/* Cancel Bill Confirmation Dialog */}
-      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+      {/* Data Freeze Confirmation Dialog */}
+      <Dialog open={showFreezeDialog} onOpenChange={setShowFreezeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Purchase Bill</DialogTitle>
+            <DialogTitle>Freeze Purchase Bill</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this bill? This action cannot be undone.
+              Are you sure you want to freeze this purchase bill? You will not be able to make changes until it is unfrozen.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="cancelReason" className="text-sm font-medium">
-                Reason for Cancellation <span className="text-red-500">*</span>
-              </label>
-              <Textarea
-                id="cancelReason"
-                placeholder="Please provide a reason for cancelling this bill..."
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                className="min-h-[80px]"
-              />
+            <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
+              <Lock className="w-5 h-5 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium text-blue-900">What happens when frozen?</p>
+                <p className="text-xs text-blue-700">All item quantities, payment details, and prices will be locked and cannot be edited.</p>
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowCancelDialog(false);
-              setCancelReason("");
-            }}>
-              Keep Bill
+            <Button variant="outline" onClick={() => setShowFreezeDialog(false)}>
+              Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmCancelBill}>
-              Cancel Bill
+            <Button onClick={confirmFreezeBill}>
+              <Lock className="w-4 h-4 mr-2" />
+              Freeze Bill
             </Button>
           </DialogFooter>
         </DialogContent>
