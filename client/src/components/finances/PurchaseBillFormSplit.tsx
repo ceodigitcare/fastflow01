@@ -1526,14 +1526,44 @@ export default function PurchaseBillFormSplit({
     setShowCancelDialog(true);
   };
 
-  const confirmCancelBill = () => {
-    setIsCancelled(true);
-    setShowCancelDialog(false);
-    toast({
-      title: "Bill Cancelled",
-      description: "This purchase bill has been marked as cancelled.",
-      variant: "destructive"
-    });
+  const confirmCancelBill = async () => {
+    if (!cancelReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for cancelling this bill.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      if (editingBill?.id) {
+        await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, {
+          status: "cancelled",
+          notes: (editingBill.notes || "") + `\n\nCANCELLED: ${cancelReason}` 
+        });
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      }
+      
+      setIsCancelled(true);
+      setShowCancelDialog(false);
+      setCancelReason("");
+      
+      toast({
+        title: "Bill Cancelled",
+        description: "This purchase bill has been successfully cancelled.",
+        variant: "destructive"
+      });
+      
+      onCancel(); // Close the form
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to cancel bill. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Form submission handler with automated status calculation
@@ -1929,30 +1959,47 @@ export default function PurchaseBillFormSplit({
               )}
             />
             
-            {/* Status */}
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Automated Status Display */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Status</label>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                <div>
+                  {(() => {
+                    // Calculate current status based on form data
+                    const currentStatus = editingBill ? editingBill.status : 
+                      calculatePurchaseBillStatus(
+                        form.watch('totalAmount') || 0,
+                        form.watch('paymentMade') || 0,
+                        billItems.map(item => ({
+                          quantity: item.quantity,
+                          quantityReceived: item.quantityReceived || 0
+                        })),
+                        isCancelled
+                      );
+                    
+                    const badge = renderStatusBadge(currentStatus || "draft");
+                    const Icon = badge.Icon;
+                    return (
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
+                        <Icon className="w-4 h-4 mr-2" />
+                        {badge.label}
+                      </span>
+                    );
+                  })()}
+                  <p className="text-xs text-gray-500 mt-1">Status updates automatically based on payments and receipts</p>
+                </div>
+                {editingBill && !isCancelled && editingBill.status !== "cancelled" && (
+                  <button
+                    type="button"
+                    onClick={handleCancelBill}
+                    className="p-2 rounded-full hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors"
+                    title="Cancel this bill"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
           
           {/* Line Items */}
@@ -2515,12 +2562,28 @@ export default function PurchaseBillFormSplit({
           <DialogHeader>
             <DialogTitle>Cancel Purchase Bill</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this purchase bill? This action cannot be undone.
-              The bill status will be marked as cancelled and it will no longer be editable.
+              Are you sure you want to cancel this bill? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="cancelReason" className="text-sm font-medium">
+                Reason for Cancellation <span className="text-red-500">*</span>
+              </label>
+              <Textarea
+                id="cancelReason"
+                placeholder="Please provide a reason for cancelling this bill..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowCancelDialog(false);
+              setCancelReason("");
+            }}>
               Keep Bill
             </Button>
             <Button variant="destructive" onClick={confirmCancelBill}>
