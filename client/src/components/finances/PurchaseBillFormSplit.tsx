@@ -1562,7 +1562,8 @@ export default function PurchaseBillFormSplit({
   // Data freeze/unfreeze handlers
   const handleFreezeToggle = () => {
     if (isFrozen) {
-      // Unfreeze immediately without confirmation
+      // Unfreeze immediately without confirmation - NO DATA MUTATIONS
+      console.log("UNFREEZING: Preserving all current data as-is");
       setIsFrozen(false);
       updateBillFreezeStatus(false);
       toast({
@@ -1570,7 +1571,8 @@ export default function PurchaseBillFormSplit({
         description: "This purchase bill is now editable.",
       });
     } else {
-      // Show confirmation dialog for freezing
+      // Show confirmation dialog for freezing - NO DATA MUTATIONS
+      console.log("FREEZING: Will preserve all current data exactly as-is");
       setShowFreezeDialog(true);
     }
   };
@@ -1597,13 +1599,19 @@ export default function PurchaseBillFormSplit({
   const updateBillFreezeStatus = async (frozen: boolean) => {
     if (editingBill?.id) {
       try {
+        // CRITICAL FIX: Only update metadata without triggering data refetch
+        // This prevents unwanted data mutations during freeze operations
         await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, {
           metadata: {
             ...editingBill.metadata,
             isFrozen: frozen
           }
         });
-        queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+        
+        // DO NOT invalidate queries during freeze to preserve data integrity
+        // queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+        
+        console.log(`FREEZE STATUS UPDATE: Bill ${editingBill.id} freeze status set to ${frozen}`);
       } catch (error) {
         console.error("Failed to update freeze status:", error);
       }
