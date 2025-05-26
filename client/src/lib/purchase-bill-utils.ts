@@ -101,3 +101,61 @@ export function getStatusBreakdown(status: string) {
 
   return { paymentStatuses, receiptStatuses };
 }
+
+// Calculate purchase bill status based on payment and receiving data
+export function calculatePurchaseBillStatus(
+  totalAmount: number,
+  paymentMade: number,
+  items: Array<{ quantity: number; quantityReceived: number }>,
+  isCancelled: boolean = false
+): string {
+  if (isCancelled) {
+    return "cancelled";
+  }
+
+  // Calculate payment status
+  let paymentStatus = "draft";
+  if (paymentMade > 0) {
+    if (paymentMade >= totalAmount) {
+      paymentStatus = "paid";
+    } else {
+      paymentStatus = "partial_paid";
+    }
+  }
+
+  // Calculate receiving status
+  let receivingStatus = "draft";
+  if (items && items.length > 0) {
+    const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+    const totalReceived = items.reduce((sum, item) => sum + (item.quantityReceived || 0), 0);
+
+    if (totalReceived > 0) {
+      if (totalReceived >= totalQuantity) {
+        receivingStatus = "received";
+      } else {
+        receivingStatus = "partial_received";
+      }
+    }
+  }
+
+  // Combine payment and receiving statuses
+  if (paymentStatus === "paid" && receivingStatus === "received") {
+    return "paid_received";
+  } else if (paymentStatus === "paid" && receivingStatus === "partial_received") {
+    return "paid_partial_received";
+  } else if (paymentStatus === "partial_paid" && receivingStatus === "received") {
+    return "partial_paid_received";
+  } else if (paymentStatus === "partial_paid" && receivingStatus === "partial_received") {
+    return "partial_paid_partial_received";
+  } else if (paymentStatus === "paid") {
+    return "paid";
+  } else if (paymentStatus === "partial_paid") {
+    return "partial_paid";
+  } else if (receivingStatus === "received") {
+    return "received";
+  } else if (receivingStatus === "partial_received") {
+    return "partial_received";
+  }
+
+  return "draft";
+}

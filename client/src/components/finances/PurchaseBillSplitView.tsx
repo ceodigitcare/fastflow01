@@ -20,8 +20,7 @@ import {
   Edit,
   History
 } from "lucide-react";
-import { statusColors, statusIcons } from "@/lib/purchase-bill-utils";
-import { calculatePurchaseBillStatus } from "@/lib/validation";
+import { calculatePurchaseBillStatus, statusColors, statusIcons } from "@/lib/purchase-bill-utils";
 import PurchaseBillFormSplit from "./PurchaseBillFormSplit";
 import TransactionVersionHistory from "./TransactionVersionHistory";
 import { useToast } from "@/hooks/use-toast";

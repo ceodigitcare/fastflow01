@@ -1,0 +1,63 @@
+🚨 URGENT: Status Display Bug in Purchase Bill View & List Modes
+
+There is a critical inconsistency between the status shown in Edit mode and the status shown in View and List modes for Purchase Bills.
+
+---
+
+### 🧪 Observed Behavior:
+
+- In **Edit Mode**, the status appears correctly:
+  - Example: A bill where all items are fully received and full payment is made shows `Paid` and `Received` statuses properly.
+- In **View Mode** and **List Mode**, **only `Received` or `Partially Received`** is shown — the `Paid` or `Partially Paid` status is missing even though the payment is complete.
+
+---
+
+### ❗ Required Fixes:
+
+1. ✅ **Status Consistency Across All Views**:
+   - Make sure that the **combined status** (e.g., `Paid`, `Partially Paid`, `Received`, `Partially Received`) is accurately calculated and displayed in:
+     - Purchase Bill **View** mode
+     - Purchase Bill **List** mode
+
+2. 🔄 **Ensure Status Is Calculated From Saved Bill Data**:
+   - Status should reflect actual data saved in the backend:
+     - Total amount due
+     - Amount paid
+     - Received quantity of each item
+   - Recalculate status on component load from saved bill data, not just from local form state.
+
+3. ❌ **Do NOT Show Partial Status** Based on Partial Item Receipt Only:
+   - A bill should show:
+     - `Received` **only when all items are fully received**
+     - `Partially Received` if **at least one item is not fully received**
+   - Similarly, `Paid` only if full payment is made, otherwise `Partially Paid`
+
+4. 🧹 **Double Check All Modes**:
+   - Verify all status logic works in:
+     - Edit Mode ✅
+     - View Mode ❌ currently broken — must be fixed
+     - List Mode ❌ currently broken — must be fixed
+
+5. ❌ Do not assume fix is done until:
+   - You fully test a bill with:
+     - Multiple items
+     - Full payment made
+     - All items received
+   - The correct status (`Paid`, `Received`) shows across **ALL three views**.
+
+---
+
+### ✅ Acceptance Criteria:
+
+- Status must be identical in Edit, View, and List views.
+- Must reflect **actual saved backend state**, not local form context.
+- Must show both `Paid` and `Received` if applicable.
+- No icons next to statuses.
+- No status display next to bill number in View mode header.
+
+---
+
+💡 Note:
+
+Please re-test thoroughly and confirm this issue is **100% fixed** before closing the task. This is a **data display bug**, not a form state bug.
+
