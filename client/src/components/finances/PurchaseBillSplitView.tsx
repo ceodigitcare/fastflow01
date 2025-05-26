@@ -455,7 +455,8 @@ export default function PurchaseBillSplitView({
                 <p className="text-sm text-gray-500">Status</p>
                 <div className="font-medium">
                   {(() => {
-                    const badge = renderStatusBadge(selectedBill.status, selectedBill);
+                    // Force recalculation - don't pass stored status
+                    const badge = renderStatusBadge(null, selectedBill);
                     if (!badge) return null;
                     return (
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
@@ -923,7 +924,8 @@ export default function PurchaseBillSplitView({
                     <div className="text-right space-y-1">
                       <p className="font-medium">{formatCurrency(bill.amount / 100)}</p>
                       {(() => {
-                        const badge = renderStatusBadge(bill.status, bill);
+                        // Force recalculation - don't pass stored status
+                        const badge = renderStatusBadge(null, bill);
                         if (!badge) return null;
                         return (
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>

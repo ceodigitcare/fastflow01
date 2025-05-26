@@ -1,0 +1,56 @@
+🚨 STATUS DISPLAY STILL INCORRECT IN VIEW & LIST MODES (Despite recent fix)
+
+❗ Problem Recap:
+Although the recent update claims status logic is unified and accurate, the bug **still persists**:
+- **In Edit mode**, status shows correctly (e.g., `Paid`, `Received`)
+- **In View and List modes**, the same bill incorrectly shows `Draft` or missing status.
+
+---
+
+### 🔍 Actual Case:
+- Purchase Bill with:
+  - 100% Payment Made
+  - All Items Fully Received
+- Status shown in Edit Mode: ✅ `Paid`, `Received`
+- Status shown in View/List Mode: ❌ `Draft` or missing
+
+This indicates that:
+- **Either** status logic in View/List modes is still not using the correct function
+- **Or** View/List modes are referencing outdated or incorrect data (e.g., stale props or backend response)
+
+---
+
+### 🧠 REQUIRED FIXES:
+
+1. ✅ Ensure ALL views (Edit, View, List) use the same **shared utility function** for status calculation (like `getBillStatus()`).
+
+2. ⚖️ Validate that **currency values** used for comparison are **normalized to the same unit** (either cents or dollars consistently) across all modes.
+
+3. 🔁 Ensure **live backend values** are fetched and used on every render — avoid using cached or stale props/state for View/List.
+
+4. 🧪 Add test cases with:
+   - Full payment, full receive (should show `Paid`, `Received`)
+   - Partial payment, full receive (should show `Partially Paid`, `Received`)
+   - Full payment, partial receive (should show `Paid`, `Partially Received`)
+   - No payment, full receive (should show `Unpaid`, `Received`)
+
+5. 🧹 UI Clean-up:
+   - ❌ No status display beside bill number in View mode
+   - ✅ Text-only status badges (no icons)
+   - ❌ Remove redundant "Current Status" block from Edit mode
+
+---
+
+### ✅ Acceptance Criteria:
+
+- View mode and List mode match Edit mode status perfectly
+- No hardcoded or default fallback statuses (`Draft`, etc.)
+- Status reflects actual backend data — not assumptions
+- Currency calculation bugs fully eliminated
+
+---
+
+💡 Final Note:
+Please **double-check data mapping**, backend API response structure, and ensure View/List components are not using out-of-date status fields or separate logic branches.
+
+I will verify again after fix — do not mark resolved unless status behaves correctly across all modes.
