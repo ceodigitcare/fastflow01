@@ -1802,10 +1802,19 @@ export default function PurchaseBillFormSplit({
                       type="button" 
                       variant="ghost" 
                       size="sm" 
-                      className="h-7 px-2 text-xs"
+                      className={`h-7 px-2 text-xs ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isFrozen}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (isFrozen) {
+                          toast({
+                            title: "Bill is frozen",
+                            description: "Please unfreeze the bill to add vendors.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
                         setAddVendorDialogOpen(true);
                       }}
                     >
@@ -1816,10 +1825,11 @@ export default function PurchaseBillFormSplit({
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))}
                     value={field.value.toString()}
+                    disabled={isFrozen}
                   >
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a vendor" />
+                      <SelectTrigger className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}>
+                        <SelectValue placeholder={isFrozen ? "Bill is frozen" : "Select a vendor"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -1858,10 +1868,11 @@ export default function PurchaseBillFormSplit({
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))}
                     value={field.value.toString()}
+                    disabled={isFrozen}
                   >
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an account" />
+                      <SelectTrigger className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}>
+                        <SelectValue placeholder={isFrozen ? "Bill is frozen" : "Select an account"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -1891,7 +1902,12 @@ export default function PurchaseBillFormSplit({
                 <FormItem>
                   <FormLabel>Bill Number</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input 
+                      {...field} 
+                      disabled={isFrozen}
+                      className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}
+                      title={isFrozen ? "This bill is frozen. Please unfreeze to make changes." : ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
