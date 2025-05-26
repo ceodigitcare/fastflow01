@@ -292,6 +292,11 @@ export default function PurchaseBillFormSplit({
     
   }, [editingBill?.id, editingBill?.metadata]); // Trigger on bill change or metadata update
   
+  // ADDITIONAL DEBUG: Log freeze state changes
+  useEffect(() => {
+    console.log(`🔒 FREEZE STATE CHANGED: isFrozen is now ${isFrozen} for bill ${editingBill?.id}`);
+  }, [isFrozen, editingBill?.id]);
+  
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
