@@ -1865,7 +1865,7 @@ export default function PurchaseBillFormSplit({
       />
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className={`space-y-6 ${isFrozen ? 'opacity-75' : ''}`} title={isFrozen ? "This bill is frozen. Unfreeze to make changes." : ""}>
           <div className="grid grid-cols-2 gap-4">
             {/* Vendor Selection */}
             <FormField
@@ -2696,13 +2696,28 @@ export default function PurchaseBillFormSplit({
             <Button type="button" variant="outline" onClick={onCancel}>
               Close
             </Button>
-            <Button 
-              type="submit" 
-              disabled={saveBillMutation.isPending || isFrozen}
-              title={isFrozen ? "This bill is frozen and cannot be edited" : ""}
-            >
-              {saveBillMutation.isPending ? "Saving..." : isFrozen ? "Bill Frozen" : "Save Purchase Bill"}
-            </Button>
+            {!isFrozen ? (
+              <Button 
+                type="submit" 
+                disabled={saveBillMutation.isPending}
+              >
+                {saveBillMutation.isPending ? "Saving..." : "Save Purchase Bill"}
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  disabled
+                  className="opacity-50 cursor-not-allowed"
+                >
+                  🧊 Bill Frozen - Cannot Save
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Unfreeze to enable saving
+                </span>
+              </div>
+            )}
           </div>
         </form>
       </Form>
