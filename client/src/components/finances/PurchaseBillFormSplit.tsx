@@ -235,6 +235,11 @@ export default function PurchaseBillFormSplit({
   
   // CRITICAL FIX: Initialize freeze state properly when component loads
   useEffect(() => {
+    console.log("🔍 FREEZE INIT: Starting freeze state check...");
+    console.log("📋 FREEZE INIT: editingBill:", editingBill);
+    console.log("📋 FREEZE INIT: editingBill?.metadata:", editingBill?.metadata);
+    console.log("📋 FREEZE INIT: Current isFrozen state:", isFrozen);
+    
     if (editingBill?.metadata) {
       let shouldBeFrozen = false;
       
@@ -243,24 +248,32 @@ export default function PurchaseBillFormSplit({
         try {
           const metadataObj = JSON.parse(editingBill.metadata);
           shouldBeFrozen = metadataObj?.isFrozen === true;
-          console.log(`FREEZE INIT: Parsed metadata freeze status: ${shouldBeFrozen}`);
+          console.log(`✅ FREEZE INIT: Parsed metadata freeze status: ${shouldBeFrozen}`);
+          console.log(`✅ FREEZE INIT: Full parsed metadata:`, metadataObj);
         } catch (e) {
-          console.log("Could not parse metadata for freeze status");
+          console.log("❌ FREEZE INIT: Could not parse metadata for freeze status", e);
         }
       } else if (typeof editingBill.metadata === 'object') {
         shouldBeFrozen = (editingBill.metadata as any)?.isFrozen === true;
-        console.log(`FREEZE INIT: Object metadata freeze status: ${shouldBeFrozen}`);
+        console.log(`✅ FREEZE INIT: Object metadata freeze status: ${shouldBeFrozen}`);
+        console.log(`✅ FREEZE INIT: Full object metadata:`, editingBill.metadata);
       }
       
+      console.log(`🔄 FREEZE INIT: shouldBeFrozen=${shouldBeFrozen}, currentIsFrozen=${isFrozen}`);
+      
       if (shouldBeFrozen !== isFrozen) {
-        console.log(`FREEZE INIT: Setting freeze state to ${shouldBeFrozen} for bill ${editingBill.id}`);
+        console.log(`🚀 FREEZE INIT: UPDATING freeze state to ${shouldBeFrozen} for bill ${editingBill.id}`);
         setIsFrozen(shouldBeFrozen);
+      } else {
+        console.log(`✓ FREEZE INIT: Freeze state already correct (${isFrozen})`);
       }
     } else {
-      console.log(`FREEZE INIT: No metadata found, setting freeze to false`);
-      setIsFrozen(false);
+      console.log(`📝 FREEZE INIT: No metadata found, setting freeze to false`);
+      if (isFrozen) {
+        setIsFrozen(false);
+      }
     }
-  }, [editingBill?.id, editingBill?.metadata]);
+  }, [editingBill?.id, editingBill?.metadata, isFrozen]);
   
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
