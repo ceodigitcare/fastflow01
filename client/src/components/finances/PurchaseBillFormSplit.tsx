@@ -1584,8 +1584,9 @@ export default function PurchaseBillFormSplit({
     
     // Convert form values to the correct format for storage
     // Always multiply money values by 100 to store as cents in the database
-    const totalDiscountValue = Number(data.totalDiscount || 0) * 100;
-    const paymentMadeValue = Number(data.paymentMade || 0) * 100;
+    // FIX: Ensure no NaN values are sent to database
+    const totalDiscountValue = isNaN(Number(data.totalDiscount)) ? 0 : Number(data.totalDiscount || 0) * 100;
+    const paymentMadeValue = isNaN(Number(data.paymentMade)) ? 0 : Number(data.paymentMade || 0) * 100;
     
     // Calculate automated status based on payment and receipt conditions
     const calculatedStatus = calculatePurchaseBillStatus(
@@ -1607,6 +1608,7 @@ export default function PurchaseBillFormSplit({
     });
     
     // COMPLETELY SIMPLIFIED: Process items with a clean, reliable approach
+    // FIX: Ensure no NaN values in any numeric fields
     const processedItems = billItems.map(item => {
       // Check if the unitPrice is already in cents or dollars for conversion
       const isUnitPriceInCents = Number(item.unitPrice) > 100;
@@ -1670,16 +1672,17 @@ export default function PurchaseBillFormSplit({
       });
       
       // Create a clean, explicitly typed item object with guaranteed values
+      // FIX: Comprehensive NaN validation for all numeric fields
       const processedItem = {
-        productId: Number(item.productId),
+        productId: isNaN(Number(item.productId)) ? 0 : Number(item.productId),
         description: String(item.description || ""),
-        quantity: Number(item.quantity || 0),
+        quantity: isNaN(Number(item.quantity)) ? 0 : Number(item.quantity || 0),
         // CRITICAL FIELD: Always use a specific numeric value with explicit conversion
-        quantityReceived: Number(qtySourceTracker.finalValue),
-        unitPrice: Number(item.unitPrice || 0),
-        amount: Number(item.amount || 0),
-        taxRate: Number(item.taxRate || 0),
-        discount: Number(item.discount || 0),
+        quantityReceived: isNaN(Number(qtySourceTracker.finalValue)) ? 0 : Number(qtySourceTracker.finalValue),
+        unitPrice: isNaN(Number(item.unitPrice)) ? 0 : Number(item.unitPrice || 0),
+        amount: isNaN(Number(item.amount)) ? 0 : Number(item.amount || 0),
+        taxRate: isNaN(Number(item.taxRate)) ? 0 : Number(item.taxRate || 0),
+        discount: isNaN(Number(item.discount)) ? 0 : Number(item.discount || 0),
         taxType: String(item.taxType || "flat"),
         discountType: String(item.discountType || "flat")
       };
