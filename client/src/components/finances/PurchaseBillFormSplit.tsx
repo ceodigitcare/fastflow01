@@ -2106,8 +2106,20 @@ export default function PurchaseBillFormSplit({
                 type="button" 
                 variant="outline" 
                 size="sm"
-                onClick={addItem}
-                className="h-8"
+                onClick={() => {
+                  if (isFrozen) {
+                    toast({
+                      title: "Bill is frozen",
+                      description: "Please unfreeze the bill to add items.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  addItem();
+                }}
+                disabled={isFrozen}
+                className={`h-8 ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={isFrozen ? "This bill is frozen. Please unfreeze to add items." : ""}
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Add Item
@@ -2607,10 +2619,20 @@ export default function PurchaseBillFormSplit({
                           defaultValue={0}
                           value={field.value ?? 0} // Ensure value is never undefined
                           onChange={(value) => {
+                            if (isFrozen) {
+                              toast({
+                                title: "Bill is frozen",
+                                description: "Please unfreeze the bill to modify payments.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
                             field.onChange(value);
                           }}
                           min={0}
                           step={0.01}
+                          disabled={isFrozen}
+                          className={isFrozen ? 'opacity-50 cursor-not-allowed' : ''}
                         />
                       </FormControl>
                       <FormMessage />
