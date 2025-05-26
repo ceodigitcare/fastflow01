@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { Calendar as CalendarIcon, X, Plus, Save, Lock, Unlock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import VendorModal from "./VendorModal";
 import {
   Dialog,
@@ -229,7 +230,6 @@ export default function PurchaseBillFormSplit({
     return [];
   });
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
-  const [showFreezeDialog, setShowFreezeDialog] = useState(false);
   
   // REBUILT FREEZE SYSTEM: Complete reliable freeze state management
   const [isFrozen, setIsFrozen] = useState(false);
@@ -1614,85 +1614,28 @@ export default function PurchaseBillFormSplit({
     }
   }, [editingBill, vendors, isFrozen]);
   
-  // REBUILT FREEZE/UNFREEZE SYSTEM: Complete reliable toggle functionality
-  const handleFreezeToggle = async () => {
-    console.log("🔒 FREEZE TOGGLE: Starting freeze/unfreeze operation", { 
-      currentState: isFrozen, 
-      billId: editingBill?.id 
-    });
-    
+  // SIMPLIFIED FREEZE TOGGLE: Direct instant toggle without confirmations
+  const handleFreezeToggle = async (newFreezeState: boolean) => {
     if (!editingBill?.id) {
-      console.error("🔒 FREEZE TOGGLE: Cannot toggle freeze - no bill ID");
-      toast({
-        title: "Error",
-        description: "Cannot change freeze status - no bill found.",
-        variant: "destructive"
-      });
+      console.error("🔒 TOGGLE: Cannot change freeze state - no bill ID");
       return;
     }
     
-    if (isFrozen) {
-      // UNFREEZE: Immediate action without confirmation
-      console.log("🔓 UNFREEZING: Starting unfreeze process for bill", editingBill.id);
-      
-      try {
-        // Update database first
-        await updateBillFreezeStatus(false);
-        
-        // Update local state
-        setIsFrozen(false);
-        
-        // Success feedback
-        toast({
-          title: "✅ Bill Unfrozen Successfully",
-          description: "This purchase bill is now editable. You can make changes and save.",
-        });
-        
-        console.log("🔓 UNFREEZING: Complete - bill is now fully editable");
-        
-      } catch (error) {
-        console.error("🔓 UNFREEZING: Failed to unfreeze bill", error);
-        toast({
-          title: "Error Unfreezing Bill",
-          description: "Could not unfreeze the bill. Please try again.",
-          variant: "destructive"
-        });
-      }
-      
-    } else {
-      // FREEZE: Show confirmation dialog
-      console.log("🔒 FREEZING: Showing confirmation dialog");
-      setShowFreezeDialog(true);
-    }
-  };
-
-  const confirmFreezeBill = async () => {
-    console.log("🔒 FREEZING: Starting freeze process for bill", editingBill?.id);
+    console.log(`🔒 TOGGLE: Switching from ${isFrozen} to ${newFreezeState} for bill ${editingBill.id}`);
     
     try {
-      // Update database first
-      await updateBillFreezeStatus(true);
+      // Update database immediately
+      await updateBillFreezeStatus(newFreezeState);
       
       // Update local state
-      setIsFrozen(true);
-      setShowFreezeDialog(false);
+      setIsFrozen(newFreezeState);
       
-      // Success feedback
-      toast({
-        title: "🧊 Bill Frozen Successfully",
-        description: "This purchase bill is now locked and cannot be edited.",
-      });
-      
-      console.log("🔒 FREEZING: Complete - bill is now frozen and protected");
+      console.log(`🔒 TOGGLE: Successfully updated freeze state to ${newFreezeState}`);
       
     } catch (error) {
-      console.error("🔒 FREEZING: Failed to freeze bill", error);
-      setShowFreezeDialog(false);
-      toast({
-        title: "Error Freezing Bill",
-        description: "Failed to freeze bill. Please try again.",
-        variant: "destructive"
-      });
+      console.error("🔒 TOGGLE: Failed to update freeze state", error);
+      // Revert toggle if database update fails
+      setIsFrozen(!newFreezeState);
     }
   };
 
@@ -2207,30 +2150,28 @@ export default function PurchaseBillFormSplit({
                           {badge.label}
                         </span>
                         
-                        {/* Data Frozen Toggle */}
+                        {/* SIMPLIFIED FREEZE TOGGLE SWITCH */}
                         {editingBill && (
-                          <button
-                            type="button"
-                            onClick={handleFreezeToggle}
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
-                              isFrozen 
-                                ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" 
-                                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                            }`}
-                            title={isFrozen ? "Click to unfreeze and allow editing" : "Click to freeze and prevent editing"}
-                          >
-                            {isFrozen ? (
-                              <>
-                                <Lock className="w-4 h-4 mr-2" />
-                                Frozen
-                              </>
-                            ) : (
-                              <>
-                                <Unlock className="w-4 h-4 mr-2" />
-                                Unlocked
-                              </>
-                            )}
-                          </button>
+                          <div className="flex items-center space-x-2 px-3 py-1 bg-gray-50 rounded-full border">
+                            <span className="text-sm font-medium text-gray-600">
+                              {isFrozen ? (
+                                <>
+                                  <Lock className="w-4 h-4 inline mr-1" />
+                                  🧊 Frozen
+                                </>
+                              ) : (
+                                <>
+                                  <Unlock className="w-4 h-4 inline mr-1" />
+                                  🔓 Editable
+                                </>
+                              )}
+                            </span>
+                            <Switch
+                              checked={isFrozen}
+                              onCheckedChange={handleFreezeToggle}
+                              className="data-[state=checked]:bg-blue-600"
+                            />
+                          </div>
                         )}
                       </div>
                     );
@@ -2840,35 +2781,7 @@ export default function PurchaseBillFormSplit({
         </form>
       </Form>
 
-      {/* Data Freeze Confirmation Dialog */}
-      <Dialog open={showFreezeDialog} onOpenChange={setShowFreezeDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Freeze Purchase Bill</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to freeze this purchase bill? You will not be able to make changes until it is unfrozen.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
-              <Lock className="w-5 h-5 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-blue-900">What happens when frozen?</p>
-                <p className="text-xs text-blue-700">All item quantities, payment details, and prices will be locked and cannot be edited.</p>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowFreezeDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={confirmFreezeBill}>
-              <Lock className="w-4 h-4 mr-2" />
-              Freeze Bill
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </>
   );
 }
