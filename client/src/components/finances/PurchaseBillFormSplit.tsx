@@ -230,7 +230,23 @@ export default function PurchaseBillFormSplit({
   });
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
   const [showFreezeDialog, setShowFreezeDialog] = useState(false);
-  const [isFrozen, setIsFrozen] = useState(editingBill?.metadata?.isFrozen || false);
+  // Data Frozen state - Check metadata for persistent freeze status
+  const [isFrozen, setIsFrozen] = useState(() => {
+    if (editingBill?.metadata) {
+      // Handle both string and object metadata formats
+      if (typeof editingBill.metadata === 'string') {
+        try {
+          const metadataObj = JSON.parse(editingBill.metadata);
+          return metadataObj?.isFrozen === true;
+        } catch (e) {
+          console.log("Could not parse metadata for freeze status");
+        }
+      } else if (typeof editingBill.metadata === 'object') {
+        return (editingBill.metadata as any)?.isFrozen === true;
+      }
+    }
+    return false;
+  });
   
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
