@@ -7,7 +7,7 @@ import { Transaction, Account, Product, InsertUser, User } from "@shared/schema"
 import { purchaseBillSchema, PurchaseBill, PurchaseBillItem } from "@/lib/validation";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrencyDisplay, normalizeCurrency } from "@/lib/currency-utils";
 import { Calendar as CalendarIcon, X, Plus, Save } from "lucide-react";
 import { calculatePurchaseBillStatus, renderStatusBadge } from "@/lib/purchase-bill-status";
 import VendorModal from "./VendorModal";
@@ -1586,7 +1586,7 @@ export default function PurchaseBillFormSplit({
     if (selectedAccount && paymentAmount > accountBalance) {
       toast({
         title: "Payment Error",
-        description: `Payment amount (${formatCurrency(paymentAmount)}) exceeds available account balance (${formatCurrency(accountBalance)})`,
+        description: `Payment amount (${formatCurrencyDisplay(paymentAmount)}) exceeds available account balance (${formatCurrencyDisplay(accountBalance)})`,
         variant: "destructive",
       });
       return; // Prevent form submission
@@ -1840,8 +1840,8 @@ export default function PurchaseBillFormSplit({
                             {vendor.balance !== undefined && vendor.balance !== null && vendor.balance !== 0 && (
                               <span className={`ml-2 text-xs ${(vendor.balance || 0) > 0 ? 'text-green-500' : 'text-amber-500'}`}>
                                 {(vendor.balance || 0) > 0 
-                                  ? `(Advance: ${formatCurrency((vendor.balance || 0) / 100)})` 
-                                  : `(Due: ${formatCurrency(Math.abs((vendor.balance || 0)) / 100)})`}
+                                  ? `(Advance: ${formatCurrencyDisplay((vendor.balance || 0) / 100)})` 
+                                  : `(Due: ${formatCurrencyDisplay(Math.abs((vendor.balance || 0)) / 100)})`}
                               </span>
                             )}
                           </SelectItem>
@@ -2090,7 +2090,7 @@ export default function PurchaseBillFormSplit({
                           />
                         </td>
                         <td className="p-2 text-right font-medium">
-                          {formatCurrency(item.amount)}
+                          {formatCurrencyDisplay(item.amount)}
                         </td>
                         <td className="p-2 text-center" rowSpan={2}>
                           <Button
@@ -2276,7 +2276,7 @@ export default function PurchaseBillFormSplit({
                     <div className="flex justify-between items-center pt-2 border-t mt-2">
                       <span className="font-medium">Line Total:</span>
                       <span className="text-right font-semibold">
-                        {formatCurrency(item.amount)}
+                        {formatCurrencyDisplay(item.amount)}
                       </span>
                     </div>
                   </div>
@@ -2373,14 +2373,14 @@ export default function PurchaseBillFormSplit({
             <div className="w-80 space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
-                <span className="font-medium">{formatCurrency(form.watch('subtotal'))}</span>
+                <span className="font-medium">{formatCurrencyDisplay(form.watch('subtotal'))}</span>
               </div>
               
               {/* Item Discounts Summary - Only show if there are item discounts */}
               {form.watch('discountAmount') > 0 && (
                 <div className="flex justify-between">
                   <span>Item Discounts:</span>
-                  <span className="text-red-500">-{formatCurrency(form.watch('discountAmount') || 0)}</span>
+                  <span className="text-red-500">-{formatCurrencyDisplay(form.watch('discountAmount') || 0)}</span>
                 </div>
               )}
               
@@ -2388,7 +2388,7 @@ export default function PurchaseBillFormSplit({
               {form.watch('taxAmount') > 0 && (
                 <div className="flex justify-between">
                   <span>Tax:</span>
-                  <span>{formatCurrency(form.watch('taxAmount'))}</span>
+                  <span>{formatCurrencyDisplay(form.watch('taxAmount'))}</span>
                 </div>
               )}
               
@@ -2439,14 +2439,14 @@ export default function PurchaseBillFormSplit({
                 {form.watch('totalDiscount') > 0 && (
                   <div className="flex justify-between text-sm text-red-500">
                     <span>Discount Amount:</span>
-                    <span>-{formatCurrency(calculateTotalDiscountAmount())}</span>
+                    <span>-{formatCurrencyDisplay(calculateTotalDiscountAmount())}</span>
                   </div>
                 )}
               </div>
               
               <div className="flex justify-between text-lg font-bold border-t pt-2">
                 <span>Total:</span>
-                <span>{formatCurrency(form.watch('totalAmount'))}</span>
+                <span>{formatCurrencyDisplay(form.watch('totalAmount'))}</span>
               </div>
               
               {/* Enhanced Payment Section */}
@@ -2456,7 +2456,7 @@ export default function PurchaseBillFormSplit({
                 {/* Previously Paid Amount (for edit mode) */}
                 {editingBill && editingBill.paymentReceived && editingBill.paymentReceived > 0 && (
                   <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
-                    <span className="text-sm text-blue-700">Previously Paid: {formatCurrency((editingBill.paymentReceived || 0) / 100)}</span>
+                    <span className="text-sm text-blue-700">Previously Paid: {formatCurrencyDisplay((editingBill.paymentReceived || 0) / 100)}</span>
                   </div>
                 )}
                 
@@ -2505,7 +2505,7 @@ export default function PurchaseBillFormSplit({
                             ) : accounts && accounts.length > 0 ? (
                               accounts.map((account) => (
                                 <SelectItem key={account.id} value={account.id.toString()}>
-                                  {account.name} - {formatCurrency((account.currentBalance || 0) / 100)}
+                                  {account.name} - {formatCurrencyDisplay((account.currentBalance || 0) / 100)}
                                 </SelectItem>
                               ))
                             ) : (
@@ -2566,7 +2566,7 @@ export default function PurchaseBillFormSplit({
                   if (selectedAccount && paymentAmount > accountBalance) {
                     return (
                       <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                        ⚠️ Payment amount ({formatCurrency(paymentAmount)}) exceeds available balance ({formatCurrency(accountBalance)})
+                        ⚠️ Payment amount ({formatCurrencyDisplay(paymentAmount)}) exceeds available balance ({formatCurrencyDisplay(accountBalance)})
                       </div>
                     );
                   }

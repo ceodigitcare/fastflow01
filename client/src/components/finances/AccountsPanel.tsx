@@ -277,7 +277,7 @@ export default function AccountsPanel() {
                 <div className="text-sm font-medium text-gray-500">Total Liabilities</div>
                 <CircleDollarSign className="h-4 w-4 text-red-600" />
               </div>
-              <div className="text-2xl font-bold mt-2">{formatCurrency(totals.liabilities)}</div>
+              <div className="text-2xl font-bold mt-2">{formatCurrencyDisplay(totals.liabilities)}</div>
             </CardContent>
           </Card>
           <Card>
@@ -287,7 +287,7 @@ export default function AccountsPanel() {
                 <ArrowUpDown className="h-4 w-4 text-blue-600" />
               </div>
               <div className={`text-2xl font-bold mt-2 ${totals.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(totals.net)}
+                {formatCurrencyDisplay(totals.net)}
               </div>
             </CardContent>
           </Card>
@@ -321,7 +321,7 @@ export default function AccountsPanel() {
                       <TableRow key={account.id}>
                         <TableCell className="font-medium">{account.name}</TableCell>
                         <TableCell>{getCategoryName(account.categoryId)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(account.currentBalance)}</TableCell>
+                        <TableCell className="text-right">{formatCurrencyDisplay(account.currentBalance)}</TableCell>
                         <TableCell>
                           <span className={`inline-block px-2 py-1 text-xs rounded-full ${account.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                             {account.isActive ? 'Active' : 'Inactive'}
@@ -363,7 +363,7 @@ export default function AccountsPanel() {
                       <TableRow key={account.id}>
                         <TableCell className="font-medium">{account.name}</TableCell>
                         <TableCell>{getCategoryName(account.categoryId)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(account.currentBalance)}</TableCell>
+                        <TableCell className="text-right">{formatCurrencyDisplay(account.currentBalance)}</TableCell>
                         <TableCell>
                           <span className={`inline-block px-2 py-1 text-xs rounded-full ${account.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                             {account.isActive ? 'Active' : 'Inactive'}
@@ -405,7 +405,7 @@ export default function AccountsPanel() {
                       <TableRow key={account.id}>
                         <TableCell className="font-medium">{account.name}</TableCell>
                         <TableCell>{getCategoryName(account.categoryId)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(account.currentBalance)}</TableCell>
+                        <TableCell className="text-right">{formatCurrencyDisplay(account.currentBalance)}</TableCell>
                         <TableCell>
                           <span className={`inline-block px-2 py-1 text-xs rounded-full ${account.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                             {account.isActive ? 'Active' : 'Inactive'}
