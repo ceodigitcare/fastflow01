@@ -1,0 +1,58 @@
+🎯 OBJECTIVE:
+Streamline Purchase Bill creation and editing experience by removing manual status inputs, improving payment input UX, showing account balances, and fixing decimal precision in discount input.
+
+---
+
+### 🔧 PART 1: REMOVE MANUAL STATUS DROPDOWN (Only in Create & Edit Views)
+
+- **Remove the manual "Status" selection field** entirely from:
+  - Purchase Bill **Create** view
+  - Purchase Bill **Edit** view
+- Status should now be shown as a **read-only, auto-calculated** field based on defined logic.
+- The automatic status display must still appear in:
+  - Purchase Bill **Edit**
+  - Purchase Bill **View**
+  - Purchase Bill **List**
+- Ensure status is rendered **only once** per page (e.g., not twice in View mode).
+- Maintain **consistent color styling**, **without any icons**.
+
+---
+
+### 💳 PART 2: IMPROVE "Payment Made" & "Pay From Account" UX
+
+✅ **Enhanced Layout**:
+- Place the **"Pay From Account"** dropdown immediately **next to** the "Payment Made" input field.
+- This dropdown should show all accounts under the `Cash and Bank` category.
+- Display account balance inline with the account name using a dash:  
+  Example: `Bkash - $3,420.00`, `Premium Bank - $15,000.00`
+
+✅ **New Actions for Payment Section**:
+- Add a button: `➕ Add More Payment` → Allows inserting multiple payment entries.
+- Add another button: `💯 Make Full Payment` → Fills the remaining due amount automatically.
+
+✅ **Editing Existing Payments**:
+- In Edit mode, clearly show the **previously paid amount** beside or below the current Payment Made field.  
+  Example: _"Previously Paid: $1,200.00"_
+
+✅ **Balance Validation**:
+- When a user selects a Pay From account:
+  - Show current account balance
+  - **If payment exceeds available balance**, block submission and show error
+
+---
+
+### 🧮 PART 3: CRITICAL FIX – Discount Field Decimal Support
+
+- The "Total Discount" input field currently does **not support decimals after two digits**, which causes rounding or invalid entry issues.
+- This is a **critical financial calculation bug** and must be fixed.
+- The field should accept and retain values with **up to two decimal places** (e.g., `15.25`, `0.99`, `200.00`)
+- Ensure correct formatting, validation, and compatibility with calculations.
+
+---
+
+✅ **Final Expectations**:
+- No manual status override in Create or Edit views
+- More intuitive and informative payment process
+- Clean, readable account dropdown with balances
+- Accurate handling of decimal discounts
+- Status and balance logic work seamlessly without impacting core calculations

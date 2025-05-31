@@ -1947,30 +1947,21 @@ export default function PurchaseBillFormSplit({
               )}
             />
             
-            {/* Status */}
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Auto-calculated Status - Read Only Display */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
+              <div className="flex items-center">
+                {(() => {
+                  const status = getCurrentBillStatus();
+                  const { colorClass, label } = renderStatusBadge(status);
+                  return (
+                    <div className={`px-3 py-1 text-sm font-medium border rounded-full ${colorClass}`}>
+                      {label}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
           
           {/* Line Items */}
@@ -2392,7 +2383,7 @@ export default function PurchaseBillFormSplit({
                       }}
                       min={0}
                       max={totalDiscountType === 'percentage' ? 100 : undefined}
-                      step={0.1}
+                      step={0.01}
                       className="w-20 h-8 text-right"
                     />
                     <Select 
@@ -2433,29 +2424,136 @@ export default function PurchaseBillFormSplit({
                 <span>{formatCurrency(form.watch('totalAmount'))}</span>
               </div>
               
-              {/* Payment Made */}
-              <div className="pt-4">
-                <FormField
-                  control={form.control}
-                  name="paymentMade"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Made</FormLabel>
-                      <FormControl>
-                        <SafeNumberInput 
-                          defaultValue={0}
-                          value={field.value ?? 0} // Ensure value is never undefined
-                          onChange={(value) => {
-                            field.onChange(value);
-                          }}
-                          min={0}
-                          step={0.01}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Enhanced Payment Section */}
+              <div className="pt-4 border-t">
+                <h4 className="font-medium mb-3">Payment Information</h4>
+                
+                {/* Previously Paid Amount (for edit mode) */}
+                {editingBill && editingBill.paymentReceived && editingBill.paymentReceived > 0 && (
+                  <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                    <span className="text-sm text-blue-700">Previously Paid: {formatCurrency((editingBill.paymentReceived || 0) / 100)}</span>
+                  </div>
+                )}
+                
+                {/* Payment Made and Pay From Account in same row */}
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <FormField
+                    control={form.control}
+                    name="paymentMade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment Made</FormLabel>
+                        <FormControl>
+                          <SafeNumberInput 
+                            defaultValue={0}
+                            value={field.value ?? 0}
+                            onChange={(value) => {
+                              field.onChange(value);
+                            }}
+                            min={0}
+                            step={0.01}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="accountId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pay From Account</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(parseInt(value))}
+                          value={field.value.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select account" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {accountsLoading ? (
+                              <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
+                            ) : accounts && accounts.length > 0 ? (
+                              accounts
+                                .filter(account => {
+                                  // Get account categories to filter by Cash and Bank
+                                  const categories = accountCategories || [];
+                                  const accountCategory = categories.find(cat => cat.id === account.categoryId);
+                                  return accountCategory?.name === "Cash and Bank";
+                                })
+                                .map((account) => (
+                                  <SelectItem key={account.id} value={account.id.toString()}>
+                                    {account.name} - {formatCurrency((account.currentBalance || 0) / 100)}
+                                  </SelectItem>
+                                ))
+                            ) : (
+                              <SelectItem value="none" disabled>No Cash and Bank accounts found</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                {/* Payment Action Buttons */}
+                <div className="flex gap-2 mb-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Add More Payment functionality (placeholder for future multi-payment feature)
+                      toast({
+                        title: "Feature Coming Soon",
+                        description: "Multiple payment entries will be available in the next update.",
+                      });
+                    }}
+                    className="text-xs"
+                  >
+                    ➕ Add More Payment
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const totalAmount = form.watch('totalAmount') || 0;
+                      const currentPayment = form.watch('paymentMade') || 0;
+                      const remainingAmount = totalAmount - currentPayment;
+                      
+                      if (remainingAmount > 0) {
+                        form.setValue('paymentMade', totalAmount);
+                      }
+                    }}
+                    className="text-xs"
+                  >
+                    💯 Make Full Payment
+                  </Button>
+                </div>
+                
+                {/* Balance Validation Warning */}
+                {(() => {
+                  const selectedAccountId = form.watch('accountId');
+                  const paymentAmount = form.watch('paymentMade') || 0;
+                  const selectedAccount = accounts?.find(acc => acc.id === selectedAccountId);
+                  const accountBalance = (selectedAccount?.currentBalance || 0) / 100;
+                  
+                  if (selectedAccount && paymentAmount > accountBalance) {
+                    return (
+                      <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                        ⚠️ Payment amount ({formatCurrency(paymentAmount)}) exceeds available balance ({formatCurrency(accountBalance)})
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           </div>
