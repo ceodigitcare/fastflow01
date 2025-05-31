@@ -806,7 +806,7 @@ export default function PurchaseBillSplitView({
                   <p className="text-sm text-gray-600">Received by</p>
                   <p className="font-semibold">{businessData?.name || "Business Name"}</p>
                 </div>
-                <div className="w-1/3 text-right">
+                <div className="w-1/3 border-t border-gray-300 mt-8 pt-2 text-right">
                   <p className="text-sm text-gray-600">Authorized Signature</p>
                 </div>
               </div>

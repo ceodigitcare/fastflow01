@@ -249,17 +249,39 @@ export default function PurchaseBillFormSplit({
     queryKey: ["/api/products"],
   });
   
-  // Get accounts (bank/cash accounts)
+  // Get account categories to filter Cash and Bank accounts
+  const { data: categories } = useQuery({
+    queryKey: ["/api/account-categories"],
+  });
+
+  // Get accounts (bank/cash accounts only)
   const { data: accounts, isLoading: accountsLoading } = useQuery<Account[]>({
     queryKey: ["/api/accounts"],
-    select: (accounts) => accounts.filter(account => 
-      // Filter for bank and cash accounts only
-      account.isActive && 
-      (account.name.toLowerCase().includes("bank") || 
-       account.name.toLowerCase().includes("cash") ||
-       account.name.toLowerCase().includes("checking") ||
-       account.name.toLowerCase().includes("savings"))
-    )
+    select: (accounts) => {
+      if (!categories) return [];
+      
+      // Find the "Cash and Bank" category
+      const cashAndBankCategory = categories.find(cat => 
+        cat.name.toLowerCase().includes("cash") && cat.name.toLowerCase().includes("bank")
+      );
+      
+      if (!cashAndBankCategory) {
+        // Fallback: filter by account names if category not found
+        return accounts.filter(account => 
+          account.isActive && 
+          (account.name.toLowerCase().includes("bank") || 
+           account.name.toLowerCase().includes("cash") ||
+           account.name.toLowerCase().includes("checking") ||
+           account.name.toLowerCase().includes("savings") ||
+           account.name.toLowerCase().includes("bkash"))
+        );
+      }
+      
+      // Filter accounts that belong to the Cash and Bank category
+      return accounts.filter(account => 
+        account.isActive && account.categoryId === cashAndBankCategory.id
+      );
+    }
   });
   
   // Define a complete set of default values to ensure no undefined values
