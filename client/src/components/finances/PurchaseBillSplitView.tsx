@@ -66,6 +66,25 @@ export default function PurchaseBillSplitView({
   const [editingBill, setEditingBill] = useState<Transaction | null>(null);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   
+  // Handle history panel toggle with auto-scroll
+  const handleHistoryToggle = () => {
+    const newState = !showVersionHistory;
+    setShowVersionHistory(newState);
+    
+    // Auto-scroll to version history when opening
+    if (newState) {
+      setTimeout(() => {
+        const historyElement = document.getElementById('version-history-section');
+        if (historyElement) {
+          historyElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
+    }
+  };
+  
   // State for toggling received quantity column visibility
   const [showReceivedQuantity, setShowReceivedQuantity] = useState(() => {
     // Check if preference is stored in localStorage
@@ -169,7 +188,7 @@ export default function PurchaseBillSplitView({
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => setShowVersionHistory(!showVersionHistory)}
+                  onClick={handleHistoryToggle}
                 >
                   <History className="h-4 w-4 mr-2" /> History
                 </Button>
@@ -769,7 +788,7 @@ export default function PurchaseBillSplitView({
             
             {/* Version History - Only shown when explicitly toggled */}
             {showVersionHistory && selectedBill && (
-              <div className="mt-6 border-t pt-6">
+              <div id="version-history-section" className="mt-6 border-t pt-6">
                 <TransactionVersionHistory 
                   transactionId={selectedBill.id} 
                   onClose={() => setShowVersionHistory(false)}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { TransactionVersion, User as UserType } from '@shared/schema';
+import { TransactionVersion, User as UserType, Account, Product } from '@shared/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { queryClient } from '@/lib/queryClient';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
 
 interface TransactionVersionHistoryProps {
   transactionId: number;
@@ -24,12 +25,16 @@ interface ChangeSummary {
   field: string;
   oldValue: any;
   newValue: any;
+  accountName?: string; // For amount changes
+  productName?: string; // For item changes
 }
 
 export default function TransactionVersionHistory({ transactionId, onClose }: TransactionVersionHistoryProps) {
   const { toast } = useToast();
   const [changeSummaries, setChangeSummaries] = useState<Map<number, ChangeSummary[]>>(new Map());
   const [userMap, setUserMap] = useState<Map<number, string>>(new Map());
+  const [accountMap, setAccountMap] = useState<Map<number, string>>(new Map());
+  const [productMap, setProductMap] = useState<Map<number, string>>(new Map());
   
   // Fetch all users to map user IDs to names
   const { data: users } = useQuery({
@@ -40,6 +45,30 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
         throw new Error('Failed to fetch users');
       }
       return response.json() as Promise<UserType[]>;
+    }
+  });
+
+  // Fetch all accounts to map account IDs to names
+  const { data: accounts } = useQuery({
+    queryKey: ['/api/accounts'],
+    queryFn: async () => {
+      const response = await fetch('/api/accounts');
+      if (!response.ok) {
+        throw new Error('Failed to fetch accounts');
+      }
+      return response.json() as Promise<Account[]>;
+    }
+  });
+
+  // Fetch all products to map product IDs to names
+  const { data: products } = useQuery({
+    queryKey: ['/api/products'],
+    queryFn: async () => {
+      const response = await fetch('/api/products');
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      return response.json() as Promise<Product[]>;
     }
   });
 
@@ -55,6 +84,32 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
       setUserMap(map);
     }
   }, [users]);
+
+  // Build a map of account IDs to names
+  useEffect(() => {
+    if (accounts && accounts.length > 0) {
+      const map = new Map<number, string>();
+      accounts.forEach(account => {
+        if (account.id) {
+          map.set(account.id, account.name);
+        }
+      });
+      setAccountMap(map);
+    }
+  }, [accounts]);
+
+  // Build a map of product IDs to names
+  useEffect(() => {
+    if (products && products.length > 0) {
+      const map = new Map<number, string>();
+      products.forEach(product => {
+        if (product.id) {
+          map.set(product.id, product.name);
+        }
+      });
+      setProductMap(map);
+    }
+  }, [products]);
   
   // Fetch version history
   const { data: versions, isLoading } = useQuery({
@@ -92,10 +147,12 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
       
       // Check for changes in amount
       if (currentData.amount !== previousData.amount) {
+        const accountName = currentData.accountId ? accountMap.get(currentData.accountId) : undefined;
         changes.push({
           field: 'Amount',
           oldValue: previousData.amount / 100, // Convert cents to dollars for display
-          newValue: currentData.amount / 100
+          newValue: currentData.amount / 100,
+          accountName
         });
       }
       
@@ -110,10 +167,12 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
       
       // Check for changes in payment received
       if (currentData.paymentReceived !== previousData.paymentReceived) {
+        const accountName = currentData.accountId ? accountMap.get(currentData.accountId) : undefined;
         changes.push({
           field: 'Payment Received',
           oldValue: previousData.paymentReceived / 100, // Convert cents to dollars for display
-          newValue: currentData.paymentReceived / 100
+          newValue: currentData.paymentReceived / 100,
+          accountName
         });
       }
       
@@ -140,20 +199,24 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
             const currentItem = currentData.items[j];
             const previousItem = previousData.items[j];
             
+            const productName = currentItem.productId ? productMap.get(currentItem.productId) : undefined;
+            
             if (currentItem.quantity !== previousItem.quantity) {
               changes.push({
-                field: `Item #${j + 1} Quantity`,
+                field: 'Item Quantity',
                 oldValue: previousItem.quantity,
-                newValue: currentItem.quantity
+                newValue: currentItem.quantity,
+                productName
               });
             }
             
             // Check for changes in item received quantities
             if (currentItem.quantityReceived !== previousItem.quantityReceived) {
               changes.push({
-                field: `Item #${j + 1} Received`,
+                field: 'Item Received',
                 oldValue: previousItem.quantityReceived || 0,
-                newValue: currentItem.quantityReceived || 0
+                newValue: currentItem.quantityReceived || 0,
+                productName
               });
             }
           }
@@ -164,7 +227,7 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
     }
     
     setChangeSummaries(summaries);
-  }, [versions]);
+  }, [versions, accountMap, productMap]);
 
   // Mutation to mark a version as important
   const markImportantMutation = useMutation({
@@ -313,11 +376,24 @@ export default function TransactionVersionHistory({ transactionId, onClose }: Tr
                                 ? formatCurrency(change.oldValue) 
                                 : change.oldValue}
                             </span>{' '}
+                            →{' '}
                             <span className="text-green-500">
                               {change.field.includes('Amount') || change.field.includes('Payment') 
                                 ? formatCurrency(change.newValue) 
                                 : change.newValue}
                             </span>
+                            {/* Show account name for amount changes */}
+                            {change.accountName && (change.field.includes('Amount') || change.field.includes('Payment')) && (
+                              <span className="text-blue-600 ml-1">
+                                → Account: {change.accountName}
+                              </span>
+                            )}
+                            {/* Show product name for item changes */}
+                            {change.productName && (change.field.includes('Item')) && (
+                              <span className="text-purple-600 ml-1">
+                                → Product: {change.productName}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
