@@ -709,6 +709,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk sync all account balances (for admin/maintenance purposes)
+  app.post("/api/accounts/sync-balances", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      await syncAllAccountBalances(businessId);
+      res.json({ message: "All account balances synchronized successfully" });
+    } catch (error) {
+      console.error("Error syncing account balances:", error);
+      res.status(500).json({ message: "Failed to sync account balances" });
+    }
+  });
+
   app.post("/api/accounts", requireAuth, async (req, res) => {
     try {
       const businessId = getBusinessId(req);
