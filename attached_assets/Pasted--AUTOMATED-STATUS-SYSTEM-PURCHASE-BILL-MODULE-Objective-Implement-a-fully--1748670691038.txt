@@ -1,0 +1,81 @@
+🛠️ AUTOMATED STATUS SYSTEM – PURCHASE BILL MODULE
+
+---
+
+### 🔹 Objective:
+
+Implement a fully **automated status assignment system** in the Purchase Bill module. Status must be:
+- Automatically determined based on item receiving and payment data.
+- Displayed in **Edit mode**, **View mode**, and **Purchase Bill List**.
+- Consistent in **color** but must **not include any icons**.
+- Displayed **only once** per page (especially in View mode).
+
+---
+
+### 🔹 Required Status Logic (MUST BE IMPLEMENTED EXACTLY):
+
+1. **Draft**
+   - When no items are received **AND**
+   - Payment made = 0
+
+2. **Partial Received**
+   - Some items received, but not all quantities fully received
+   - AND payment made = 0
+
+3. **Partial Received & Partial Paid**
+   - Some items received, not all fully
+   - AND payment made > 0 but less than total bill amount
+
+4. **Partial Received & Paid**
+   - Some items received, not all fully
+   - AND payment made = total bill amount
+
+5. **Received**
+   - All item quantities fully received
+   - AND payment made = 0
+
+6. **Received & Partial Paid**
+   - All item quantities fully received
+   - AND payment made > 0 but less than total bill amount
+
+7. **Received & Paid**
+   - All item quantities fully received
+   - AND payment made = total bill amount
+
+8. **Partial Paid**
+   - No items received
+   - AND payment made > 0 but less than total bill amount
+
+9. **Paid**
+   - No items received
+   - AND payment made = total bill amount
+
+---
+
+### 🔹 Functional Notes:
+
+- Status should be dynamically calculated in real-time in:
+  - **Purchase Bill Create/Edit**
+  - **Purchase Bill View**
+  - **Purchase Bill List**
+- Status is **read-only** (non-editable manually).
+- Ensure status updates seamlessly upon **Save**, **Edit**, or **Reload**.
+- Do not allow duplicated status display (especially in View mode – only one status badge should be shown).
+
+---
+
+### 🔹 Visual & UI Guidelines:
+
+- All status badges must use consistent background/text color styles (e.g., blue, green, orange, etc.)
+- **Do not use icons** alongside status labels.
+- Make sure display styles are responsive and do not break the layout.
+- No unnecessary delays in status rendering.
+- Status logic must NOT affect or break existing calculation workflows (e.g., totals, balance, receiving quantity).
+
+---
+
+✅ Please double-check all views and thoroughly test using:
+- Bills with no payments or items received
+- Bills with partial/full payments and receiving combinations
+- Edge cases (e.g., manually adjusting items or amounts after receiving)
+

@@ -9,6 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { Calendar as CalendarIcon, X, Plus, Save } from "lucide-react";
+import { calculatePurchaseBillStatus, renderStatusBadge } from "@/lib/purchase-bill-status";
 import VendorModal from "./VendorModal";
 import {
   Dialog,
@@ -937,6 +938,22 @@ export default function PurchaseBillFormSplit({
     // Update the form value
     form.setValue('totalAmount', roundedFinalTotal);
   };
+
+  // Calculate current bill status automatically
+  const getCurrentBillStatus = () => {
+    const totalAmount = form.watch('totalAmount') || 0;
+    const paymentMade = form.watch('paymentMade') || 0;
+    const items = billItems.map(item => ({
+      quantity: item.quantity || 0,
+      quantityReceived: item.quantityReceived || 0
+    }));
+
+    return calculatePurchaseBillStatus({
+      totalAmount,
+      paymentReceived: paymentMade,
+      items
+    });
+  };
   
   // Mutation for saving the purchase bill
   const saveBillMutation = useMutation({
@@ -1745,6 +1762,16 @@ export default function PurchaseBillFormSplit({
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Automated Status Display */}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">
+              {editingBill ? 'Edit Purchase Bill' : 'New Purchase Bill'}
+            </h3>
+            <div className={`px-3 py-1 text-sm font-medium border rounded-full ${renderStatusBadge(getCurrentBillStatus()).colorClass}`}>
+              {renderStatusBadge(getCurrentBillStatus()).label}
+            </div>
+          </div>
+          
           <div className="grid grid-cols-2 gap-4">
             {/* Vendor Selection */}
             <FormField
