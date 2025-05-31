@@ -251,7 +251,7 @@ export default function PurchaseBillFormSplit({
   });
   
   // Get account categories to filter Cash and Bank accounts
-  const { data: categories } = useQuery({
+  const { data: categories } = useQuery<any[]>({
     queryKey: ["/api/account-categories"],
   });
 
@@ -259,11 +259,22 @@ export default function PurchaseBillFormSplit({
   const { data: accounts, isLoading: accountsLoading } = useQuery<Account[]>({
     queryKey: ["/api/accounts"],
     select: (accounts) => {
-      if (!categories) return [];
+      if (!accounts || !Array.isArray(accounts)) return [];
+      if (!categories || !Array.isArray(categories)) {
+        // Fallback: filter by account names if categories not available
+        return accounts.filter(account => 
+          account.isActive && 
+          (account.name.toLowerCase().includes("bank") || 
+           account.name.toLowerCase().includes("cash") ||
+           account.name.toLowerCase().includes("checking") ||
+           account.name.toLowerCase().includes("savings") ||
+           account.name.toLowerCase().includes("bkash"))
+        );
+      }
       
       // Find the "Cash and Bank" category
-      const cashAndBankCategory = categories.find(cat => 
-        cat.name.toLowerCase().includes("cash") && cat.name.toLowerCase().includes("bank")
+      const cashAndBankCategory = categories.find((cat: any) => 
+        cat.name && cat.name.toLowerCase().includes("cash") && cat.name.toLowerCase().includes("bank")
       );
       
       if (!cashAndBankCategory) {
@@ -2492,20 +2503,13 @@ export default function PurchaseBillFormSplit({
                             {accountsLoading ? (
                               <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
                             ) : accounts && accounts.length > 0 ? (
-                              accounts
-                                .filter(account => {
-                                  // Get account categories to filter by Cash and Bank
-                                  const categories = accountCategories || [];
-                                  const accountCategory = categories.find(cat => cat.id === account.categoryId);
-                                  return accountCategory?.name === "Cash and Bank";
-                                })
-                                .map((account) => (
-                                  <SelectItem key={account.id} value={account.id.toString()}>
-                                    {account.name} - {formatCurrency((account.currentBalance || 0) / 100)}
-                                  </SelectItem>
-                                ))
+                              accounts.map((account) => (
+                                <SelectItem key={account.id} value={account.id.toString()}>
+                                  {account.name} - {formatCurrency((account.currentBalance || 0) / 100)}
+                                </SelectItem>
+                              ))
                             ) : (
-                              <SelectItem value="none" disabled>No Cash and Bank accounts found</SelectItem>
+                              <SelectItem value="none" disabled>No accounts found</SelectItem>
                             )}
                           </SelectContent>
                         </Select>
