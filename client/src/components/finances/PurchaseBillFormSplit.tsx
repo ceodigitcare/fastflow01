@@ -1580,8 +1580,8 @@ export default function PurchaseBillFormSplit({
     
     // Validate account balance before submission
     const selectedAccount = accounts?.find(acc => acc.id === data.accountId);
-    const accountBalance = (selectedAccount?.currentBalance || 0) / 100;
-    const paymentAmount = data.paymentMade || 0;
+    const accountBalance = normalizeCurrency(selectedAccount?.currentBalance || 0);
+    const paymentAmount = normalizeCurrency(data.paymentMade || 0);
     
     if (selectedAccount && paymentAmount > accountBalance) {
       toast({
@@ -1592,10 +1592,9 @@ export default function PurchaseBillFormSplit({
       return; // Prevent form submission
     }
     
-    // Convert form values to the correct format for storage
-    // Always multiply money values by 100 to store as cents in the database
-    const totalDiscountValue = Number(data.totalDiscount || 0) * 100;
-    const paymentMadeValue = Number(data.paymentMade || 0) * 100;
+    // Ensure proper decimal precision for storage - values are stored as dollars, not cents
+    const totalDiscountValue = normalizeCurrency(data.totalDiscount || 0);
+    const paymentMadeValue = normalizeCurrency(data.paymentMade || 0);
     
     // Log what we're saving
     console.log("Saving bill with data:", {
@@ -1606,8 +1605,7 @@ export default function PurchaseBillFormSplit({
     
     // COMPLETELY SIMPLIFIED: Process items with a clean, reliable approach
     const processedItems = billItems.map(item => {
-      // Check if the unitPrice is already in cents or dollars for conversion
-      const isUnitPriceInCents = Number(item.unitPrice) > 100;
+      // Currency values are consistently stored as dollars with 2 decimal precision
       
       // Get the most up-to-date form values first
       const formItems = form.getValues('items') || [];
@@ -1674,8 +1672,8 @@ export default function PurchaseBillFormSplit({
         quantity: Number(item.quantity || 0),
         // CRITICAL FIELD: Always use a specific numeric value with explicit conversion
         quantityReceived: Number(qtySourceTracker.finalValue),
-        unitPrice: Number(item.unitPrice || 0),
-        amount: Number(item.amount || 0),
+        unitPrice: normalizeCurrency(item.unitPrice || 0),
+        amount: normalizeCurrency(item.amount || 0),
         taxRate: Number(item.taxRate || 0),
         discount: Number(item.discount || 0),
         taxType: String(item.taxType || "flat"),
