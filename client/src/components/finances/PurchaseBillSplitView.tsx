@@ -20,7 +20,6 @@ import {
   Edit,
   History
 } from "lucide-react";
-import { calculateTransactionStatus, statusLabels, statusColors } from "@/lib/bill-status-calculator";
 import PurchaseBillFormSplit from "./PurchaseBillFormSplit";
 import TransactionVersionHistory from "./TransactionVersionHistory";
 import { useToast } from "@/hooks/use-toast";
@@ -120,22 +119,42 @@ export default function PurchaseBillSplitView({
     }
   };
   
-
-
-  // UNIFIED STATUS SYSTEM - Single source of truth for all modes
-  const renderStatusBadge = (bill: Transaction) => {
-    // Calculate fresh status from live bill data - never use cached bill.status
-    const calculatedStatus = calculateTransactionStatus(bill);
+  // Get status badge
+  const getStatusBadge = (status: string | null) => {
+    if (!status) return null;
     
-    // Get human-readable label and styling
-    const label = statusLabels[calculatedStatus];
-    const colorClass = statusColors[calculatedStatus];
-    
-    return {
-      label,
-      colorClass,
-      status: calculatedStatus
-    };
+    switch(status) {
+      case "draft":
+        return (
+          <div className="flex items-center text-gray-500">
+            <Clock className="w-3 h-3 mr-1" />
+            <span className="text-xs">Draft</span>
+          </div>
+        );
+      case "received":
+        return (
+          <div className="flex items-center text-blue-500">
+            <MessageCircle className="w-3 h-3 mr-1" />
+            <span className="text-xs">Received</span>
+          </div>
+        );
+      case "paid":
+        return (
+          <div className="flex items-center text-green-500">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            <span className="text-xs">Paid</span>
+          </div>
+        );
+      case "overdue":
+        return (
+          <div className="flex items-center text-red-500">
+            <AlertTriangle className="w-3 h-3 mr-1" />
+            <span className="text-xs">Overdue</span>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
   
   return (
@@ -432,17 +451,7 @@ export default function PurchaseBillSplitView({
               </div>
               <div>
                 <p className="text-sm text-gray-500">Status</p>
-                <div className="font-medium">
-                  {(() => {
-                    // Use unified status calculation for consistent results
-                    const badge = renderStatusBadge(selectedBill);
-                    return (
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
-                        {badge.label}
-                      </span>
-                    );
-                  })()}
-                </div>
+                <div className="font-medium">{getStatusBadge(selectedBill.status)}</div>
               </div>
             </div>
             
@@ -899,17 +908,9 @@ export default function PurchaseBillSplitView({
                       <p className="font-medium">{bill.documentNumber}</p>
                       <p className="text-sm text-gray-500">{bill.contactName}</p>
                     </div>
-                    <div className="text-right space-y-1">
+                    <div className="text-right">
                       <p className="font-medium">{formatCurrency(bill.amount / 100)}</p>
-                      {(() => {
-                        // Use unified status calculation for consistent results
-                        const badge = renderStatusBadge(bill);
-                        return (
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${badge.colorClass}`}>
-                            {badge.label}
-                          </span>
-                        );
-                      })()}
+                      {getStatusBadge(bill.status)}
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">

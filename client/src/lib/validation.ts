@@ -153,18 +153,7 @@ export const purchaseBillSchema = z.object({
   billDate: z.date(),
   dueDate: z.date(),
   // Status is now calculated automatically, but we keep it for compatibility
-  status: z.enum([
-    "draft", 
-    "cancelled", 
-    "paid", 
-    "partial_paid", 
-    "received", 
-    "partial_received",
-    "paid_received",
-    "paid_partial_received", 
-    "partial_paid_received",
-    "partial_paid_partial_received"
-  ]).optional().default("draft"),
+  status: z.enum(["draft", "cancelled", "paid", "partial_paid", "received", "partial_received"]).optional().default("draft"),
   items: z.array(purchaseBillItemSchema).min(1, "At least one item is required"),
   subtotal: z.number().min(0, "Subtotal cannot be negative"),
   taxAmount: z.number().default(0),
@@ -212,20 +201,12 @@ export function calculatePurchaseBillStatus(
   const isPartiallyPaid = paymentMade > 0 && paymentMade < totalAmount;
   const isNotPaid = paymentMade === 0;
 
-  // Calculate receipt status - Fixed logic for proper "Received" vs "Partial Received"
+  // Calculate receipt status
   const totalQuantityOrdered = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalQuantityReceived = items.reduce((sum, item) => sum + (item.quantityReceived || 0), 0);
   
-  // Check if ALL items are fully received (each item's received quantity equals ordered quantity)
-  const allItemsFullyReceived = items.length > 0 && items.every(item => 
-    (item.quantityReceived || 0) >= item.quantity
-  );
-  
-  // Check if some items have partial receipt
-  const someItemsReceived = items.some(item => (item.quantityReceived || 0) > 0);
-  
-  const isFullyReceived = allItemsFullyReceived && totalQuantityOrdered > 0;
-  const isPartiallyReceived = someItemsReceived && !allItemsFullyReceived;
+  const isFullyReceived = totalQuantityReceived >= totalQuantityOrdered && totalQuantityOrdered > 0;
+  const isPartiallyReceived = totalQuantityReceived > 0 && totalQuantityReceived < totalQuantityOrdered;
   const isNotReceived = totalQuantityReceived === 0;
 
   // If no payment and no receipt, it's draft

@@ -5,11 +5,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Transaction, Account, Product, InsertUser, User } from "@shared/schema";
 import { purchaseBillSchema, PurchaseBill, PurchaseBillItem } from "@/lib/validation";
-import { calculateTransactionStatus, statusLabels, statusColors } from "@/lib/bill-status-calculator";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar as CalendarIcon, X, Plus, Save, XCircle } from "lucide-react";
+import { Calendar as CalendarIcon, X, Plus, Save } from "lucide-react";
 import VendorModal from "./VendorModal";
 import {
   Dialog,
@@ -72,22 +71,6 @@ export default function PurchaseBillFormSplit({
   editingBill = null 
 }: PurchaseBillFormSplitProps) {
   const { toast } = useToast();
-  
-  // UNIFIED STATUS SYSTEM - Same function used across all modes
-  const renderStatusBadge = (transaction: Transaction) => {
-    // Calculate fresh status from live transaction data
-    const calculatedStatus = calculateTransactionStatus(transaction);
-    
-    // Get human-readable label and styling
-    const label = statusLabels[calculatedStatus];
-    const colorClass = statusColors[calculatedStatus];
-    
-    return {
-      label,
-      colorClass,
-      status: calculatedStatus
-    };
-  };
   
   // Local state for line items and dialogs
   // Initialize bill items with a function to properly handle complex logic
@@ -245,9 +228,6 @@ export default function PurchaseBillFormSplit({
     return [];
   });
   const [addVendorDialogOpen, setAddVendorDialogOpen] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [isCancelled, setIsCancelled] = useState(editingBill?.status === "cancelled" || false);
-  const [cancelReason, setCancelReason] = useState("");
   
   // Get vendors (users of type "vendor")
   const { data: vendors, isLoading: vendorsLoading } = useQuery<User[]>({
@@ -1537,53 +1517,7 @@ export default function PurchaseBillFormSplit({
     }
   }, [editingBill, vendors]);
   
-  // Cancel bill handler
-  const handleCancelBill = () => {
-    if (isCancelled) return; // Already cancelled
-    setShowCancelDialog(true);
-  };
-
-  const confirmCancelBill = async () => {
-    if (!cancelReason.trim()) {
-      toast({
-        title: "Reason Required",
-        description: "Please provide a reason for cancelling this bill.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      if (editingBill?.id) {
-        await apiRequest("PATCH", `/api/transactions/${editingBill.id}`, {
-          status: "cancelled",
-          notes: (editingBill.notes || "") + `\n\nCANCELLED: ${cancelReason}` 
-        });
-        
-        queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
-      }
-      
-      setIsCancelled(true);
-      setShowCancelDialog(false);
-      setCancelReason("");
-      
-      toast({
-        title: "Bill Cancelled",
-        description: "This purchase bill has been successfully cancelled.",
-        variant: "destructive"
-      });
-      
-      onCancel(); // Close the form
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to cancel bill. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Form submission handler with automated status calculation
+  // Form submission handler
   const onSubmit = (data: PurchaseBill) => {
     if (billItems.length === 0) {
       toast({
@@ -1599,22 +1533,11 @@ export default function PurchaseBillFormSplit({
     const totalDiscountValue = Number(data.totalDiscount || 0) * 100;
     const paymentMadeValue = Number(data.paymentMade || 0) * 100;
     
-    // Calculate automated status using unified system
-    const transactionData = {
-      amount: data.totalAmount * 100, // Convert to cents
-      paymentMade: paymentMadeValue, // Already in cents
-      items: billItems,
-      status: isCancelled ? "cancelled" : "draft"
-    } as Transaction;
-    
-    const calculatedStatus = calculateTransactionStatus(transactionData);
-    
     // Log what we're saving
     console.log("Saving bill with data:", {
       totalDiscount: totalDiscountValue,
       totalDiscountType: data.totalDiscountType,
-      dueDate: data.dueDate,
-      calculatedStatus: calculatedStatus
+      dueDate: data.dueDate
     });
     
     // COMPLETELY SIMPLIFIED: Process items with a clean, reliable approach
@@ -1757,7 +1680,7 @@ export default function PurchaseBillFormSplit({
       },
       // Calculate the total amount correctly
       amount: processedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
-      status: calculatedStatus, // Use automatically calculated status
+      status: data.status || "draft",
       paymentReceived: paymentMadeValue,
       type: "purchase",
       category: "Bills"
@@ -1975,34 +1898,30 @@ export default function PurchaseBillFormSplit({
               )}
             />
             
-            {/* Automated Status Display */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Status</label>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                <div>
-                  {(() => {
-                    // Use unified status calculation for consistent results
-                    if (editingBill) {
-                      const badge = renderStatusBadge(editingBill);
-                      return (
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${badge.colorClass}`}>
-                          {badge.label}
-                        </span>
-                      );
-                    }
-                    
-                    // For new bills, show draft status
-                    return (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border bg-gray-50 text-gray-600 border-gray-200">
-                        Draft
-                      </span>
-                    );
-                  })()}
-                  <p className="text-xs text-gray-500 mt-1">Status updates automatically based on payments and receipts</p>
-                </div>
-
-              </div>
-            </div>
+            {/* Status */}
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
           
           {/* Line Items */}
@@ -2511,59 +2430,20 @@ export default function PurchaseBillFormSplit({
             )}
           />
           
-
-
           {/* Form Actions */}
           <div className="flex justify-end space-x-2 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onCancel}>
-              Close
+              Cancel
             </Button>
             <Button 
               type="submit" 
-              disabled={saveBillMutation.isPending || isCancelled}
+              disabled={saveBillMutation.isPending}
             >
               {saveBillMutation.isPending ? "Saving..." : "Save Purchase Bill"}
             </Button>
           </div>
         </form>
       </Form>
-
-      {/* Cancel Bill Confirmation Dialog */}
-      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancel Purchase Bill</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this bill? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="cancelReason" className="text-sm font-medium">
-                Reason for Cancellation <span className="text-red-500">*</span>
-              </label>
-              <Textarea
-                id="cancelReason"
-                placeholder="Please provide a reason for cancelling this bill..."
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                className="min-h-[80px]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowCancelDialog(false);
-              setCancelReason("");
-            }}>
-              Keep Bill
-            </Button>
-            <Button variant="destructive" onClick={confirmCancelBill}>
-              Cancel Bill
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
