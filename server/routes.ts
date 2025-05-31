@@ -836,8 +836,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Transaction data received:", JSON.stringify(req.body, null, 2));
       
       try {
-        const transactionData = insertTransactionSchema.parse({
+        // Ensure proper decimal precision for all monetary fields
+        const bodyData = {
           ...req.body,
+          amount: req.body.amount ? Number(Number(req.body.amount).toFixed(2)) : 0,
+          paymentReceived: req.body.paymentReceived ? Number(Number(req.body.paymentReceived).toFixed(2)) : 0,
+        };
+        
+        const transactionData = insertTransactionSchema.parse({
+          ...bodyData,
           businessId,
         });
         console.log("Parsed transaction data:", JSON.stringify(transactionData, null, 2));
@@ -902,9 +909,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...transactionData,
         businessId,
         id: transactionId,
-        // Add any other required default values
-        paymentReceived: transactionData.paymentReceived !== undefined ? Number(transactionData.paymentReceived) : 0,
-        amount: Number(transactionData.amount),
+        // Add any other required default values with proper decimal precision
+        paymentReceived: transactionData.paymentReceived !== undefined ? Number(Number(transactionData.paymentReceived).toFixed(2)) : 0,
+        amount: Number(Number(transactionData.amount).toFixed(2)),
         // Add the authenticated user ID for proper version history attribution
         updatedBy: req.user.id
       };

@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrencyDisplay, normalizeCurrency } from "@/lib/currency-utils";
 import {
   Card,
   CardContent,
@@ -268,7 +268,7 @@ export default function AccountsPanel() {
                 <div className="text-sm font-medium text-gray-500">Total Assets</div>
                 <CircleDollarSign className="h-4 w-4 text-green-600" />
               </div>
-              <div className="text-2xl font-bold mt-2">{formatCurrency(totals.assets)}</div>
+              <div className="text-2xl font-bold mt-2">{formatCurrencyDisplay(totals.assets)}</div>
             </CardContent>
           </Card>
           <Card>

@@ -1,0 +1,126 @@
+🎯 OBJECTIVE:
+Fix critical calculation inconsistencies, standardize decimal precision to 2 digits, and refine UI/UX for a financial-accounting-focused application—particularly in the Purchase Bill module.
+
+---
+
+### 🚨 CRITICAL ISSUES TO FIX:
+
+1. **Inconsistent Account Balance Display:**
+   - An account named “DBMB” was created under the **Cash & Bank** category with an initial balance of **$120.00**.
+   - However:
+     - On the **Accounts Page**, it shows as **$1200.00**
+     - On the **Purchase Bill (Pay From Account)** dropdown, it shows as **$12.00**
+   - This indicates major inconsistencies likely due to incorrect **currency unit conversion (cents vs dollars)** or improper parsing.
+   - 🛠️ Fix: Ensure all balances use **a consistent unit (USD)** throughout all pages, and convert only when needed (e.g., storing in cents, displaying in dollars).
+
+2. **Incorrect Precision in 'Make Full Payment':**
+   - When clicking “Make Full Payment”:
+     - If Total = `$305.31`, the Payment Made field shows `305.30609`
+     - This precision mismatch causes inaccurate payment status (e.g., “Paid” when it should be partial)
+   - ✅ Required Fix:
+     - All financial figures must display and operate on **two decimal places only**.
+     - Never show or store fractional values beyond `.00`–`.99`.
+
+   ```js
+   // Example enforcement (for all monetary outputs)
+   const formattedAmount = parseFloat(amount).toFixed(2);
+
+PURCHASE BILL UI/UX IMPROVEMENTS:
+Simplify Top Section of Purchase Bill Editor:
+
+
+Remove the top "Pay From Account" section — it’s already available in the lower payment section.
+
+
+Move Bill Number next to the Vendor field (same row).
+
+
+Place Bill Date and Due Date side by side in the second row.
+
+
+The current third row (status) can be removed, since the status is already shown above the form.
+
+
+The “Add More Payment” button is not needed — remove it.
+
+
+Standardize Status Placement:
+
+
+Status should appear only once, ideally above the main form.
+
+
+Ensure it does not duplicate in multiple places (especially in edit mode).
+
+
+Payment Account Dropdown:
+
+
+The “Pay From Account” dropdown should list all accounts under the Cash & Bank category.
+
+
+Each entry should display the account name along with its current runtime balance, formatted like:
+
+
+DBMB — $120.00
+bKash — $97.50
+Premium Bank — $560.32
+
+
+Runtime Balance Accuracy:
+
+
+Balances shown next to accounts must reflect real-time data from:
+
+
+Initial Balance
+
+
+Purchase Bills
+
+
+Sales Invoices
+
+
+Expense & Income Vouchers
+
+
+Runtime balance should be used to:
+
+
+Validate sufficient funds before allowing a payment
+
+
+Show live balance to users for decision making
+
+
+
+📌 GENERAL FINANCIAL LOGIC & DATA HYGIENE:
+Decimal Handling Across Entire System:
+
+
+All amount fields (Total, Payment Made, Discounts, Balances, etc.) must:
+
+
+Accept and display up to two decimal digits only
+
+
+Reject or round excess digits properly
+
+
+Critical for financial accuracy and user trust
+
+
+
+
+🏁 FINAL NOTES:
+This is a precision-sensitive, financial-grade application — accounting logic must be mathematically flawless.
+
+
+Refrain from unnecessary UX changes unless functionally justified.
+
+
+Ensure full validation, consistent formatting, and no rounding errors.
+
+
+All modules must reflect synchronized and trustworthy figures to avoid user confusion or data mismatch.
