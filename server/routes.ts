@@ -22,6 +22,7 @@ import {
 } from "@shared/schema";
 import { chatbotRouter } from "./chatbot";
 import { setupAuth } from "./auth";
+import { updateAccountBalance, getAccountsWithBalances, syncAllAccountBalances } from "./account-balance-sync";
 
 // Setup PostgreSQL session store
 const PgSessionStore = connectPg(session);
@@ -699,7 +700,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/accounts", requireAuth, async (req, res) => {
     try {
       const businessId = getBusinessId(req);
-      const accounts = await storage.getAccountsByBusiness(businessId);
+      // Use the real-time balance calculation system
+      const accounts = await getAccountsWithBalances(businessId);
       res.json(accounts);
     } catch (error) {
       console.error("Error fetching accounts:", error);
@@ -717,6 +719,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const account = await storage.createAccount(accountData);
+      
+      // Immediately sync the account balance after creation
+      await updateAccountBalance(account.id, businessId);
+      
       res.status(201).json(account);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -748,6 +754,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedAccount = await storage.updateAccount(accountId, req.body);
+      
+      // Sync account balance after update (especially important for initial balance changes)
+      await updateAccountBalance(accountId, businessId);
+      
       res.json(updatedAccount);
     } catch (error) {
       console.error("Error updating account:", error);
@@ -821,6 +831,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Parsed transaction data:", JSON.stringify(transactionData, null, 2));
         
         const transaction = await storage.createTransaction(transactionData);
+        
+        // Automatically sync account balance after transaction creation
+        if (transaction.accountId) {
+          await updateAccountBalance(transaction.accountId, businessId);
+        }
+        
         res.status(201).json(transaction);
       } catch (parseError) {
         console.error("Schema validation error:", parseError);
@@ -886,6 +902,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedTransaction = await storage.updateTransaction(parsedData);
       
       if (updatedTransaction) {
+        // Sync account balance after transaction update
+        if (updatedTransaction.accountId) {
+          await updateAccountBalance(updatedTransaction.accountId, businessId);
+        }
+        // Also sync the previous account if it was changed
+        if (existingTransaction.accountId !== updatedTransaction.accountId) {
+          await updateAccountBalance(existingTransaction.accountId, businessId);
+        }
+        
         res.status(200).json(updatedTransaction);
       } else {
         res.status(500).json({ message: "Failed to update transaction" });

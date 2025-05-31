@@ -1,0 +1,54 @@
+🎯 OBJECTIVE:
+Ensure that account balances are always synchronized and updated in real-time across the system, including purchases, sales, vouchers, and initial balance updates. This is essential for accurate financial tracking and enabling intelligent payment UX in other modules (e.g., Purchase Bill).
+
+---
+
+### 🧮 PROBLEM:
+Currently, when a user sets or updates the **Initial Balance** of an account, the updated value is **not reflected immediately** in the live account balance. Similarly, transactions like:
+
+- **Purchase Bills**
+- **Sales Invoices**
+- **Expense Vouchers**
+- **Income Vouchers**
+
+...do not dynamically update the associated account balances after submission.
+
+As a result:
+- Runtime balance is inaccurate
+- Users cannot rely on account balance data when making payments (e.g., in Purchase Bills)
+- Financial inconsistency risk across modules
+
+---
+
+### ✅ REQUIRED FIX:
+
+Implement a **real-time account balance synchronization system**, where:
+
+1. **All accounts (especially under Cash and Bank category)** maintain a live balance.
+2. Balance should auto-update when any of the following events occur:
+   - Initial Balance is added or modified
+   - Payment is made from the account (e.g., via Purchase Bill or Expense)
+   - Income is received into the account (e.g., via Sales Invoice or Income Voucher)
+3. The system should calculate current account balance using:
+Account Balance = Initial Balance
++ All Incoming Transactions
+- All Outgoing Transactions
+4. Balance calculation should be **transaction-aware and date-sensitive** if applicable.
+5. Ensure **runtime balance data is immediately available** in:
+- Account Listing / Ledger
+- Account Dropdowns (e.g., “Pay From Account” in Purchase Bill)
+- Reports or any module where account balance is required
+
+---
+
+### ⚙️ TECHNICAL NOTES:
+- Avoid using static balance fields. Instead, balance should be derived from a centralized transaction ledger or dynamic calculation logic.
+- Ensure consistent behavior across all views (Create, Edit, View, List).
+- Optimize for performance so that balance retrieval does not slow down page loads.
+
+---
+
+✅ **Final Outcome**:
+- Users can trust the balance they see at any moment
+- Enables features like balance validation during payment
+- Supports accurate financial workflows across modules
