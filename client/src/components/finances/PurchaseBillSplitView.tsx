@@ -139,42 +139,35 @@ export default function PurchaseBillSplitView({
     }
   };
   
-  // Get status badge
-  const getStatusBadge = (status: string | null) => {
-    if (!status) return null;
+  // Calculate automated status for a bill
+  const calculateBillStatus = (bill: Transaction) => {
+    if (!bill || !Array.isArray(bill.items)) return "draft";
     
-    switch(status) {
-      case "draft":
-        return (
-          <div className="flex items-center text-gray-500">
-            <Clock className="w-3 h-3 mr-1" />
-            <span className="text-xs">Draft</span>
-          </div>
-        );
-      case "received":
-        return (
-          <div className="flex items-center text-blue-500">
-            <MessageCircle className="w-3 h-3 mr-1" />
-            <span className="text-xs">Received</span>
-          </div>
-        );
-      case "paid":
-        return (
-          <div className="flex items-center text-green-500">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            <span className="text-xs">Paid</span>
-          </div>
-        );
-      case "overdue":
-        return (
-          <div className="flex items-center text-red-500">
-            <AlertTriangle className="w-3 h-3 mr-1" />
-            <span className="text-xs">Overdue</span>
-          </div>
-        );
-      default:
-        return null;
-    }
+    const totalAmount = (bill.amount || 0) / 100; // Convert from cents to dollars
+    const paymentReceived = (bill.paymentReceived || 0) / 100; // Convert from cents to dollars
+    
+    const items = bill.items.map((item: any) => ({
+      quantity: item.quantity || 0,
+      quantityReceived: item.quantityReceived || 0
+    }));
+
+    return calculatePurchaseBillStatus({
+      totalAmount,
+      paymentReceived,
+      items
+    });
+  };
+
+  // Get automated status badge (no icons as per requirement)
+  const getAutomatedStatusBadge = (bill: Transaction) => {
+    const status = calculateBillStatus(bill);
+    const { colorClass, label } = renderStatusBadge(status);
+    
+    return (
+      <div className={`px-2 py-1 text-xs font-medium border rounded-full ${colorClass}`}>
+        {label}
+      </div>
+    );
   };
   
   return (
@@ -471,7 +464,7 @@ export default function PurchaseBillSplitView({
               </div>
               <div>
                 <p className="text-sm text-gray-500">Status</p>
-                <div className="font-medium">{getStatusBadge(selectedBill.status)}</div>
+                <div className="font-medium">{getAutomatedStatusBadge(selectedBill)}</div>
               </div>
             </div>
             
@@ -930,7 +923,7 @@ export default function PurchaseBillSplitView({
                     </div>
                     <div className="text-right">
                       <p className="font-medium">{formatCurrency(bill.amount / 100)}</p>
-                      {getStatusBadge(bill.status)}
+                      {getAutomatedStatusBadge(bill)}
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">

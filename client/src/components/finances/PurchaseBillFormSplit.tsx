@@ -973,7 +973,7 @@ export default function PurchaseBillFormSplit({
         category: "Purchases",
         documentType: "bill",
         documentNumber: data.billNumber,
-        status: data.status || "draft", // Ensure status is provided (and make optional per request)
+        status: getCurrentBillStatus(), // Automatically calculate status based on payment and receipt data
         contactId: data.vendorId, // Add contactId for the vendor relationship
         contactName: vendor?.name || "",
         contactEmail: vendor?.email || "",
