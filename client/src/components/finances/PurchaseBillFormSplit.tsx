@@ -1567,6 +1567,20 @@ export default function PurchaseBillFormSplit({
       return;
     }
     
+    // Validate account balance before submission
+    const selectedAccount = accounts?.find(acc => acc.id === data.accountId);
+    const accountBalance = (selectedAccount?.currentBalance || 0) / 100;
+    const paymentAmount = data.paymentMade || 0;
+    
+    if (selectedAccount && paymentAmount > accountBalance) {
+      toast({
+        title: "Payment Error",
+        description: `Payment amount (${formatCurrency(paymentAmount)}) exceeds available account balance (${formatCurrency(accountBalance)})`,
+        variant: "destructive",
+      });
+      return; // Prevent form submission
+    }
+    
     // Convert form values to the correct format for storage
     // Always multiply money values by 100 to store as cents in the database
     const totalDiscountValue = Number(data.totalDiscount || 0) * 100;
