@@ -1339,12 +1339,12 @@ export default function PurchaseBillFormSplit({
       // Get total discount - check both metadata and direct properties with proper fallbacks
       let totalDiscount = 0;
       if (editingBill.metadata?.totalDiscount !== undefined) {
-        // If in metadata (preferred), convert from cents to dollars
-        totalDiscount = Number(editingBill.metadata.totalDiscount) / 100;
+        // Values are stored as dollars, not cents - use normalization for consistent precision
+        totalDiscount = normalizeCurrency(editingBill.metadata.totalDiscount);
         console.log("Using totalDiscount from metadata:", totalDiscount);
       } else if (editingBill.totalDiscount !== undefined) {
         // Fallback to direct property if available
-        totalDiscount = Number(editingBill.totalDiscount) / 100;
+        totalDiscount = normalizeCurrency(editingBill.totalDiscount);
         console.log("Using totalDiscount from direct property:", totalDiscount);
       }
       
@@ -2454,7 +2454,7 @@ export default function PurchaseBillFormSplit({
                 {/* Previously Paid Amount (for edit mode) */}
                 {editingBill && editingBill.paymentReceived && editingBill.paymentReceived > 0 && (
                   <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
-                    <span className="text-sm text-blue-700">Previously Paid: {formatCurrencyDisplay((editingBill.paymentReceived || 0) / 100)}</span>
+                    <span className="text-sm text-blue-700">Previously Paid: {formatCurrencyDisplay(normalizeCurrency(editingBill.paymentReceived || 0))}</span>
                   </div>
                 )}
                 
@@ -2559,7 +2559,7 @@ export default function PurchaseBillFormSplit({
                   const selectedAccountId = form.watch('accountId');
                   const paymentAmount = form.watch('paymentMade') || 0;
                   const selectedAccount = accounts?.find(acc => acc.id === selectedAccountId);
-                  const accountBalance = (selectedAccount?.currentBalance || 0) / 100;
+                  const accountBalance = normalizeCurrency(selectedAccount?.currentBalance || 0);
                   
                   if (selectedAccount && paymentAmount > accountBalance) {
                     return (
