@@ -853,8 +853,8 @@ export default function PurchaseBillFormSplit({
         taxAmount = item.taxRate;
       }
       
-      // Round to 2 decimal places to avoid floating point issues
-      const finalAmount = Math.round((subtotal - discountAmount + taxAmount) * 100) / 100;
+      // Use currency utilities to ensure consistent 2-decimal precision
+      const finalAmount = normalizeCurrency(subtotal - discountAmount + taxAmount);
       
       return {
         ...item,
@@ -896,10 +896,10 @@ export default function PurchaseBillFormSplit({
       }
     }, 0);
     
-    // Round all totals to 2 decimal places to avoid floating point issues
-    const roundedSubtotal = Math.round(subtotal * 100) / 100;
-    const roundedTaxAmount = Math.round(taxAmount * 100) / 100;
-    const roundedDiscountAmount = Math.round(discountAmount * 100) / 100;
+    // Use currency utilities to ensure consistent 2-decimal precision
+    const roundedSubtotal = normalizeCurrency(subtotal);
+    const roundedTaxAmount = normalizeCurrency(taxAmount);
+    const roundedDiscountAmount = normalizeCurrency(discountAmount);
     
     // Set the form values with updated calculations for line items
     form.setValue('items', recalculatedItems);
@@ -924,10 +924,10 @@ export default function PurchaseBillFormSplit({
     
     if (totalDiscountType === 'percentage') {
       // Calculate percentage discount based on the subtotal after item discounts and taxes
-      return (baseAmount * totalDiscount / 100);
+      return normalizeCurrency(baseAmount * totalDiscount / 100);
     } else {
       // For flat amount, just return the value (capped at the baseAmount to prevent negative totals)
-      return Math.min(totalDiscount, baseAmount);
+      return normalizeCurrency(Math.min(totalDiscount, baseAmount));
     }
   };
   
@@ -943,8 +943,8 @@ export default function PurchaseBillFormSplit({
     // Calculate the final total = subtotal - item discounts + tax - total discount
     const finalTotal = Math.max(0, subtotal - itemDiscountAmount + taxAmount - totalDiscountAmount);
     
-    // Round to 2 decimal places
-    const roundedFinalTotal = Math.round(finalTotal * 100) / 100;
+    // Use currency utilities to ensure consistent 2-decimal precision
+    const roundedFinalTotal = normalizeCurrency(finalTotal);
     
     // Update the form value
     form.setValue('totalAmount', roundedFinalTotal);
