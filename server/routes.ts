@@ -18,6 +18,7 @@ import {
   insertTransferSchema,
   insertUserSchema,
   loginHistoryEntrySchema,
+  insertPwaConfigurationSchema,
   Business
 } from "@shared/schema";
 import { chatbotRouter } from "./chatbot";
@@ -1545,6 +1546,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating version importance:", error);
       res.status(500).json({ message: "Failed to update version importance" });
+    }
+  });
+
+  // PWA Configuration routes
+  app.get("/api/pwa-config", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const config = await storage.getPwaConfiguration(businessId);
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching PWA configuration:", error);
+      res.status(500).json({ message: "Failed to fetch PWA configuration" });
+    }
+  });
+
+  app.post("/api/pwa-config", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const configData = insertPwaConfigurationSchema.parse({
+        ...req.body,
+        businessId,
+      });
+      
+      const config = await storage.createOrUpdatePwaConfiguration(configData);
+      res.status(201).json(config);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        console.error("Error creating/updating PWA configuration:", error);
+        res.status(500).json({ message: "Failed to create/update PWA configuration" });
+      }
+    }
+  });
+
+  // Generate manifest.json dynamically
+  app.get("/manifest.json", async (req, res) => {
+    try {
+      // For demo purposes, we'll use business ID 1. In production, this could be determined by domain or other means
+      const businessId = 1;
+      const config = await storage.getPwaConfiguration(businessId);
+      
+      if (!config) {
+        // Default manifest if no configuration exists
+        const defaultManifest = {
+          name: "Business App",
+          short_name: "Business",
+          start_url: "/",
+          display: "standalone",
+          background_color: "#ffffff",
+          theme_color: "#000000",
+          icons: [
+            {
+              src: "/icon-192x192.png",
+              sizes: "192x192",
+              type: "image/png"
+            },
+            {
+              src: "/icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png"
+            }
+          ]
+        };
+        return res.json(defaultManifest);
+      }
+
+      const manifest = {
+        name: config.appName,
+        short_name: config.shortName,
+        start_url: "/",
+        display: "standalone",
+        background_color: config.backgroundColor,
+        theme_color: config.themeColor,
+        icons: [
+          {
+            src: config.appIconUrl || "/icon-192x192.png",
+            sizes: "192x192",
+            type: "image/png"
+          },
+          {
+            src: config.appIconUrl || "/icon-512x512.png",
+            sizes: "512x512",
+            type: "image/png"
+          }
+        ]
+      };
+
+      res.setHeader('Content-Type', 'application/json');
+      res.json(manifest);
+    } catch (error) {
+      console.error("Error generating manifest:", error);
+      res.status(500).json({ message: "Failed to generate manifest" });
     }
   });
 

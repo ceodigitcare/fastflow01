@@ -1,0 +1,71 @@
+🎯 OBJECTIVE:
+Implement full **Progressive Web App (PWA)** support from the settings panel — specifically inside the existing **“Profile”** section. The goal is to allow the application to be installable from the browser and customize key PWA configurations through user input.
+
+
+### 🔧 1. ADD A NEW SECTION INSIDE "PROFILE" CALLED `PWA CONFIGURATION`
+
+Under the "Profile" or "Settings" module, create a dedicated expandable section titled:
+> **PWA Configuration**
+
+Inside this section, add the following input fields to collect PWA-related metadata from the user:
+
+| Field Name        | Type     | Notes                                                                 |
+|------------------|----------|-----------------------------------------------------------------------|
+| App Name         | Text     | Full name of the app (e.g., “digitCare ERP”)                         |
+| Short Name       | Text     | Used when space is limited (e.g., mobile home screen)                |
+| Theme Color      | Color    | Used in address bar and splash screen background                     |
+| Background Color | Color    | Background color for the splash screen                               |
+| App Icon         | File     | Accept `.png`, `.jpg`, or `.svg`. Preferably square (512x512 pixels) |
+
+All fields should be editable and saved to the database or app config used to generate the `manifest.json`.
+
+---
+
+### 🗂 2. OUTPUT MANIFEST.JS FILE BASED ON USER INPUT
+
+When the user provides the above data and saves it:
+
+- Dynamically generate or update the `manifest.json` file with the user-provided information.
+- Ensure the file is accessible at:
+
+
+
+---
+
+### 💡 3. ENABLE PWA INSTALLATION ICON IN THE BROWSER
+
+Ensure full PWA compliance by doing the following:
+
+- Generate a valid `manifest.json` based on the config.
+- Register a proper `service-worker.js` file to support caching and offline behavior.
+- Make sure the application passes **Lighthouse PWA audit.**
+
+✅ **Critically Important**:  
+When a user opens the web app on a supported browser (like Chrome), the **“Install App” icon must appear in the top-right corner of the browser address bar**.
+
+---
+
+### 🧪 4. PWA TEST BEHAVIOR
+
+After implementing:
+
+- Test on both **desktop and mobile browsers**.
+- Ensure the app is installable with custom icon, name, and colors.
+- Upon installation, the app should launch as a standalone window, **not in a browser tab**.
+
+---
+
+### ⚠️ NOTES
+
+- Validate image upload for the App Icon (e.g., must be square and at least 192x192 or 512x512).
+- Theme and background color inputs must use a color picker.
+- The generated manifest must meet [Web App Manifest specs](https://developer.mozilla.org/en-US/docs/Web/Manifest).
+
+---
+
+### ✅ END GOAL
+
+Make it possible for any user to:
+- Set and customize their app's PWA branding.
+- Install the app directly from browser with correct metadata.
+- Have a fully functioning, installable Progressive Web App.
