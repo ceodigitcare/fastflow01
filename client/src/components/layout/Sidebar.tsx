@@ -102,7 +102,6 @@ export default function Sidebar({ isOpen, onClose, user }: SidebarProps) {
       submenu: financesSubmenu
     },
     { path: "/settings", label: "Settings", icon: <Settings className="w-5 h-5" /> },
-    { path: "/profile", label: "Profile", icon: <User className="w-5 h-5" /> },
   ];
   
   const supportItems = [

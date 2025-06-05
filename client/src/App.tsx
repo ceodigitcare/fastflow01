@@ -15,7 +15,7 @@ import Products from "@/pages/Products";
 import Finances from "@/pages/Finances";
 import PurchaseBill from "@/pages/PurchaseBill";
 import Settings from "@/pages/Settings";
-import ProfilePage from "@/pages/profile-page";
+
 import AuthPage from "@/pages/auth-page";
 import ChatWidget from "@/pages/ChatWidget";
 import NotFound from "@/pages/not-found";
@@ -42,7 +42,7 @@ function Router() {
       <ProtectedRoute path="/finances/chart-of-accounts" component={Finances} />
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/settings" component={Settings} />
-      <ProtectedRoute path="/profile" component={ProfilePage} />
+
       <ProtectedRoute path="/help" component={Help} />
       <ProtectedRoute path="/documentation" component={Documentation} />
       <ProtectedRoute path="/" component={Dashboard} />
