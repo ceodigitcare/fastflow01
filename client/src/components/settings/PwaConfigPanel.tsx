@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -7,31 +7,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Smartphone, Download, Settings, Palette, Globe, Shield } from "lucide-react";
+import { Smartphone, Upload, Palette, Type, Image } from "lucide-react";
 
 const pwaConfigSchema = z.object({
   appName: z.string().min(1, "App name is required").max(50, "App name must be less than 50 characters"),
   shortName: z.string().min(1, "Short name is required").max(12, "Short name must be less than 12 characters"),
-  description: z.string().min(1, "Description is required").max(200, "Description must be less than 200 characters"),
   themeColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Must be a valid hex color"),
   backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Must be a valid hex color"),
-  appIconUrl: z.string().url().optional().or(z.literal("")),
-  enableNotifications: z.boolean(),
-  enableOfflineMode: z.boolean(),
-  autoUpdate: z.boolean(),
+  appIconUrl: z.string().optional(),
 });
 
 type PwaConfigFormData = z.infer<typeof pwaConfigSchema>;
 
 export default function PwaConfigPanel() {
   const { toast } = useToast();
-  const [isInstallPromptVisible, setIsInstallPromptVisible] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const { data: config, isLoading } = useQuery({
     queryKey: ["/api/pwa-config"],
@@ -43,13 +36,9 @@ export default function PwaConfigPanel() {
     defaultValues: {
       appName: "Business Manager",
       shortName: "Business",
-      description: "Comprehensive business management application",
       themeColor: "#000000",
       backgroundColor: "#ffffff",
       appIconUrl: "",
-      enableNotifications: true,
-      enableOfflineMode: true,
-      autoUpdate: true,
     },
   });
 
@@ -59,20 +48,66 @@ export default function PwaConfigPanel() {
       form.reset({
         appName: config.appName || "Business Manager",
         shortName: config.shortName || "Business",
-        description: config.description || "Comprehensive business management application",
         themeColor: config.themeColor || "#000000",
         backgroundColor: config.backgroundColor || "#ffffff",
         appIconUrl: config.appIconUrl || "",
-        enableNotifications: config.enableNotifications ?? true,
-        enableOfflineMode: config.enableOfflineMode ?? true,
-        autoUpdate: config.autoUpdate ?? true,
       });
     }
   }, [config, form]);
 
+  const handleFileUpload = useCallback((file: File) => {
+    if (!file.type.match(/^image\/(png|jpg|jpeg|svg\+xml)$/)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PNG, JPG, or SVG file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload a file smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadedFile(file);
+    const fileUrl = URL.createObjectURL(file);
+    form.setValue("appIconUrl", fileUrl);
+  }, [form, toast]);
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  }, [handleFileUpload]);
+
   const saveMutation = useMutation({
     mutationFn: async (data: PwaConfigFormData) => {
-      const response = await apiRequest("POST", "/api/pwa-config", data);
+      const response = await apiRequest("POST", "/api/pwa-config", {
+        ...data,
+        description: "Comprehensive business management application",
+        enableNotifications: true,
+        enableOfflineMode: true,
+        autoUpdate: true,
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -84,44 +119,12 @@ export default function PwaConfigPanel() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to save PWA configuration",
+        title: "Save Failed",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
-
-  const handleInstallApp = async () => {
-    if ('serviceWorker' in navigator) {
-      // Check if app is already installed
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        toast({
-          title: "Already Installed",
-          description: "The app is already installed on this device.",
-        });
-        return;
-      }
-
-      // Trigger install prompt if available
-      const event = (window as any).deferredPrompt;
-      if (event) {
-        event.prompt();
-        const { outcome } = await event.userChoice;
-        if (outcome === 'accepted') {
-          toast({
-            title: "App Installed",
-            description: "The app has been installed successfully!",
-          });
-        }
-        (window as any).deferredPrompt = null;
-      } else {
-        toast({
-          title: "Manual Installation",
-          description: "Please use your browser's 'Add to Home Screen' or 'Install App' option.",
-        });
-      }
-    }
-  };
 
   const onSubmit = (data: PwaConfigFormData) => {
     saveMutation.mutate(data);
@@ -129,308 +132,220 @@ export default function PwaConfigPanel() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="space-y-4">
-            <div className="h-20 bg-gray-200 rounded"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Smartphone className="h-6 w-6" />
-          Progressive Web App Configuration
-        </h2>
-        <p className="text-muted-foreground">
-          Configure your app to work as a Progressive Web App with offline capabilities and installable features.
-        </p>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Smartphone className="h-4 w-4" />
+        <span>Configure your app for mobile installation and offline support</span>
       </div>
 
-      {/* App Status Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
-            Installation Status
-          </CardTitle>
-          <CardDescription>
-            Current PWA installation and feature status
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="font-medium">App Installation</p>
-              <p className="text-sm text-muted-foreground">
-                {window.matchMedia('(display-mode: standalone)').matches 
-                  ? "App is installed and running in standalone mode"
-                  : "App is running in browser mode"
-                }
-              </p>
-            </div>
-            <Badge variant={window.matchMedia('(display-mode: standalone)').matches ? "default" : "secondary"}>
-              {window.matchMedia('(display-mode: standalone)').matches ? "Installed" : "Not Installed"}
-            </Badge>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="font-medium">Service Worker</p>
-              <p className="text-sm text-muted-foreground">
-                {'serviceWorker' in navigator ? "Supported and available" : "Not supported in this browser"}
-              </p>
-            </div>
-            <Badge variant={'serviceWorker' in navigator ? "default" : "destructive"}>
-              {'serviceWorker' in navigator ? "Available" : "Unavailable"}
-            </Badge>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* App Name */}
+            <FormField
+              control={form.control}
+              name="appName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Type className="h-4 w-4" />
+                    App Name
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Business Manager" />
+                  </FormControl>
+                  <FormDescription>
+                    Full name shown in install popup and launcher
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Short Name */}
+            <FormField
+              control={form.control}
+              name="shortName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Type className="h-4 w-4" />
+                    Short Name
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Business" maxLength={12} />
+                  </FormControl>
+                  <FormDescription>
+                    Short identifier for compact display (max 12 characters)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Theme Color */}
+            <FormField
+              control={form.control}
+              name="themeColor"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Palette className="h-4 w-4" />
+                    Theme Color
+                  </FormLabel>
+                  <FormControl>
+                    <div className="flex gap-2">
+                      <Input 
+                        {...field} 
+                        placeholder="#000000" 
+                        className="flex-1"
+                      />
+                      <input
+                        type="color"
+                        value={field.value}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        className="w-12 h-10 border border-input rounded-md cursor-pointer"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Used in browser toolbar and splash screen
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Background Color */}
+            <FormField
+              control={form.control}
+              name="backgroundColor"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Palette className="h-4 w-4" />
+                    Background Color
+                  </FormLabel>
+                  <FormControl>
+                    <div className="flex gap-2">
+                      <Input 
+                        {...field} 
+                        placeholder="#ffffff" 
+                        className="flex-1"
+                      />
+                      <input
+                        type="color"
+                        value={field.value}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        className="w-12 h-10 border border-input rounded-md cursor-pointer"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Sets background color for splash screen
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
-          <Separator />
-          
-          <Button onClick={handleInstallApp} className="w-full" disabled={window.matchMedia('(display-mode: standalone)').matches}>
-            <Download className="h-4 w-4 mr-2" />
-            {window.matchMedia('(display-mode: standalone)').matches ? "Already Installed" : "Install App"}
-          </Button>
-        </CardContent>
-      </Card>
+          {/* App Icon Upload */}
+          <FormField
+            control={form.control}
+            name="appIconUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Image className="h-4 w-4" />
+                  App Icon
+                </FormLabel>
+                <FormControl>
+                  <div className="space-y-4">
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                        dragActive 
+                          ? "border-primary bg-primary/5" 
+                          : "border-muted-foreground/25 hover:border-primary/50"
+                      }`}
+                      onDragEnter={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDragOver={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={() => document.getElementById('icon-upload')?.click()}
+                    >
+                      <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">
+                          {uploadedFile ? uploadedFile.name : "Drag & drop your app icon here"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Or click to browse files
+                        </p>
+                      </div>
+                      <input
+                        id="icon-upload"
+                        type="file"
+                        accept="image/png,image/jpg,image/jpeg,image/svg+xml"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file);
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Accepts .png, .jpg, .svg — Minimum size: 512x512 pixels
+                    </p>
+                    {field.value && (
+                      <div className="flex items-center gap-2 p-2 bg-muted rounded">
+                        <img 
+                          src={field.value} 
+                          alt="App icon preview" 
+                          className="w-8 h-8 rounded"
+                        />
+                        <span className="text-sm">Icon uploaded successfully</span>
+                      </div>
+                    )}
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-      {/* Configuration Form */}
-      <Card>
+          <div className="flex justify-end pt-4">
+            <Button 
+              type="submit" 
+              disabled={saveMutation.isPending}
+              className="min-w-32"
+            >
+              {saveMutation.isPending ? "Saving..." : "Save PWA Settings"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+
+      {/* PWA Status Indicator */}
+      <Card className="bg-muted/30">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            App Configuration
-          </CardTitle>
-          <CardDescription>
-            Customize your Progressive Web App settings and appearance
-          </CardDescription>
+          <CardTitle className="text-sm">PWA Status</CardTitle>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Basic Information */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  <h3 className="text-lg font-semibold">Basic Information</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="appName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>App Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="My Business App" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Full name displayed when installing the app
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="shortName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Short Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Business" maxLength={12} {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Short name for home screen (max 12 chars)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Comprehensive business management application with financial tracking and inventory management"
-                          className="resize-none"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Brief description of your app functionality
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Separator />
-
-              {/* Appearance */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Palette className="h-4 w-4" />
-                  <h3 className="text-lg font-semibold">Appearance</h3>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="themeColor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Theme Color</FormLabel>
-                        <FormControl>
-                          <div className="flex gap-2">
-                            <Input type="color" className="w-16 h-10 p-1" {...field} />
-                            <Input placeholder="#000000" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          Primary theme color for the app
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="backgroundColor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Background Color</FormLabel>
-                        <FormControl>
-                          <div className="flex gap-2">
-                            <Input type="color" className="w-16 h-10 p-1" {...field} />
-                            <Input placeholder="#ffffff" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          Background color for splash screen
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="appIconUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>App Icon URL</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://example.com/icon.png" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        URL to your app icon (512x512 PNG recommended)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Separator />
-
-              {/* Features */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  <h3 className="text-lg font-semibold">Features</h3>
-                </div>
-
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="enableNotifications"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Push Notifications</FormLabel>
-                          <FormDescription>
-                            Allow the app to send push notifications for important updates
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="enableOfflineMode"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Offline Mode</FormLabel>
-                          <FormDescription>
-                            Enable offline functionality with cached data
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="autoUpdate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Auto Update</FormLabel>
-                          <FormDescription>
-                            Automatically update the app when new versions are available
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? "Saving..." : "Save Configuration"}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => form.reset()}
-                  disabled={saveMutation.isPending}
-                >
-                  Reset
-                </Button>
-              </div>
-            </form>
-          </Form>
+          <div className="flex items-center gap-2 text-sm">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>Progressive Web App features are active</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Your app can be installed on devices and works offline
+          </p>
         </CardContent>
       </Card>
     </div>

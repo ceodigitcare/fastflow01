@@ -15,14 +15,10 @@ export default function ProfilePage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Profile
-          </TabsTrigger>
-          <TabsTrigger value="pwa" className="flex items-center gap-2">
-            <Smartphone className="h-4 w-4" />
-            PWA Settings
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
@@ -48,11 +44,25 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* PWA Configuration Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5" />
+                PWA Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure your Progressive Web App settings for mobile installation and offline support.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PwaConfigPanel />
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="pwa" className="space-y-4">
-          <PwaConfigPanel />
-        </TabsContent>
+
 
         <TabsContent value="notifications" className="space-y-4">
           <Card>
