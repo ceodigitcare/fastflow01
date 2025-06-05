@@ -1,10 +1,9 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -26,11 +25,6 @@ export default function PwaConfigPanel() {
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  const { data: config, isLoading } = useQuery({
-    queryKey: ["/api/pwa-config"],
-    retry: false,
-  });
-
   const form = useForm<PwaConfigFormData>({
     resolver: zodResolver(pwaConfigSchema),
     defaultValues: {
@@ -42,20 +36,7 @@ export default function PwaConfigPanel() {
     },
   });
 
-  // Update form when config data is loaded
-  React.useEffect(() => {
-    if (config) {
-      form.reset({
-        appName: config.appName || "Business Manager",
-        shortName: config.shortName || "Business",
-        themeColor: config.themeColor || "#000000",
-        backgroundColor: config.backgroundColor || "#ffffff",
-        appIconUrl: config.appIconUrl || "",
-      });
-    }
-  }, [config, form]);
-
-  const handleFileUpload = useCallback((file: File) => {
+  const handleFileUpload = (file: File) => {
     if (!file.type.match(/^image\/(png|jpg|jpeg|svg\+xml)$/)) {
       toast({
         title: "Invalid file type",
@@ -77,9 +58,9 @@ export default function PwaConfigPanel() {
     setUploadedFile(file);
     const fileUrl = URL.createObjectURL(file);
     form.setValue("appIconUrl", fileUrl);
-  }, [form, toast]);
+  };
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
+  const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
@@ -87,9 +68,9 @@ export default function PwaConfigPanel() {
     } else if (e.type === "dragleave") {
       setDragActive(false);
     }
-  }, []);
+  };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -97,7 +78,7 @@ export default function PwaConfigPanel() {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileUpload(e.dataTransfer.files[0]);
     }
-  }, [handleFileUpload]);
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data: PwaConfigFormData) => {
@@ -129,14 +110,6 @@ export default function PwaConfigPanel() {
   const onSubmit = (data: PwaConfigFormData) => {
     saveMutation.mutate(data);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -334,20 +307,15 @@ export default function PwaConfigPanel() {
       </Form>
 
       {/* PWA Status Indicator */}
-      <Card className="bg-muted/30">
-        <CardHeader>
-          <CardTitle className="text-sm">PWA Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 text-sm">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>Progressive Web App features are active</span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Your app can be installed on devices and works offline
-          </p>
-        </CardContent>
-      </Card>
+      <div className="bg-muted/30 rounded-lg p-4">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          <span>PWA Status</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Progressive Web App features are active. Your app can be installed on devices and works offline.
+        </p>
+      </div>
     </div>
   );
 }
