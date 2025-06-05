@@ -46,7 +46,8 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AlertCircle, Upload, Save, User, CreditCard, Bell, Shield, HelpCircle } from "lucide-react";
+import { AlertCircle, Upload, Save, User, CreditCard, Bell, Shield, HelpCircle, Smartphone } from "lucide-react";
+import PwaConfigPanel from "@/components/settings/PwaConfigPanel";
 
 // Profile form schema
 const profileFormSchema = z.object({
@@ -349,6 +350,22 @@ export default function Settings() {
                   </Button>
                 </form>
               </Form>
+            </CardContent>
+          </Card>
+          
+          {/* PWA Configuration Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5" />
+                PWA Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure your Progressive Web App settings for mobile installation and offline support.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PwaConfigPanel />
             </CardContent>
           </Card>
         </TabsContent>
