@@ -41,17 +41,34 @@ export default function PwaConfigPanel() {
   const form = useForm<PwaConfigFormData>({
     resolver: zodResolver(pwaConfigSchema),
     defaultValues: {
-      appName: config?.appName || "Business Manager",
-      shortName: config?.shortName || "Business",
-      description: config?.description || "Comprehensive business management application",
-      themeColor: config?.themeColor || "#000000",
-      backgroundColor: config?.backgroundColor || "#ffffff",
-      appIconUrl: config?.appIconUrl || "",
-      enableNotifications: config?.enableNotifications ?? true,
-      enableOfflineMode: config?.enableOfflineMode ?? true,
-      autoUpdate: config?.autoUpdate ?? true,
+      appName: "Business Manager",
+      shortName: "Business",
+      description: "Comprehensive business management application",
+      themeColor: "#000000",
+      backgroundColor: "#ffffff",
+      appIconUrl: "",
+      enableNotifications: true,
+      enableOfflineMode: true,
+      autoUpdate: true,
     },
   });
+
+  // Update form when config data is loaded
+  React.useEffect(() => {
+    if (config) {
+      form.reset({
+        appName: config.appName || "Business Manager",
+        shortName: config.shortName || "Business",
+        description: config.description || "Comprehensive business management application",
+        themeColor: config.themeColor || "#000000",
+        backgroundColor: config.backgroundColor || "#ffffff",
+        appIconUrl: config.appIconUrl || "",
+        enableNotifications: config.enableNotifications ?? true,
+        enableOfflineMode: config.enableOfflineMode ?? true,
+        autoUpdate: config.autoUpdate ?? true,
+      });
+    }
+  }, [config, form]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: PwaConfigFormData) => {
