@@ -46,8 +46,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AlertCircle, Upload, Save, User, CreditCard, Bell, Shield, HelpCircle, Smartphone, Type, Palette, Image as ImageIcon } from "lucide-react";
-import PwaConfigPanel from "@/components/settings/PwaConfigPanel";
+import { AlertCircle, Upload, Save, User, CreditCard, Bell, Shield, HelpCircle } from "lucide-react";
 
 // Profile form schema
 const profileFormSchema = z.object({
@@ -352,137 +351,6 @@ export default function Settings() {
               </Form>
             </CardContent>
           </Card>
-          
-          {/* PWA Configuration Section */}
-          <div className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Smartphone className="h-5 w-5" />
-                  PWA Configuration
-                </CardTitle>
-                <CardDescription>
-                  Configure your Progressive Web App settings for mobile installation and offline support.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Smartphone className="h-4 w-4" />
-                    <span>Configure your app for mobile installation and offline support</span>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {/* App Name */}
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        <Type className="h-4 w-4" />
-                        App Name
-                      </label>
-                      <Input placeholder="Business Manager" />
-                      <p className="text-xs text-muted-foreground">
-                        Full name shown in install popup and launcher
-                      </p>
-                    </div>
-
-                    {/* Short Name */}
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        <Type className="h-4 w-4" />
-                        Short Name
-                      </label>
-                      <Input placeholder="Business" maxLength={12} />
-                      <p className="text-xs text-muted-foreground">
-                        Short identifier for compact display (max 12 characters)
-                      </p>
-                    </div>
-
-                    {/* Theme Color */}
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        <Palette className="h-4 w-4" />
-                        Theme Color
-                      </label>
-                      <div className="flex gap-2">
-                        <Input placeholder="#000000" className="flex-1" />
-                        <input
-                          type="color"
-                          defaultValue="#000000"
-                          className="w-12 h-10 border border-input rounded-md cursor-pointer"
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Used in browser toolbar and splash screen
-                      </p>
-                    </div>
-
-                    {/* Background Color */}
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        <Palette className="h-4 w-4" />
-                        Background Color
-                      </label>
-                      <div className="flex gap-2">
-                        <Input placeholder="#ffffff" className="flex-1" />
-                        <input
-                          type="color"
-                          defaultValue="#ffffff"
-                          className="w-12 h-10 border border-input rounded-md cursor-pointer"
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Sets background color for splash screen
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* App Icon Upload */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium">
-                      <ImageIcon className="h-4 w-4" />
-                      App Icon
-                    </label>
-                    <div className="border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer border-muted-foreground/25 hover:border-primary/50">
-                      <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">
-                          Drag & drop your app icon here
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Or click to browse files
-                        </p>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/png,image/jpg,image/jpeg,image/svg+xml"
-                        className="hidden"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Accepts .png, .jpg, .svg — Minimum size: 512x512 pixels
-                    </p>
-                  </div>
-
-                  <div className="flex justify-end pt-4">
-                    <Button className="min-w-32">
-                      Save PWA Settings
-                    </Button>
-                  </div>
-
-                  {/* PWA Status Indicator */}
-                  <div className="bg-muted/30 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>PWA Status</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Progressive Web App features are active. Your app can be installed on devices and works offline.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
         
         <TabsContent value="password">

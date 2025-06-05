@@ -76,6 +76,9 @@ export default function Header({ onSidebarToggle, user, isSidebarOpen, onRightPa
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onSelect={() => setLocation("/profile")}>
+                Your Profile
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setLocation("/settings")}>
                 Settings
               </DropdownMenuItem>

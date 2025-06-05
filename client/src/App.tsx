@@ -1,4 +1,3 @@
-import React from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
-import { initializePWA } from "@/lib/pwa";
 
 import Dashboard from "@/pages/Dashboard";
 import WebsiteBuilder from "@/pages/WebsiteBuilder";
@@ -15,7 +13,6 @@ import Products from "@/pages/Products";
 import Finances from "@/pages/Finances";
 import PurchaseBill from "@/pages/PurchaseBill";
 import Settings from "@/pages/Settings";
-
 import AuthPage from "@/pages/auth-page";
 import ChatWidget from "@/pages/ChatWidget";
 import NotFound from "@/pages/not-found";
@@ -42,7 +39,6 @@ function Router() {
       <ProtectedRoute path="/finances/chart-of-accounts" component={Finances} />
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/settings" component={Settings} />
-
       <ProtectedRoute path="/help" component={Help} />
       <ProtectedRoute path="/documentation" component={Documentation} />
       <ProtectedRoute path="/" component={Dashboard} />
@@ -52,11 +48,6 @@ function Router() {
 }
 
 function App() {
-  // Initialize PWA features
-  React.useEffect(() => {
-    initializePWA();
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

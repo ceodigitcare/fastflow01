@@ -8,7 +8,6 @@ import {
   BarChart2, 
   DollarSign, 
   Settings,
-  User,
   HelpCircle,
   BookOpen,
   X,
