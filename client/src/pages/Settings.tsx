@@ -129,6 +129,23 @@ export default function Settings() {
       }
     }
   }, [business, profileForm]);
+
+  // Update PWA form when data is loaded
+  React.useEffect(() => {
+    if (pwaSettings || business) {
+      pwaForm.reset({
+        appName: pwaSettings?.appName || business?.name || "",
+        shortName: pwaSettings?.shortName || business?.name?.substring(0, 12) || "",
+        themeColor: pwaSettings?.themeColor || "#FFFFFF",
+        backgroundColor: pwaSettings?.backgroundColor || "#FFFFFF",
+        iconUrl: pwaSettings?.iconUrl || "",
+      });
+      
+      if (pwaSettings?.iconUrl) {
+        setIconPreview(pwaSettings.iconUrl);
+      }
+    }
+  }, [pwaSettings, business, pwaForm]);
   
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -151,22 +168,42 @@ export default function Settings() {
     },
   });
   
-  // Update password mutation
-  const updatePasswordMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof passwordFormSchema>) => {
-      return await apiRequest("PATCH", "/api/auth/password", data);
+  // PWA Settings mutations
+  const createPwaSettingsMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
+      return await apiRequest("POST", "/api/pwa-settings", data);
     },
     onSuccess: () => {
       toast({
-        title: "Password updated",
-        description: "Your password has been updated successfully.",
+        title: "PWA settings created",
+        description: "Your PWA settings have been created successfully.",
       });
-      passwordForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update password. Please check your current password and try again.",
+        description: "Failed to create PWA settings. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePwaSettingsMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
+      return await apiRequest("PATCH", "/api/pwa-settings", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "PWA settings updated",
+        description: "Your PWA settings have been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update PWA settings. Please try again.",
         variant: "destructive",
       });
     },
@@ -183,16 +220,56 @@ export default function Settings() {
       profileForm.setValue("logoUrl", url);
     }
   };
+
+  // Handle PWA icon upload
+  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setIconPreview(url);
+      pwaForm.setValue("iconUrl", url);
+    }
+  };
   
   // Handle profile form submission
   const onProfileSubmit = (data: z.infer<typeof profileFormSchema>) => {
     updateProfileMutation.mutate(data);
   };
   
-  // Handle password form submission
-  const onPasswordSubmit = (data: z.infer<typeof passwordFormSchema>) => {
-    updatePasswordMutation.mutate(data);
+  // Handle PWA form submission
+  const onPwaSubmit = (data: z.infer<typeof pwaFormSchema>) => {
+    if (pwaSettings) {
+      updatePwaSettingsMutation.mutate(data);
+    } else {
+      createPwaSettingsMutation.mutate(data);
+    }
   };
+
+  // Check PWA readiness
+  React.useEffect(() => {
+    const checkPwaReadiness = async () => {
+      const readiness = {
+        https: location.protocol === 'https:' || location.hostname === 'localhost',
+        manifest: false,
+        serviceWorker: 'serviceWorker' in navigator,
+        installable: false,
+      };
+
+      // Check for manifest
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      readiness.manifest = !!manifestLink;
+
+      // Check if app is installable
+      window.addEventListener('beforeinstallprompt', () => {
+        readiness.installable = true;
+        setPwaReadiness({ ...readiness });
+      });
+
+      setPwaReadiness(readiness);
+    };
+
+    checkPwaReadiness();
+  }, []);
   
   if (isLoading) {
     return (
@@ -220,9 +297,9 @@ export default function Settings() {
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profile</span>
           </TabsTrigger>
-          <TabsTrigger value="password" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Password</span>
+          <TabsTrigger value="pwa" className="flex items-center gap-2">
+            <Smartphone className="h-4 w-4" />
+            <span className="hidden sm:inline">PWA</span>
           </TabsTrigger>
           <TabsTrigger value="billing" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
