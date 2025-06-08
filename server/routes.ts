@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import express from "express";
 import session from "express-session";
 import { z } from "zod";
-import { pool } from "./db";
+import { pool, db } from "./db";
+import { sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { 
   insertBusinessSchema, 
@@ -18,6 +19,7 @@ import {
   insertTransferSchema,
   insertUserSchema,
   loginHistoryEntrySchema,
+  insertPwaSettingsSchema,
   Business
 } from "@shared/schema";
 import { chatbotRouter } from "./chatbot";
@@ -1546,6 +1548,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating version importance:", error);
       res.status(500).json({ message: "Failed to update version importance" });
     }
+  });
+
+  // PWA Settings routes
+  app.get("/api/pwa-settings", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const settings = await storage.getPwaSettings(businessId);
+      res.json(settings || null);
+    } catch (error) {
+      console.error("Error fetching PWA settings:", error);
+      res.status(500).json({ message: "Failed to fetch PWA settings" });
+    }
+  });
+
+  app.post("/api/pwa-settings", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const validatedData = insertPwaSettingsSchema.parse({ ...req.body, businessId });
+      
+      // Check if settings already exist
+      const existingSettings = await storage.getPwaSettings(businessId);
+      if (existingSettings) {
+        return res.status(400).json({ message: "PWA settings already exist. Use PATCH to update." });
+      }
+      
+      const settings = await storage.createPwaSettings(validatedData);
+      res.status(201).json(settings);
+    } catch (error) {
+      console.error("Error creating PWA settings:", error);
+      res.status(500).json({ message: "Failed to create PWA settings" });
+    }
+  });
+
+  app.patch("/api/pwa-settings", requireAuth, async (req, res) => {
+    try {
+      const businessId = getBusinessId(req);
+      const settings = await storage.updatePwaSettings(businessId, req.body);
+      if (settings) {
+        res.json(settings);
+      } else {
+        res.status(404).json({ message: "PWA settings not found" });
+      }
+    } catch (error) {
+      console.error("Error updating PWA settings:", error);
+      res.status(500).json({ message: "Failed to update PWA settings" });
+    }
+  });
+
+  // Generate manifest.json dynamically
+  app.get("/manifest.json", async (req, res) => {
+    try {
+      // For now, we'll use a default manifest. In a real app, you'd get this from PWA settings
+      const manifest = {
+        name: "Business Manager",
+        short_name: "BizManager",
+        description: "Comprehensive business management platform",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#000000",
+        icons: [
+          {
+            src: "/icon-192.png",
+            sizes: "192x192",
+            type: "image/png"
+          },
+          {
+            src: "/icon-512.png", 
+            sizes: "512x512",
+            type: "image/png"
+          }
+        ]
+      };
+      
+      res.setHeader("Content-Type", "application/manifest+json");
+      res.json(manifest);
+    } catch (error) {
+      console.error("Error generating manifest:", error);
+      res.status(500).json({ message: "Failed to generate manifest" });
+    }
+  });
+
+  // Service Worker
+  app.get("/sw.js", (req, res) => {
+    const swContent = `
+// Basic service worker for PWA functionality
+const CACHE_NAME = 'business-manager-v1';
+const urlsToCache = [
+  '/',
+  '/static/js/bundle.js',
+  '/static/css/main.css',
+  '/manifest.json'
+];
+
+self.addEventListener('install', function(event) {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(function(cache) {
+        return cache.addAll(urlsToCache);
+      })
+  );
+});
+
+self.addEventListener('fetch', function(event) {
+  event.respondWith(
+    caches.match(event.request)
+      .then(function(response) {
+        if (response) {
+          return response;
+        }
+        return fetch(event.request);
+      }
+    )
+  );
+});
+`;
+    
+    res.setHeader("Content-Type", "application/javascript");
+    res.send(swContent);
   });
 
   // Create HTTP server

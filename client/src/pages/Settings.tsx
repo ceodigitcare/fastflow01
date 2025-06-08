@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
 import { apiRequest } from "@/lib/queryClient";
@@ -46,7 +46,8 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AlertCircle, Upload, Save, User, CreditCard, Bell, Shield, HelpCircle } from "lucide-react";
+import { AlertCircle, Upload, Save, User, CreditCard, Bell, Smartphone, HelpCircle, CheckCircle, Palette } from "lucide-react";
+import { insertPwaSettingsSchema } from "@shared/schema";
 
 // Profile form schema
 const profileFormSchema = z.object({
@@ -57,24 +58,35 @@ const profileFormSchema = z.object({
   bio: z.string().optional(),
 });
 
-// Password form schema
-const passwordFormSchema = z.object({
-  currentPassword: z.string().min(6, { message: "Current password is required." }),
-  newPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  confirmPassword: z.string().min(6, { message: "Please confirm your password." }),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
+// PWA form schema
+const pwaFormSchema = insertPwaSettingsSchema.omit({ businessId: true }).extend({
+  appName: z.string().min(1, { message: "App name is required." }),
+  shortName: z.string().max(12, { message: "Short name must be 12 characters or less." }).min(1, { message: "Short name is required." }),
+  themeColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { message: "Theme color must be a valid hex color." }),
+  backgroundColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { message: "Background color must be a valid hex color." }),
+  iconUrl: z.string().optional(),
 });
 
 export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [pwaReadiness, setPwaReadiness] = useState<{
+    https: boolean;
+    manifest: boolean;
+    serviceWorker: boolean;
+    installable: boolean;
+  } | null>(null);
   
   // Get business data
   const { data: business, isLoading } = useQuery({
     queryKey: ["/api/business"],
+  });
+  
+  // Get PWA settings data
+  const { data: pwaSettings, isLoading: isPwaLoading } = useQuery({
+    queryKey: ["/api/pwa-settings"],
   });
   
   // Profile form
@@ -89,13 +101,15 @@ export default function Settings() {
     },
   });
   
-  // Password form
-  const passwordForm = useForm<z.infer<typeof passwordFormSchema>>({
-    resolver: zodResolver(passwordFormSchema),
+  // PWA form
+  const pwaForm = useForm<z.infer<typeof pwaFormSchema>>({
+    resolver: zodResolver(pwaFormSchema),
     defaultValues: {
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
+      appName: pwaSettings?.appName || business?.name || "",
+      shortName: pwaSettings?.shortName || business?.name?.substring(0, 12) || "",
+      themeColor: pwaSettings?.themeColor || "#FFFFFF",
+      backgroundColor: pwaSettings?.backgroundColor || "#FFFFFF",
+      iconUrl: pwaSettings?.iconUrl || "",
     },
   });
   

@@ -1846,6 +1846,32 @@ export class DatabaseStorage implements IStorage {
       
     return updatedUser || undefined;
   }
+
+  // PWA Settings methods
+  async getPwaSettings(businessId: number): Promise<PwaSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(pwaSettings)
+      .where(eq(pwaSettings.businessId, businessId));
+    return settings || undefined;
+  }
+
+  async createPwaSettings(settings: InsertPwaSettings): Promise<PwaSettings> {
+    const [newSettings] = await db
+      .insert(pwaSettings)
+      .values(settings)
+      .returning();
+    return newSettings;
+  }
+
+  async updatePwaSettings(businessId: number, data: Partial<PwaSettings>): Promise<PwaSettings | undefined> {
+    const [updatedSettings] = await db
+      .update(pwaSettings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(pwaSettings.businessId, businessId))
+      .returning();
+    return updatedSettings || undefined;
+  }
 }
 
 // Initialize templates when creating database storage for the first time
