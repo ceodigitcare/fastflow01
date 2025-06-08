@@ -234,14 +234,54 @@ export default function Settings() {
     }
   };
 
-  // Handle PWA icon upload
-  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle PWA icon upload with proper file upload
+  const handleIconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setIconPreview(url);
-      // For demo purposes, use the default static icon instead of blob URL
-      pwaForm.setValue("iconUrl", "/icon-512.png");
+      // Show loading state with blob URL preview
+      const tempUrl = URL.createObjectURL(file);
+      setIconPreview(tempUrl);
+      
+      try {
+        // Upload file to server
+        const formData = new FormData();
+        formData.append('icon', file);
+        
+        const response = await fetch('/api/upload/icon', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include', // Include session cookies
+        });
+        
+        if (!response.ok) {
+          throw new Error('Upload failed');
+        }
+        
+        const { iconUrl } = await response.json();
+        
+        // Update form with actual uploaded URL
+        pwaForm.setValue("iconUrl", iconUrl);
+        setIconPreview(iconUrl);
+        
+        // Clean up blob URL
+        URL.revokeObjectURL(tempUrl);
+        
+        toast({
+          title: "Icon uploaded",
+          description: "Your PWA icon has been uploaded successfully.",
+        });
+      } catch (error) {
+        console.error('Upload failed:', error);
+        // Revert to previous icon on failure
+        URL.revokeObjectURL(tempUrl);
+        setIconPreview(pwaSettings?.iconUrl || "/icon-512.png");
+        
+        toast({
+          title: "Upload failed",
+          description: "Failed to upload icon. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
   
@@ -621,10 +661,22 @@ export default function Settings() {
                                     alt="App Icon Preview" 
                                     className="w-16 h-16 rounded-lg object-cover border-2 border-gray-200"
                                   />
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                                    onClick={() => {
+                                      setIconPreview("/icon-512.png");
+                                      pwaForm.setValue("iconUrl", "/icon-512.png");
+                                    }}
+                                  >
+                                    ×
+                                  </Button>
                                 </div>
                               )}
                               <div className="flex-1">
-                                <Input {...field} placeholder="Icon URL or upload below" />
+                                <Input {...field} placeholder="Icon URL or upload below" readOnly />
                               </div>
                             </div>
                             <div>

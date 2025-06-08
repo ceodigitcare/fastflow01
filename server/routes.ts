@@ -25,9 +25,45 @@ import {
 import { chatbotRouter } from "./chatbot";
 import { setupAuth } from "./auth";
 import { updateAccountBalance, getAccountsWithBalances, syncAllAccountBalances } from "./account-balance-sync";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 // Setup PostgreSQL session store
 const PgSessionStore = connectPg(session);
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(process.cwd(), 'client', 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename with timestamp
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'icon-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only images
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication with Passport.js
@@ -49,6 +85,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Cast user to Business type since we know it's a Business instance from Passport authentication
     return (req.user as Business).id;
   };
+
+  // File upload endpoint for PWA icons
+  app.post("/api/upload/icon", requireAuth, upload.single('icon'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      // Return the public URL for the uploaded file
+      const iconUrl = `/uploads/${req.file.filename}`;
+      res.json({ iconUrl });
+    } catch (error) {
+      console.error("Error uploading icon:", error);
+      res.status(500).json({ message: "Failed to upload icon" });
+    }
+  });
 
   // Business routes
   app.get("/api/business", requireAuth, async (req, res) => {
@@ -1584,6 +1636,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/pwa-settings", requireAuth, async (req, res) => {
     try {
       const businessId = getBusinessId(req);
+      
+      // Validate that iconUrl is not a blob URL
+      if (req.body.iconUrl && req.body.iconUrl.startsWith('blob:')) {
+        return res.status(400).json({ 
+          message: "Invalid icon URL. Please upload a file instead of using blob URLs." 
+        });
+      }
+      
       const settings = await storage.updatePwaSettings(businessId, req.body);
       if (settings) {
         res.json(settings);
