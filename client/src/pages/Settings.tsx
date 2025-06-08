@@ -173,7 +173,33 @@ export default function Settings() {
   // PWA Settings mutations
   const createPwaSettingsMutation = useMutation({
     mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
-      return await apiRequest("POST", "/api/pwa-settings", data);
+      console.log('Creating PWA settings with data:', data);
+      
+      try {
+        const response = await fetch('/api/pwa-settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(data),
+        });
+        
+        console.log('PWA create response status:', response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('PWA create error response:', response.status, errorText);
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('PWA create success:', result);
+        return result;
+      } catch (error) {
+        console.error('PWA create fetch error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -182,10 +208,23 @@ export default function Settings() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("PWA settings create error:", error);
+      let errorMessage = "Failed to create PWA settings. Please try again.";
+      
+      if (error?.message) {
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          errorMessage = "Authentication failed. Please refresh the page and log in again.";
+        } else if (error.message.includes('400')) {
+          errorMessage = "Invalid data provided. Please check your inputs and try again.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to create PWA settings. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -193,7 +232,33 @@ export default function Settings() {
 
   const updatePwaSettingsMutation = useMutation({
     mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
-      return await apiRequest("PATCH", "/api/pwa-settings", data);
+      console.log('Updating PWA settings with data:', data);
+      
+      try {
+        const response = await fetch('/api/pwa-settings', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(data),
+        });
+        
+        console.log('PWA update response status:', response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('PWA update error response:', response.status, errorText);
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('PWA update success:', result);
+        return result;
+      } catch (error) {
+        console.error('PWA update fetch error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -206,12 +271,14 @@ export default function Settings() {
       console.error("PWA settings update error:", error);
       let errorMessage = "Failed to update PWA settings. Please try again.";
       
-      if (error?.response?.status === 401) {
-        errorMessage = "Please log in again to update PWA settings.";
-      } else if (error?.response?.status === 400) {
-        errorMessage = "Invalid PWA settings data. Please check your inputs.";
-      } else if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
+      if (error?.message) {
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          errorMessage = "Authentication failed. Please refresh the page and log in again.";
+        } else if (error.message.includes('400')) {
+          errorMessage = "Invalid data provided. Please check your inputs and try again.";
+        } else {
+          errorMessage = error.message;
+        }
       }
       
       toast({
@@ -292,6 +359,18 @@ export default function Settings() {
   
   // Handle PWA form submission
   const onPwaSubmit = (data: z.infer<typeof pwaFormSchema>) => {
+    console.log('PWA form submission data:', data);
+    
+    // Validate required fields
+    if (!data.appName || !data.shortName) {
+      toast({
+        title: "Validation Error",
+        description: "App Name and Short Name are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (pwaSettings) {
       updatePwaSettingsMutation.mutate(data);
     } else {
@@ -676,7 +755,10 @@ export default function Settings() {
                                 </div>
                               )}
                               <div className="flex-1">
-                                <Input {...field} placeholder="Icon URL or upload below" readOnly />
+                                <Input {...field} placeholder="Icon URL or upload below" readOnly className="sr-only" />
+                                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded border">
+                                  {field.value ? "Custom icon uploaded" : "Using default icon"}
+                                </div>
                               </div>
                             </div>
                             <div>

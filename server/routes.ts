@@ -1617,6 +1617,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/pwa-settings", requireAuth, async (req, res) => {
     try {
       const businessId = getBusinessId(req);
+      
+      // Validate that iconUrl is not a blob URL
+      if (req.body.iconUrl && req.body.iconUrl.startsWith('blob:')) {
+        return res.status(400).json({ 
+          message: "Invalid icon URL. Please upload a file instead of using blob URLs." 
+        });
+      }
+      
+      console.log('Creating PWA settings for business:', businessId, 'with data:', req.body);
       const validatedData = insertPwaSettingsSchema.parse({ ...req.body, businessId });
       
       // Check if settings already exist
@@ -1626,6 +1635,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const settings = await storage.createPwaSettings(validatedData);
+      console.log('PWA settings created successfully:', settings);
       res.status(201).json(settings);
     } catch (error) {
       console.error("Error creating PWA settings:", error);
