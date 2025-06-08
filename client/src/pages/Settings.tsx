@@ -138,13 +138,11 @@ export default function Settings() {
         shortName: pwaSettings?.shortName || business?.name?.substring(0, 12) || "",
         themeColor: pwaSettings?.themeColor || "#FFFFFF",
         backgroundColor: pwaSettings?.backgroundColor || "#FFFFFF",
-        iconUrl: pwaSettings?.iconUrl || "/icon-512.png",
+        iconUrl: pwaSettings?.iconUrl || "",
       });
       
       if (pwaSettings?.iconUrl) {
         setIconPreview(pwaSettings.iconUrl);
-      } else {
-        setIconPreview("/icon-512.png");
       }
     }
   }, [pwaSettings, business, pwaForm]);
@@ -173,33 +171,7 @@ export default function Settings() {
   // PWA Settings mutations
   const createPwaSettingsMutation = useMutation({
     mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
-      console.log('Creating PWA settings with data:', data);
-      
-      try {
-        const response = await fetch('/api/pwa-settings', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(data),
-        });
-        
-        console.log('PWA create response status:', response.status);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('PWA create error response:', response.status, errorText);
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        
-        const result = await response.json();
-        console.log('PWA create success:', result);
-        return result;
-      } catch (error) {
-        console.error('PWA create fetch error:', error);
-        throw error;
-      }
+      return await apiRequest("POST", "/api/pwa-settings", data);
     },
     onSuccess: () => {
       toast({
@@ -208,23 +180,10 @@ export default function Settings() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
     },
-    onError: (error: any) => {
-      console.error("PWA settings create error:", error);
-      let errorMessage = "Failed to create PWA settings. Please try again.";
-      
-      if (error?.message) {
-        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-          errorMessage = "Authentication failed. Please refresh the page and log in again.";
-        } else if (error.message.includes('400')) {
-          errorMessage = "Invalid data provided. Please check your inputs and try again.";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
+    onError: () => {
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to create PWA settings. Please try again.",
         variant: "destructive",
       });
     },
@@ -232,33 +191,7 @@ export default function Settings() {
 
   const updatePwaSettingsMutation = useMutation({
     mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
-      console.log('Updating PWA settings with data:', data);
-      
-      try {
-        const response = await fetch('/api/pwa-settings', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(data),
-        });
-        
-        console.log('PWA update response status:', response.status);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('PWA update error response:', response.status, errorText);
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        
-        const result = await response.json();
-        console.log('PWA update success:', result);
-        return result;
-      } catch (error) {
-        console.error('PWA update fetch error:', error);
-        throw error;
-      }
+      return await apiRequest("PATCH", "/api/pwa-settings", data);
     },
     onSuccess: () => {
       toast({
@@ -267,23 +200,10 @@ export default function Settings() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
     },
-    onError: (error: any) => {
-      console.error("PWA settings update error:", error);
-      let errorMessage = "Failed to update PWA settings. Please try again.";
-      
-      if (error?.message) {
-        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-          errorMessage = "Authentication failed. Please refresh the page and log in again.";
-        } else if (error.message.includes('400')) {
-          errorMessage = "Invalid data provided. Please check your inputs and try again.";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
+    onError: () => {
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to update PWA settings. Please try again.",
         variant: "destructive",
       });
     },
@@ -301,54 +221,13 @@ export default function Settings() {
     }
   };
 
-  // Handle PWA icon upload with proper file upload
-  const handleIconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle PWA icon upload
+  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Show loading state with blob URL preview
-      const tempUrl = URL.createObjectURL(file);
-      setIconPreview(tempUrl);
-      
-      try {
-        // Upload file to server
-        const formData = new FormData();
-        formData.append('icon', file);
-        
-        const response = await fetch('/api/upload/icon', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include', // Include session cookies
-        });
-        
-        if (!response.ok) {
-          throw new Error('Upload failed');
-        }
-        
-        const { iconUrl } = await response.json();
-        
-        // Update form with actual uploaded URL
-        pwaForm.setValue("iconUrl", iconUrl);
-        setIconPreview(iconUrl);
-        
-        // Clean up blob URL
-        URL.revokeObjectURL(tempUrl);
-        
-        toast({
-          title: "Icon uploaded",
-          description: "Your PWA icon has been uploaded successfully.",
-        });
-      } catch (error) {
-        console.error('Upload failed:', error);
-        // Revert to previous icon on failure
-        URL.revokeObjectURL(tempUrl);
-        setIconPreview(pwaSettings?.iconUrl || "/icon-512.png");
-        
-        toast({
-          title: "Upload failed",
-          description: "Failed to upload icon. Please try again.",
-          variant: "destructive",
-        });
-      }
+      const url = URL.createObjectURL(file);
+      setIconPreview(url);
+      pwaForm.setValue("iconUrl", url);
     }
   };
   
@@ -359,18 +238,6 @@ export default function Settings() {
   
   // Handle PWA form submission
   const onPwaSubmit = (data: z.infer<typeof pwaFormSchema>) => {
-    console.log('PWA form submission data:', data);
-    
-    // Validate required fields
-    if (!data.appName || !data.shortName) {
-      toast({
-        title: "Validation Error",
-        description: "App Name and Short Name are required.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     if (pwaSettings) {
       updatePwaSettingsMutation.mutate(data);
     } else {
@@ -740,25 +607,10 @@ export default function Settings() {
                                     alt="App Icon Preview" 
                                     className="w-16 h-16 rounded-lg object-cover border-2 border-gray-200"
                                   />
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="sm"
-                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                                    onClick={() => {
-                                      setIconPreview("/icon-512.png");
-                                      pwaForm.setValue("iconUrl", "/icon-512.png");
-                                    }}
-                                  >
-                                    ×
-                                  </Button>
                                 </div>
                               )}
                               <div className="flex-1">
-                                <Input {...field} placeholder="Icon URL or upload below" readOnly className="sr-only" />
-                                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded border">
-                                  {field.value ? "Custom icon uploaded" : "Using default icon"}
-                                </div>
+                                <Input {...field} placeholder="Icon URL or upload below" />
                               </div>
                             </div>
                             <div>

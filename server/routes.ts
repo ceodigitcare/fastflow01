@@ -25,45 +25,9 @@ import {
 import { chatbotRouter } from "./chatbot";
 import { setupAuth } from "./auth";
 import { updateAccountBalance, getAccountsWithBalances, syncAllAccountBalances } from "./account-balance-sync";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
 
 // Setup PostgreSQL session store
 const PgSessionStore = connectPg(session);
-
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(process.cwd(), 'client', 'public', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    // Generate unique filename with timestamp
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'icon-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    // Accept only images
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication with Passport.js
@@ -85,22 +49,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Cast user to Business type since we know it's a Business instance from Passport authentication
     return (req.user as Business).id;
   };
-
-  // File upload endpoint for PWA icons
-  app.post("/api/upload/icon", requireAuth, upload.single('icon'), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-      
-      // Return the public URL for the uploaded file
-      const iconUrl = `/uploads/${req.file.filename}`;
-      res.json({ iconUrl });
-    } catch (error) {
-      console.error("Error uploading icon:", error);
-      res.status(500).json({ message: "Failed to upload icon" });
-    }
-  });
 
   // Business routes
   app.get("/api/business", requireAuth, async (req, res) => {
@@ -1617,15 +1565,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/pwa-settings", requireAuth, async (req, res) => {
     try {
       const businessId = getBusinessId(req);
-      
-      // Validate that iconUrl is not a blob URL
-      if (req.body.iconUrl && req.body.iconUrl.startsWith('blob:')) {
-        return res.status(400).json({ 
-          message: "Invalid icon URL. Please upload a file instead of using blob URLs." 
-        });
-      }
-      
-      console.log('Creating PWA settings for business:', businessId, 'with data:', req.body);
       const validatedData = insertPwaSettingsSchema.parse({ ...req.body, businessId });
       
       // Check if settings already exist
@@ -1635,7 +1574,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const settings = await storage.createPwaSettings(validatedData);
-      console.log('PWA settings created successfully:', settings);
       res.status(201).json(settings);
     } catch (error) {
       console.error("Error creating PWA settings:", error);
@@ -1646,14 +1584,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/pwa-settings", requireAuth, async (req, res) => {
     try {
       const businessId = getBusinessId(req);
-      
-      // Validate that iconUrl is not a blob URL
-      if (req.body.iconUrl && req.body.iconUrl.startsWith('blob:')) {
-        return res.status(400).json({ 
-          message: "Invalid icon URL. Please upload a file instead of using blob URLs." 
-        });
-      }
-      
       const settings = await storage.updatePwaSettings(businessId, req.body);
       if (settings) {
         res.json(settings);
@@ -1724,78 +1654,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Service Worker
   app.get("/sw.js", (req, res) => {
     const swContent = `
-// Enhanced service worker for PWA functionality
+// Basic service worker for PWA functionality
 const CACHE_NAME = 'business-manager-v1';
 const urlsToCache = [
   '/',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/static/js/bundle.js',
+  '/static/css/main.css',
+  '/manifest.json'
 ];
 
-// Install event - cache essential resources
 self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
-        console.log('Service Worker: Caching files');
         return cache.addAll(urlsToCache);
       })
-      .then(() => self.skipWaiting())
   );
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', function(event) {
-  event.waitUntil(
-    caches.keys().then(function(cacheNames) {
-      return Promise.all(
-        cacheNames.map(function(cacheName) {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Service Worker: Clearing old cache');
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
-
-// Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', function(event) {
   event.respondWith(
     caches.match(event.request)
       .then(function(response) {
-        // Return cached version or fetch from network
-        return response || fetch(event.request).then(function(response) {
-          // Don't cache non-successful responses
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then(function(cache) {
-              cache.put(event.request, responseToCache);
-            });
-
+        if (response) {
           return response;
-        });
-      })
-      .catch(function() {
-        // Fallback for offline scenarios
-        if (event.request.destination === 'document') {
-          return caches.match('/');
         }
-      })
+        return fetch(event.request);
+      }
+    )
   );
 });
 `;
     
     res.setHeader("Content-Type", "application/javascript");
-    res.setHeader("Cache-Control", "no-cache");
     res.send(swContent);
   });
 
