@@ -444,65 +444,212 @@ export default function Settings() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="password">
+        <TabsContent value="pwa">
           <Card>
             <CardHeader>
-              <CardTitle>Password</CardTitle>
-              <CardDescription>Change your password to keep your account secure</CardDescription>
+              <CardTitle>Progressive Web App Configuration</CardTitle>
+              <CardDescription>Configure your app for installation on mobile devices and desktop</CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
+              {/* PWA Readiness Status */}
+              {pwaReadiness && (
+                <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+                  <h4 className="font-medium mb-3 flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    PWA Readiness Status
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div className="flex items-center">
+                      {pwaReadiness.https ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
+                      )}
+                      HTTPS
+                    </div>
+                    <div className="flex items-center">
+                      {pwaReadiness.manifest ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
+                      )}
+                      Manifest
+                    </div>
+                    <div className="flex items-center">
+                      {pwaReadiness.serviceWorker ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
+                      )}
+                      Service Worker
+                    </div>
+                    <div className="flex items-center">
+                      {pwaReadiness.installable ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-orange-500 mr-2" />
+                      )}
+                      Installable
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <Form {...pwaForm}>
+                <form onSubmit={pwaForm.handleSubmit(onPwaSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={pwaForm.control}
+                      name="appName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>App Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="My Business App" />
+                          </FormControl>
+                          <FormDescription>
+                            The full name of your app as it appears to users
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={pwaForm.control}
+                      name="shortName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Short Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="MyApp" maxLength={12} />
+                          </FormControl>
+                          <FormDescription>
+                            Short name for home screen (max 12 characters)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={pwaForm.control}
+                      name="themeColor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Theme Color</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center space-x-2">
+                              <Input 
+                                {...field} 
+                                type="color" 
+                                className="w-16 h-10 p-1 border-2" 
+                              />
+                              <Input 
+                                {...field} 
+                                placeholder="#FFFFFF" 
+                                className="flex-1"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Primary theme color for status bars and UI
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={pwaForm.control}
+                      name="backgroundColor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Background Color</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center space-x-2">
+                              <Input 
+                                {...field} 
+                                type="color" 
+                                className="w-16 h-10 p-1 border-2" 
+                              />
+                              <Input 
+                                {...field} 
+                                placeholder="#FFFFFF" 
+                                className="flex-1"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Background color shown while app loads
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
-                    control={passwordForm.control}
-                    name="currentPassword"
+                    control={pwaForm.control}
+                    name="iconUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Current Password</FormLabel>
+                        <FormLabel>App Icon</FormLabel>
                         <FormControl>
-                          <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={passwordForm.control}
-                    name="newPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>New Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} />
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-4">
+                              {iconPreview && (
+                                <div className="relative">
+                                  <img 
+                                    src={iconPreview} 
+                                    alt="App Icon Preview" 
+                                    className="w-16 h-16 rounded-lg object-cover border-2 border-gray-200"
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <Input {...field} placeholder="Icon URL or upload below" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <div className="flex flex-col items-center">
+                                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                                  <span className="text-sm text-gray-500">Click to upload icon</span>
+                                  <span className="text-xs text-gray-400">PNG, JPG (512x512 recommended)</span>
+                                </div>
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  accept="image/*"
+                                  onChange={handleIconChange}
+                                />
+                              </label>
+                            </div>
+                          </div>
                         </FormControl>
                         <FormDescription>
-                          Password must be at least 6 characters long
+                          Icon displayed on home screen and app stores (512x512 recommended)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   
-                  <FormField
-                    control={passwordForm.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirm New Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
                   <Button 
-                    type="submit"
-                    disabled={updatePasswordMutation.isPending}
+                    type="submit" 
+                    className="flex items-center"
+                    disabled={createPwaSettingsMutation.isPending || updatePwaSettingsMutation.isPending || isPwaLoading}
                   >
-                    {updatePasswordMutation.isPending ? "Updating..." : "Update Password"}
+                    <Save className="mr-2 h-4 w-4" />
+                    {(createPwaSettingsMutation.isPending || updatePwaSettingsMutation.isPending) 
+                      ? "Saving..." 
+                      : pwaSettings 
+                        ? "Update PWA Settings" 
+                        : "Create PWA Settings"
+                    }
                   </Button>
                 </form>
               </Form>
