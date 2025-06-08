@@ -69,9 +69,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication with Passport.js
   setupAuth(app);
 
-  // Authentication middleware using Passport
+  // Authentication middleware using Passport with detailed logging
   const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+    console.log(`Auth check for ${req.method} ${req.path}:`);
+    console.log('- Session ID:', req.sessionID);
+    console.log('- Is authenticated:', req.isAuthenticated());
+    console.log('- User:', req.user ? `Business ID ${(req.user as any).id}` : 'None');
+    console.log('- Session data:', req.session);
+    
     if (!req.isAuthenticated()) {
+      console.log('Authentication failed - returning 401');
       return res.status(401).json({ message: "Unauthorized" });
     }
     next();

@@ -547,13 +547,13 @@ export default function Settings() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="pwa" className="space-y-0">
-          <Card className="h-fit">
+        <TabsContent value="pwa" className="space-y-6">
+          <Card>
             <CardHeader>
               <CardTitle>Progressive Web App Configuration</CardTitle>
               <CardDescription>Configure your app for installation on mobile devices and desktop</CardDescription>
             </CardHeader>
-            <CardContent className="pb-6">
+            <CardContent className="space-y-6 max-w-none overflow-visible">
               {/* PWA Readiness Status */}
               {pwaReadiness && (
                 <div className="mb-6 p-4 border rounded-lg bg-gray-50">
