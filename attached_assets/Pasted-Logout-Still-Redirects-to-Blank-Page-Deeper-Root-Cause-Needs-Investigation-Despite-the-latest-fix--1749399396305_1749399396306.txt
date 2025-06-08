@@ -1,0 +1,39 @@
+Logout Still Redirects to Blank Page — Deeper Root Cause Needs Investigation
+Despite the latest fix using window.location.replace() and updates to the ProtectedRoute logic, the logout issue persists — the app continues to show a blank screen instead of redirecting to the login page.
+
+🐞 Current Observations:
+Clicking "Logout" triggers session/token clearing
+
+The browser does not show the login UI; instead, it loads a blank page (white screen)
+
+Manually refreshing after logout sometimes loads the login screen correctly — indicating the routing or render logic is not executing after auth state change
+
+🔍 Suggested Areas to Investigate:
+1. Routing Flow After Logout
+Ensure window.location.replace('/login') or navigate('/login') is placed after session state is cleared (not before).
+
+If using React Router, verify that the /login route is correctly declared and not conditionally rendered based on auth.
+
+2. AuthProvider & Context Update
+Ensure the AuthProvider context correctly updates the auth state on logout.
+
+The consumer of the context (e.g., App.tsx, ProtectedRoute) must react to the state change and trigger route update.
+
+Add console.log() inside AuthProvider and ProtectedRoute to confirm flow during logout.
+
+3. Null Component Render
+There may still be a return null or fallback component rendering undefined while routing or auth check is pending.
+
+Confirm that the logout state does not leave the component tree in an empty/unmounted state.
+
+4. Component Mounting Order
+Ensure no race conditions between useEffect, routing, and context update that prevent the login route from rendering.
+
+✅ Expected Behavior:
+After clicking "Logout", users should be redirected cleanly and immediately to /login with no blank screen.
+
+No white page, flash, or render delay should occur.
+
+Please review and resolve the routing and auth state flow at a deeper level — this issue appears persistent and may be caused by improper state sequencing or conditional rendering during logout.
+
+Let me know once it's addressed and stable.

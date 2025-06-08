@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth-simple";
 import {
   Card,
   CardContent,
@@ -44,8 +44,9 @@ type RegisterFormValues = z.infer<typeof registerFormSchema>;
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, login, register } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
+  const [isLoading, setIsLoading] = useState(false);
   
   // Redirect if user is already logged in
   useEffect(() => {
@@ -73,31 +74,27 @@ export default function AuthPage() {
   });
   
   const onLoginSubmit = async (data: LoginFormValues) => {
-    loginMutation.mutate(data, {
-      onSuccess: () => {
-        setLocation("/dashboard");
-      }
-    });
+    setIsLoading(true);
+    try {
+      await login(data);
+      setLocation("/dashboard");
+    } catch (error: any) {
+      // Error handling is already done in the login function
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const onRegisterSubmit = async (data: RegisterFormValues) => {
-    registerMutation.mutate(data, {
-      onSuccess: () => {
-        toast({
-          title: "Registration successful",
-          description: "Your account has been created. You'll be redirected to the dashboard.",
-        });
-        // Automatically login after successful registration
-        setLocation("/dashboard");
-      },
-      onError: (error: Error) => {
-        toast({
-          title: "Registration failed",
-          description: error.message || "Something went wrong",
-          variant: "destructive",
-        });
-      }
-    });
+    setIsLoading(true);
+    try {
+      await register(data);
+      setLocation("/dashboard");
+    } catch (error: any) {
+      // Error handling is already done in the register function
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (
@@ -171,9 +168,9 @@ export default function AuthPage() {
                       <Button 
                         type="submit" 
                         className="w-full" 
-                        disabled={loginMutation.isPending}
+                        disabled={isLoading}
                       >
-                        {loginMutation.isPending ? "Logging in..." : "Log In"}
+                        {isLoading ? "Logging in..." : "Log In"}
                       </Button>
                     </form>
                   </Form>
@@ -268,9 +265,9 @@ export default function AuthPage() {
                       <Button 
                         type="submit" 
                         className="w-full" 
-                        disabled={registerMutation.isPending}
+                        disabled={isLoading}
                       >
-                        {registerMutation.isPending ? "Registering..." : "Register"}
+                        {isLoading ? "Registering..." : "Register"}
                       </Button>
                     </form>
                   </Form>
