@@ -23,17 +23,11 @@ export function ProtectedRoute({
   }
 
   if (!user) {
-    // Don't redirect if we're already on the auth page to prevent loops
-    const currentPath = window.location.pathname;
-    if (currentPath !== '/auth') {
-      return (
-        <Route path={path}>
-          <Redirect to="/auth" />
-        </Route>
-      );
-    }
-    // Return null rather than rendering the component when not authenticated
-    return null;
+    return (
+      <Route path={path}>
+        <Redirect to="/auth" />
+      </Route>
+    );
   }
 
   // User is authenticated, render the protected component

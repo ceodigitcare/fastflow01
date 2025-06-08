@@ -67,12 +67,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     apiRequest("POST", "/api/auth/logout", {})
       .then(() => {
+        // Clear all cached data
         queryClient.clear();
-        window.location.href = "/auth";
+        // Force a hard redirect to ensure clean state
+        window.location.replace("/auth");
       })
       .catch(() => {
+        // Even if logout fails, clear local state and redirect
         queryClient.clear();
-        window.location.href = "/auth";
+        window.location.replace("/auth");
       });
   };
 
