@@ -39,7 +39,7 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Configure multer for file uploads
-const multerStorage = multer.diskStorage({
+const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
@@ -51,7 +51,7 @@ const multerStorage = multer.diskStorage({
 });
 
 const upload = multer({
-  storage: multerStorage,
+  storage,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
@@ -1645,13 +1645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/pwa-settings", requireAuth, async (req, res) => {
     try {
-      console.log('PWA PATCH - Headers:', JSON.stringify(req.headers, null, 2));
-      console.log('PWA PATCH - Session:', req.session);
-      console.log('PWA PATCH - User:', req.user);
-      console.log('PWA PATCH - Body:', req.body);
-      
       const businessId = getBusinessId(req);
-      console.log('PWA PATCH - Business ID:', businessId);
       
       // Validate that iconUrl is not a blob URL
       if (req.body.iconUrl && req.body.iconUrl.startsWith('blob:')) {
@@ -1660,24 +1654,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      console.log('PWA PATCH - Calling storage.updatePwaSettings...');
       const settings = await storage.updatePwaSettings(businessId, req.body);
-      console.log('PWA PATCH - Storage result:', settings);
-      
       if (settings) {
-        // Force cache invalidation for manifest.json
-        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        res.setHeader("Pragma", "no-cache");
-        res.setHeader("Expires", "0");
         res.json(settings);
       } else {
         res.status(404).json({ message: "PWA settings not found" });
       }
     } catch (error) {
       console.error("Error updating PWA settings:", error);
-      if (error instanceof Error) {
-        console.error("Error stack:", error.stack);
-      }
       res.status(500).json({ message: "Failed to update PWA settings" });
     }
   });
@@ -1711,13 +1695,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scope: "/",
         icons: [
           {
-            src: pwaSettings?.iconUrl || "/icon-192.png",
+            src: "/icon-192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any maskable"
           },
           {
-            src: pwaSettings?.iconUrl || "/icon-512.png", 
+            src: "/icon-512.png", 
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable"
@@ -1729,9 +1713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       res.setHeader("Content-Type", "application/manifest+json");
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      res.setHeader("Pragma", "no-cache");
-      res.setHeader("Expires", "0");
+      res.setHeader("Cache-Control", "public, max-age=300"); // Cache for 5 minutes
       res.json(manifest);
     } catch (error) {
       console.error("Error generating manifest:", error);

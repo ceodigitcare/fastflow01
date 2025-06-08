@@ -173,7 +173,33 @@ export default function Settings() {
   // PWA Settings mutations
   const createPwaSettingsMutation = useMutation({
     mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
-      return await apiRequest("POST", "/api/pwa-settings", data);
+      console.log('Creating PWA settings with data:', data);
+      
+      try {
+        const response = await fetch('/api/pwa-settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(data),
+        });
+        
+        console.log('PWA create response status:', response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('PWA create error response:', response.status, errorText);
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('PWA create success:', result);
+        return result;
+      } catch (error) {
+        console.error('PWA create fetch error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -206,7 +232,33 @@ export default function Settings() {
 
   const updatePwaSettingsMutation = useMutation({
     mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
-      return await apiRequest("PATCH", "/api/pwa-settings", data);
+      console.log('Updating PWA settings with data:', data);
+      
+      try {
+        const response = await fetch('/api/pwa-settings', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(data),
+        });
+        
+        console.log('PWA update response status:', response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('PWA update error response:', response.status, errorText);
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('PWA update success:', result);
+        return result;
+      } catch (error) {
+        console.error('PWA update fetch error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -214,28 +266,6 @@ export default function Settings() {
         description: "Your PWA settings have been updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
-      
-      // Force refresh manifest and service worker
-      setTimeout(() => {
-        // Clear manifest cache by forcing a reload
-        const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
-        if (manifestLink) {
-          const href = manifestLink.href;
-          manifestLink.href = '';
-          setTimeout(() => {
-            manifestLink.href = href + '?v=' + Date.now();
-          }, 100);
-        }
-        
-        // Update service worker if available
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(registrations => {
-            registrations.forEach(registration => {
-              registration.update();
-            });
-          });
-        }
-      }, 500);
     },
     onError: (error: any) => {
       console.error("PWA settings update error:", error);
@@ -291,10 +321,7 @@ export default function Settings() {
         });
         
         if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('Authentication failed. Please refresh the page and login again.');
-          }
-          throw new Error('Failed to upload icon.');
+          throw new Error('Upload failed');
         }
         
         const { iconUrl } = await response.json();
@@ -550,13 +577,13 @@ export default function Settings() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="pwa" className="space-y-6">
+        <TabsContent value="pwa">
           <Card>
             <CardHeader>
               <CardTitle>Progressive Web App Configuration</CardTitle>
               <CardDescription>Configure your app for installation on mobile devices and desktop</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6 max-w-none overflow-visible">
+            <CardContent>
               {/* PWA Readiness Status */}
               {pwaReadiness && (
                 <div className="mb-6 p-4 border rounded-lg bg-gray-50">

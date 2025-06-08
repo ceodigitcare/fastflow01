@@ -50,17 +50,14 @@ export default function MainLayout({ children, onRightPanelToggle }: MainLayoutP
   
   // Redirect to auth page if not authenticated
   useEffect(() => {
-    if (!isLoading && !user && !error) {
+    if (!isLoading && !user) {
       // Only redirect if we're not already on the auth page
       const currentPath = window.location.pathname;
       if (currentPath !== '/auth') {
-        // Add a small delay to prevent race conditions during logout
-        setTimeout(() => {
-          setLocation("/auth");
-        }, 100);
+        setLocation("/auth");
       }
     }
-  }, [user, isLoading, error, setLocation]);
+  }, [user, isLoading, setLocation]);
   
   // Only close sidebar on navigation on mobile, never on desktop
   const [location] = useLocation();

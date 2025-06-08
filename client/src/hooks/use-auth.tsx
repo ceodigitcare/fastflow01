@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -7,6 +7,12 @@ import {
 import { Business } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  loginUser as loginUserApi, 
+  logoutUser as logoutUserApi, 
+  registerUser as registerUserApi 
+} from "@/lib/auth";
+import { useLocation } from "wouter";
 
 type LoginData = {
   username: string;
@@ -35,6 +41,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   
   // Store the User query result
   const {
@@ -49,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/auth/login", credentials);
+      const res = await loginUserApi(credentials);
       return await res.json();
     },
     onSuccess: () => {
@@ -71,23 +78,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", "/api/auth/logout", {});
+      return await logoutUserApi();
     },
     onSuccess: () => {
-      // Clear all query data immediately
-      queryClient.clear();
-      
-      // Set user data to null explicitly
+      // Mark user as logged out immediately
       queryClient.setQueryData(["/api/auth/me"], null);
       
-      // Clear any localStorage/sessionStorage auth data
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
-      });
+      // Clear cache in the next tick to avoid React render issues
+      setTimeout(() => {
+        // This clears ALL query data
+        queryClient.clear();
+        
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out",
+        });
+      }, 0);
     },
     onError: (error: Error) => {
       toast({
@@ -101,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (credentials: RegisterData) => {
-      const res = await apiRequest("POST", "/api/auth/register", credentials);
+      const res = await registerUserApi(credentials);
       return await res.json();
     },
     onSuccess: () => {
@@ -122,26 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Helper function to handle logout and redirect
   const logout = () => {
-    // Prevent multiple simultaneous logout calls
-    if (logoutMutation.isPending) {
-      return;
-    }
-    
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
-        // Clear client-side data
-        queryClient.clear();
-        localStorage.clear();
-        sessionStorage.clear();
-        // Force immediate redirect to auth page
-        window.location.href = '/auth';
-      },
-      onError: () => {
-        // Even if logout fails, clear local state and redirect
-        queryClient.clear();
-        localStorage.clear();
-        sessionStorage.clear();
-        window.location.href = '/auth';
+        // Redirect to auth page
+        setLocation('/auth');
       }
     });
   };
