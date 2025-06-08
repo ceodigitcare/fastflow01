@@ -20,7 +20,6 @@ import { eq, asc, desc, and, or, gte, lte } from "drizzle-orm";
 export interface IStorage {
   // Business methods
   getBusiness(id: number): Promise<Business | undefined>;
-  getBusinesses(): Promise<Business[]>;
   getBusinessByUsername(username: string): Promise<Business | undefined>;
   createBusiness(business: InsertBusiness): Promise<Business>;
   updateBusiness(id: number, data: Partial<Business>): Promise<Business | undefined>;
@@ -278,10 +277,6 @@ export class MemStorage implements IStorage {
   // Business methods
   async getBusiness(id: number): Promise<Business | undefined> {
     return this.businesses.get(id);
-  }
-  
-  async getBusinesses(): Promise<Business[]> {
-    return Array.from(this.businesses.values());
   }
   
   async getBusinessByUsername(username: string): Promise<Business | undefined> {
@@ -921,10 +916,6 @@ export class DatabaseStorage implements IStorage {
   async getBusiness(id: number): Promise<Business | undefined> {
     const [business] = await db.select().from(businesses).where(eq(businesses.id, id));
     return business || undefined;
-  }
-
-  async getBusinesses(): Promise<Business[]> {
-    return await db.select().from(businesses).orderBy(asc(businesses.id));
   }
 
   async getBusinessByUsername(username: string): Promise<Business | undefined> {

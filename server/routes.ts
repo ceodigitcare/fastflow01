@@ -1596,54 +1596,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate manifest.json dynamically from PWA settings
+  // Generate manifest.json dynamically
   app.get("/manifest.json", async (req, res) => {
     try {
-      // Try to get PWA settings from any business (for public manifest access)
-      // In a multi-tenant app, you might want to use a subdomain or other identifier
-      let pwaSettings = null;
-      
-      try {
-        // Get the first business's PWA settings as default
-        const businesses = await storage.getBusinesses();
-        if (businesses.length > 0) {
-          pwaSettings = await storage.getPwaSettings(businesses[0].id);
-        }
-      } catch (error) {
-        console.log("No PWA settings found, using defaults");
-      }
-      
+      // For now, we'll use a default manifest. In a real app, you'd get this from PWA settings
       const manifest = {
-        name: pwaSettings?.appName || "Business Manager",
-        short_name: pwaSettings?.shortName || "BizManager",
-        description: pwaSettings?.description || "Comprehensive business management platform",
-        start_url: "/?source=pwa",
-        display: pwaSettings?.displayMode || "standalone",
-        orientation: pwaSettings?.orientation || "portrait",
-        background_color: pwaSettings?.backgroundColor || "#ffffff",
-        theme_color: pwaSettings?.themeColor || "#000000",
-        scope: "/",
+        name: "Business Manager",
+        short_name: "BizManager",
+        description: "Comprehensive business management platform",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#000000",
         icons: [
           {
             src: "/icon-192.png",
             sizes: "192x192",
-            type: "image/png",
-            purpose: "any maskable"
+            type: "image/png"
           },
           {
             src: "/icon-512.png", 
             sizes: "512x512",
-            type: "image/png",
-            purpose: "any maskable"
+            type: "image/png"
           }
-        ],
-        categories: ["business", "productivity", "finance"],
-        lang: "en",
-        dir: "ltr"
+        ]
       };
       
       res.setHeader("Content-Type", "application/manifest+json");
-      res.setHeader("Cache-Control", "public, max-age=300"); // Cache for 5 minutes
       res.json(manifest);
     } catch (error) {
       console.error("Error generating manifest:", error);
