@@ -20,8 +20,7 @@ import {
   BarChart4
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
-import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -45,7 +44,7 @@ interface MenuItem {
 
 export default function Sidebar({ isOpen, onClose, user }: SidebarProps) {
   const [location] = useLocation();
-  const queryClient = useQueryClient();
+  const { logout } = useAuth();
   const [upgradeHovered, setUpgradeHovered] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   
@@ -60,15 +59,6 @@ export default function Sidebar({ isOpen, onClose, user }: SidebarProps) {
       setExpandedMenus(prev => [...prev, '/finances']);
     }
   }, [location]);
-  
-  const handleLogout = async () => {
-    try {
-      await apiRequest("POST", "/api/auth/logout", {});
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-    } catch (error) {
-      console.error("Logout failed", error);
-    }
-  };
   
   const toggleSubmenu = (path: string) => {
     if (expandedMenus.includes(path)) {

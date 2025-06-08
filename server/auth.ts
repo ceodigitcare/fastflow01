@@ -139,7 +139,24 @@ export function setupAuth(app: Express) {
   app.post("/api/auth/logout", (req, res, next) => {
     req.logout((err: Error | null) => {
       if (err) return next(err);
-      res.json({ message: "Logged out successfully" });
+      
+      // Destroy the session completely
+      req.session.destroy((destroyErr: Error | null) => {
+        if (destroyErr) {
+          console.error("Session destroy error:", destroyErr);
+          return res.status(500).json({ message: "Failed to logout completely" });
+        }
+        
+        // Clear the session cookie
+        res.clearCookie('bizapp.sid', {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        });
+        
+        res.json({ message: "Logged out successfully" });
+      });
     });
   });
 

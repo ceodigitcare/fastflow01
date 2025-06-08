@@ -173,33 +173,7 @@ export default function Settings() {
   // PWA Settings mutations
   const createPwaSettingsMutation = useMutation({
     mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
-      console.log('Creating PWA settings with data:', data);
-      
-      try {
-        const response = await fetch('/api/pwa-settings', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(data),
-        });
-        
-        console.log('PWA create response status:', response.status);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('PWA create error response:', response.status, errorText);
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        
-        const result = await response.json();
-        console.log('PWA create success:', result);
-        return result;
-      } catch (error) {
-        console.error('PWA create fetch error:', error);
-        throw error;
-      }
+      return await apiRequest("POST", "/api/pwa-settings", data);
     },
     onSuccess: () => {
       toast({
@@ -232,33 +206,7 @@ export default function Settings() {
 
   const updatePwaSettingsMutation = useMutation({
     mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
-      console.log('Updating PWA settings with data:', data);
-      
-      try {
-        const response = await fetch('/api/pwa-settings', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(data),
-        });
-        
-        console.log('PWA update response status:', response.status);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('PWA update error response:', response.status, errorText);
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        
-        const result = await response.json();
-        console.log('PWA update success:', result);
-        return result;
-      } catch (error) {
-        console.error('PWA update fetch error:', error);
-        throw error;
-      }
+      return await apiRequest("PATCH", "/api/pwa-settings", data);
     },
     onSuccess: () => {
       toast({

@@ -1,0 +1,62 @@
+Combined Issues with Logout, PWA Icon, Auth Error, and UI Design
+1️⃣ Logout Issue (Auto-login After Logout)
+When I click "Logout", I am briefly redirected to the login page, but then automatically logged back into the dashboard without any input.
+
+This issue persists until I manually clear the browser cache.
+
+This suggests that authentication tokens (e.g., cookies or localStorage) are not being properly cleared on logout.
+
+Expected Fix:
+
+Ensure logout function fully removes all session data (JWT, refresh token, localStorage/cookies).
+
+Prevent automatic re-authentication if the user hasn't explicitly logged in.
+
+2️⃣ Authentication Error When Updating PWA Settings
+When I try to update anything in the PWA Settings tab (like changing the icon), I receive this error:
+"Authentication failed. Please refresh the page and login again."
+
+This happens even though I am clearly logged in and able to navigate other sections.
+
+Expected Fix:
+
+Check if token expiry or CSRF protection is causing this.
+
+Make sure authenticated routes in the backend correctly verify user identity.
+
+Frontend should gracefully handle token expiration and avoid triggering updates with invalid credentials.
+
+3️⃣ PWA Settings UI Design Issue
+The PWA Settings tab creates a vertical scrollbar, even when there is minimal content.
+
+When I scroll to the bottom, an unnecessary blank area appears on the right-hand side of the screen.
+
+This layout issue only happens inside the PWA tab and breaks the otherwise clean UI.
+
+Expected Fix:
+
+Review container and layout styling (e.g., padding, margins, min-height, overflow behavior).
+
+Ensure no unnecessary whitespace is rendered on the right side when scrolling.
+
+4️⃣ PWA Install Icon Shows Default Icon Instead of Custom One
+After uploading a custom app icon in the PWA tab, the browser’s install icon (top-right corner) still shows the default icon.
+
+It seems like the manifest.json is not picking up the uploaded icon path properly or not regenerating after update.
+
+Expected Fix:
+
+Ensure manifest.json is being dynamically rebuilt after each PWA settings update.
+
+Clear browser cache or use cache-busting headers to avoid loading stale manifest/icon.
+
+Make sure the icon path is absolute and publicly accessible (e.g., /uploads/icon-512x512.png).
+
+✅ Final Goal:
+Logout should fully clear authentication and prevent silent re-login.
+
+Updating PWA settings should work without auth errors.
+
+PWA tab UI should be clean with no unnecessary scroll or spacing.
+
+Browser install icon should use the updated app icon, not the default.
