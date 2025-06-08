@@ -138,11 +138,13 @@ export default function Settings() {
         shortName: pwaSettings?.shortName || business?.name?.substring(0, 12) || "",
         themeColor: pwaSettings?.themeColor || "#FFFFFF",
         backgroundColor: pwaSettings?.backgroundColor || "#FFFFFF",
-        iconUrl: pwaSettings?.iconUrl || "",
+        iconUrl: pwaSettings?.iconUrl || "/icon-512.png",
       });
       
       if (pwaSettings?.iconUrl) {
         setIconPreview(pwaSettings.iconUrl);
+      } else {
+        setIconPreview("/icon-512.png");
       }
     }
   }, [pwaSettings, business, pwaForm]);
@@ -200,10 +202,21 @@ export default function Settings() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("PWA settings update error:", error);
+      let errorMessage = "Failed to update PWA settings. Please try again.";
+      
+      if (error?.response?.status === 401) {
+        errorMessage = "Please log in again to update PWA settings.";
+      } else if (error?.response?.status === 400) {
+        errorMessage = "Invalid PWA settings data. Please check your inputs.";
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to update PWA settings. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -227,7 +240,8 @@ export default function Settings() {
     if (file) {
       const url = URL.createObjectURL(file);
       setIconPreview(url);
-      pwaForm.setValue("iconUrl", url);
+      // For demo purposes, use the default static icon instead of blob URL
+      pwaForm.setValue("iconUrl", "/icon-512.png");
     }
   };
   
