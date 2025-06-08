@@ -1654,39 +1654,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Service Worker
   app.get("/sw.js", (req, res) => {
     const swContent = `
-// Basic service worker for PWA functionality
+// Enhanced service worker for PWA functionality
 const CACHE_NAME = 'business-manager-v1';
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
+// Install event - cache essential resources
 self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
+        console.log('Service Worker: Caching files');
         return cache.addAll(urlsToCache);
       })
+      .then(() => self.skipWaiting())
   );
 });
 
+// Activate event - clean up old caches
+self.addEventListener('activate', function(event) {
+  event.waitUntil(
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(
+        cacheNames.map(function(cacheName) {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Service Worker: Clearing old cache');
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
+// Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', function(event) {
   event.respondWith(
     caches.match(event.request)
       .then(function(response) {
-        if (response) {
+        // Return cached version or fetch from network
+        return response || fetch(event.request).then(function(response) {
+          // Don't cache non-successful responses
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+
+          // Clone the response
+          const responseToCache = response.clone();
+
+          caches.open(CACHE_NAME)
+            .then(function(cache) {
+              cache.put(event.request, responseToCache);
+            });
+
           return response;
+        });
+      })
+      .catch(function() {
+        // Fallback for offline scenarios
+        if (event.request.destination === 'document') {
+          return caches.match('/');
         }
-        return fetch(event.request);
-      }
-    )
+      })
   );
 });
 `;
     
     res.setHeader("Content-Type", "application/javascript");
+    res.setHeader("Cache-Control", "no-cache");
     res.send(swContent);
   });
 
