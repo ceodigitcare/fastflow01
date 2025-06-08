@@ -402,3 +402,25 @@ export type BalanceHistoryEntry = z.infer<typeof balanceHistoryEntrySchema>;
 
 export type TransactionVersion = typeof transactionVersions.$inferSelect;
 export type InsertTransactionVersion = z.infer<typeof insertTransactionVersionSchema>;
+
+// PWA Settings
+export const pwaSettings = pgTable("pwa_settings", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().unique(),
+  appName: text("app_name"),
+  shortName: text("short_name"),
+  themeColor: text("theme_color").default("#FFFFFF"),
+  backgroundColor: text("background_color").default("#FFFFFF"),
+  iconUrl: text("icon_url"), // 512x512 PNG icon
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPwaSettingsSchema = createInsertSchema(pwaSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PwaSettings = typeof pwaSettings.$inferSelect;
+export type InsertPwaSettings = z.infer<typeof insertPwaSettingsSchema>;

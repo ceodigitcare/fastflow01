@@ -11,7 +11,8 @@ import {
   accounts, Account, InsertAccount,
   transfers, Transfer, InsertTransfer,
   users, User, InsertUser, LoginHistoryEntry,
-  transactionVersions
+  transactionVersions, TransactionVersion, InsertTransactionVersion,
+  pwaSettings, PwaSettings, InsertPwaSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, asc, desc, and, or, gte, lte } from "drizzle-orm";
@@ -112,6 +113,11 @@ export interface IStorage {
   getCashFlow(businessId: number, startDate: Date, endDate: Date): Promise<any>;
   getProfitAndLoss(businessId: number, startDate: Date, endDate: Date): Promise<any>;
   getBalanceSheet(businessId: number, asOfDate: Date): Promise<any>;
+  
+  // PWA Settings methods
+  getPwaSettings(businessId: number): Promise<PwaSettings | undefined>;
+  createPwaSettings(settings: InsertPwaSettings): Promise<PwaSettings>;
+  updatePwaSettings(businessId: number, data: Partial<PwaSettings>): Promise<PwaSettings | undefined>;
 }
 
 export class MemStorage implements IStorage {
