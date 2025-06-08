@@ -214,6 +214,28 @@ export default function Settings() {
         description: "Your PWA settings have been updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
+      
+      // Force refresh manifest and service worker
+      setTimeout(() => {
+        // Clear manifest cache by forcing a reload
+        const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+        if (manifestLink) {
+          const href = manifestLink.href;
+          manifestLink.href = '';
+          setTimeout(() => {
+            manifestLink.href = href + '?v=' + Date.now();
+          }, 100);
+        }
+        
+        // Update service worker if available
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            registrations.forEach(registration => {
+              registration.update();
+            });
+          });
+        }
+      }, 500);
     },
     onError: (error: any) => {
       console.error("PWA settings update error:", error);
@@ -525,13 +547,13 @@ export default function Settings() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="pwa">
-          <Card>
+        <TabsContent value="pwa" className="space-y-0">
+          <Card className="h-fit">
             <CardHeader>
               <CardTitle>Progressive Web App Configuration</CardTitle>
               <CardDescription>Configure your app for installation on mobile devices and desktop</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-6">
               {/* PWA Readiness Status */}
               {pwaReadiness && (
                 <div className="mb-6 p-4 border rounded-lg bg-gray-50">

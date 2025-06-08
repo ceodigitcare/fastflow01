@@ -1665,6 +1665,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('PWA PATCH - Storage result:', settings);
       
       if (settings) {
+        // Force cache invalidation for manifest.json
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
         res.json(settings);
       } else {
         res.status(404).json({ message: "PWA settings not found" });
@@ -1707,13 +1711,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scope: "/",
         icons: [
           {
-            src: "/icon-192.png",
+            src: pwaSettings?.iconUrl || "/icon-192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any maskable"
           },
           {
-            src: "/icon-512.png", 
+            src: pwaSettings?.iconUrl || "/icon-512.png", 
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable"
@@ -1725,7 +1729,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       res.setHeader("Content-Type", "application/manifest+json");
-      res.setHeader("Cache-Control", "public, max-age=300"); // Cache for 5 minutes
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
       res.json(manifest);
     } catch (error) {
       console.error("Error generating manifest:", error);
