@@ -291,7 +291,10 @@ export default function Settings() {
         });
         
         if (!response.ok) {
-          throw new Error('Upload failed');
+          if (response.status === 401) {
+            throw new Error('Authentication failed. Please refresh the page and login again.');
+          }
+          throw new Error('Failed to upload icon.');
         }
         
         const { iconUrl } = await response.json();

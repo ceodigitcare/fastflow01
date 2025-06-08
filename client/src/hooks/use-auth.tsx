@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useState, useEffect } from "react";
+import React, { createContext, ReactNode, useContext } from "react";
 import {
   useQuery,
   useMutation,
@@ -12,7 +12,6 @@ import {
   logoutUser as logoutUserApi, 
   registerUser as registerUserApi 
 } from "@/lib/auth";
-import { useLocation } from "wouter";
 
 type LoginData = {
   username: string;
@@ -41,7 +40,6 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
   
   // Store the User query result
   const {
@@ -129,8 +127,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Helper function to handle logout and redirect
   const logout = () => {
+    // Prevent multiple simultaneous logout calls
+    if (logoutMutation.isPending) {
+      return;
+    }
+    
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
+        // Clear client-side data
+        queryClient.clear();
+        localStorage.clear();
+        sessionStorage.clear();
         // Force immediate redirect to auth page
         window.location.href = '/auth';
       },
