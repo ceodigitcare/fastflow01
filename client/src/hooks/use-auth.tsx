@@ -81,19 +81,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await logoutUserApi();
     },
     onSuccess: () => {
-      // Mark user as logged out immediately
+      // Clear all query data immediately
+      queryClient.clear();
+      
+      // Set user data to null explicitly
       queryClient.setQueryData(["/api/auth/me"], null);
       
-      // Clear cache in the next tick to avoid React render issues
-      setTimeout(() => {
-        // This clears ALL query data
-        queryClient.clear();
-        
-        toast({
-          title: "Logged out",
-          description: "You have been successfully logged out",
-        });
-      }, 0);
+      // Clear any localStorage/sessionStorage auth data
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -130,8 +131,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
-        // Redirect to auth page
-        setLocation('/auth');
+        // Force immediate redirect to auth page
+        window.location.href = '/auth';
+      },
+      onError: () => {
+        // Even if logout fails, clear local state and redirect
+        queryClient.clear();
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = '/auth';
       }
     });
   };

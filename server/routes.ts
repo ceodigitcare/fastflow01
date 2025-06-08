@@ -1645,7 +1645,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/pwa-settings", requireAuth, async (req, res) => {
     try {
+      console.log('PWA PATCH - Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('PWA PATCH - Session:', req.session);
+      console.log('PWA PATCH - User:', req.user);
+      console.log('PWA PATCH - Body:', req.body);
+      
       const businessId = getBusinessId(req);
+      console.log('PWA PATCH - Business ID:', businessId);
       
       // Validate that iconUrl is not a blob URL
       if (req.body.iconUrl && req.body.iconUrl.startsWith('blob:')) {
@@ -1654,7 +1660,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      console.log('PWA PATCH - Calling storage.updatePwaSettings...');
       const settings = await storage.updatePwaSettings(businessId, req.body);
+      console.log('PWA PATCH - Storage result:', settings);
+      
       if (settings) {
         res.json(settings);
       } else {
@@ -1662,6 +1671,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Error updating PWA settings:", error);
+      if (error instanceof Error) {
+        console.error("Error stack:", error.stack);
+      }
       res.status(500).json({ message: "Failed to update PWA settings" });
     }
   });
