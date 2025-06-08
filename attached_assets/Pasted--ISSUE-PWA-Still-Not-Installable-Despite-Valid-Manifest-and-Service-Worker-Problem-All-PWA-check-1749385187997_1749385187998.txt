@@ -1,0 +1,80 @@
+⚠️ ISSUE: PWA Still Not Installable Despite Valid Manifest and Service Worker
+Problem:
+All PWA checks (Manifest, HTTPS, Service Worker) are now passing ✅, but the app is still not installable — the install icon does not appear in the browser’s address bar, and no install prompt is triggered.
+
+🎯 GOAL
+Ensure the PWA meets all installability requirements so users can see the install icon and install the app directly from their browser.
+
+🔍 CHECKLIST TO FIX INSTALLABILITY
+Please verify and address the following issues:
+
+Manifest Icons
+
+Ensure the icon in the manifest.json has a valid, public, HTTPS URL (not blob: or local dev paths).
+
+Use this format:
+
+json
+Copy
+Edit
+"icons": [
+  {
+    "src": "/icon-512x512.png",
+    "sizes": "512x512",
+    "type": "image/png"
+  }
+]
+Icon must be exactly 512x512 pixels for installability.
+
+Service Worker Scope
+
+Confirm the Service Worker is registered with the correct scope ('/') and is controlling the page:
+
+js
+Copy
+Edit
+navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+Use navigator.serviceWorker.controller in the console to verify it's active.
+
+Start URL
+
+Manifest must include a start_url that matches your root route:
+
+json
+Copy
+Edit
+"start_url": "/?source=pwa"
+Display Mode
+
+Ensure the display property is set to "standalone" in the manifest:
+
+json
+Copy
+Edit
+"display": "standalone"
+Secure Context
+
+Double-check that all URLs (including icon src and start_url) are served over HTTPS and not from dev-only blob or data URLs.
+
+No Page Reloads During SW Registration
+
+Make sure the Service Worker is registered before any page reloads occur — some browsers skip the install prompt if the page reloads too early.
+
+Install Prompt Handling (Optional)
+
+You can optionally capture and manually show the install prompt for more control:
+
+js
+Copy
+Edit
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  window.deferredPrompt = e;
+  // Show custom install button here if needed
+});
+🧪 RECOMMENDED TESTING
+Open DevTools → Application tab → Manifest → check for installability warnings
+
+Go to Chrome → open the PWA URL → check if the install icon appears in the address bar
+
+Use Lighthouse → check for "Installable" score and follow recommendations

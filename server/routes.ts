@@ -1616,21 +1616,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const manifest = {
         name: pwaSettings?.appName || "Business Manager",
         short_name: pwaSettings?.shortName || "BizManager",
-        description: "Comprehensive business management platform",
-        start_url: "/",
-        display: "standalone",
-        orientation: "portrait",
+        description: pwaSettings?.description || "Comprehensive business management platform",
+        start_url: "/?source=pwa",
+        display: pwaSettings?.displayMode || "standalone",
+        orientation: pwaSettings?.orientation || "portrait",
         background_color: pwaSettings?.backgroundColor || "#ffffff",
         theme_color: pwaSettings?.themeColor || "#000000",
+        scope: "/",
         icons: [
           {
-            src: pwaSettings?.iconUrl || "/icon-192.png",
+            src: "/icon-192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any maskable"
           },
           {
-            src: pwaSettings?.iconUrl || "/icon-512.png", 
+            src: "/icon-512.png", 
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable"
