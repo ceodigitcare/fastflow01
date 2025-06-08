@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext } from "react";
 import {
   useQuery,
   useMutation,
@@ -7,11 +7,6 @@ import {
 import { Business } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  loginUser as loginUserApi, 
-  logoutUser as logoutUserApi, 
-  registerUser as registerUserApi 
-} from "@/lib/auth";
 
 type LoginData = {
   username: string;
@@ -54,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await loginUserApi(credentials);
+      const res = await apiRequest("POST", "/api/auth/login", credentials);
       return await res.json();
     },
     onSuccess: () => {
@@ -76,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      return await logoutUserApi();
+      return await apiRequest("POST", "/api/auth/logout", {});
     },
     onSuccess: () => {
       // Clear all query data immediately
@@ -106,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (credentials: RegisterData) => {
-      const res = await registerUserApi(credentials);
+      const res = await apiRequest("POST", "/api/auth/register", credentials);
       return await res.json();
     },
     onSuccess: () => {
