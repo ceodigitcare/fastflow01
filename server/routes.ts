@@ -1618,25 +1618,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (pwaSettings.iconUrl.startsWith('data:') || pwaSettings.iconUrl.startsWith('http'))) {
         
         if (pwaSettings.iconUrl.startsWith('data:')) {
-          // For data URLs, create a dynamic endpoint to serve the icon with proper headers
+          // For data URLs, serve as static files with cache-busting
           icons.push(
             {
-              src: `/api/pwa-icon?size=192&v=${cacheVersion}`,
+              src: `/pwa-icon-192.png?v=${cacheVersion}`,
               sizes: "192x192",
               type: "image/png",
-              purpose: "any"
+              purpose: "any maskable"
             },
             {
-              src: `/api/pwa-icon?size=512&v=${cacheVersion}`,
+              src: `/pwa-icon-512.png?v=${cacheVersion}`,
               sizes: "512x512", 
               type: "image/png",
-              purpose: "any"
-            },
-            {
-              src: `/api/pwa-icon?size=192&v=${cacheVersion}`,
-              sizes: "192x192",
-              type: "image/png",
-              purpose: "maskable"
+              purpose: "any maskable"
             }
           );
         } else {
@@ -1701,7 +1695,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dynamic PWA Icon endpoint for serving base64 icons
+  // Static PWA Icon endpoints for better browser compatibility
+  app.get("/pwa-icon-192.png", async (req, res) => {
+    try {
+      const allSettings = await storage.getAllPwaSettings();
+      const pwaSettings = allSettings[0] || null;
+      
+      if (!pwaSettings?.iconUrl || !pwaSettings.iconUrl.startsWith('data:')) {
+        return res.redirect('/icon-192.png');
+      }
+      
+      // Extract base64 data from data URL
+      const matches = pwaSettings.iconUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches) {
+        return res.redirect('/icon-192.png');
+      }
+      
+      const mimeType = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Set proper headers for PWA icon
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', buffer.length);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      res.end(buffer);
+    } catch (error) {
+      console.error("Error serving PWA icon 192:", error);
+      res.redirect('/icon-192.png');
+    }
+  });
+
+  app.get("/pwa-icon-512.png", async (req, res) => {
+    try {
+      const allSettings = await storage.getAllPwaSettings();
+      const pwaSettings = allSettings[0] || null;
+      
+      if (!pwaSettings?.iconUrl || !pwaSettings.iconUrl.startsWith('data:')) {
+        return res.redirect('/icon-512.png');
+      }
+      
+      // Extract base64 data from data URL
+      const matches = pwaSettings.iconUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches) {
+        return res.redirect('/icon-512.png');
+      }
+      
+      const mimeType = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Set proper headers for PWA icon
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', buffer.length);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      res.end(buffer);
+    } catch (error) {
+      console.error("Error serving PWA icon 512:", error);
+      res.redirect('/icon-512.png');
+    }
+  });
+
+  // Dynamic PWA Icon endpoint for serving base64 icons (legacy support)
   app.get("/api/pwa-icon", async (req, res) => {
     try {
       const size = req.query.size || "512";
@@ -1725,16 +1786,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set proper headers for PWA icon caching
       res.setHeader('Content-Type', mimeType);
       res.setHeader('Content-Length', buffer.length);
-      res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year cache
-      res.setHeader('ETag', `"${Date.now()}"`);
-      
-      // Version-based cache invalidation
-      const ifNoneMatch = req.headers['if-none-match'];
-      const currentVersion = pwaSettings.updatedAt ? new Date(pwaSettings.updatedAt).getTime() : Date.now();
-      
-      if (ifNoneMatch && ifNoneMatch.includes(currentVersion.toString())) {
-        return res.status(304).end();
-      }
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       
       res.end(buffer);
     } catch (error) {
