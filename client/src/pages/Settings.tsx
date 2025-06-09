@@ -179,6 +179,8 @@ export default function Settings() {
         description: "Your PWA settings have been created successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
+      // Refresh PWA readiness status after settings are saved
+      setTimeout(refreshPwaReadiness, 1000);
     },
     onError: () => {
       toast({
@@ -199,6 +201,8 @@ export default function Settings() {
         description: "Your PWA settings have been updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
+      // Refresh PWA readiness status after settings are saved
+      setTimeout(refreshPwaReadiness, 1000);
     },
     onError: () => {
       toast({
@@ -222,12 +226,20 @@ export default function Settings() {
   };
 
   // Handle PWA icon upload
-  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleIconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setIconPreview(url);
-      pwaForm.setValue("iconUrl", url);
+      // Create preview URL for immediate display
+      const previewUrl = URL.createObjectURL(file);
+      setIconPreview(previewUrl);
+      
+      // Convert file to base64 data URL for storage
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64Url = reader.result as string;
+        pwaForm.setValue("iconUrl", base64Url);
+      };
+      reader.readAsDataURL(file);
     }
   };
   
@@ -244,6 +256,36 @@ export default function Settings() {
       createPwaSettingsMutation.mutate(data);
     }
   };
+
+  // Refresh PWA readiness after settings update
+  const refreshPwaReadiness = useCallback(async () => {
+    const readiness = {
+      https: location.protocol === 'https:' || location.hostname === 'localhost',
+      manifest: false,
+      serviceWorker: 'serviceWorker' in navigator,
+      installable: false,
+    };
+
+    // Check for manifest
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    readiness.manifest = !!manifestLink;
+
+    // Force reload manifest to check if it's valid
+    if (manifestLink) {
+      try {
+        const manifestResponse = await fetch('/manifest.json');
+        if (manifestResponse.ok) {
+          const manifestData = await manifestResponse.json();
+          readiness.manifest = !!(manifestData.name && manifestData.short_name && manifestData.icons && manifestData.icons.length > 0);
+        }
+      } catch (error) {
+        console.error('Error checking manifest:', error);
+        readiness.manifest = false;
+      }
+    }
+
+    setPwaReadiness(readiness);
+  }, []);
 
   // Check PWA readiness
   React.useEffect(() => {

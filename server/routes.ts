@@ -1599,17 +1599,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Generate manifest.json dynamically from PWA settings
   app.get("/manifest.json", async (req, res) => {
     try {
-      // Try to get PWA settings for the current business
-      // Since manifest.json is accessed without authentication, we'll need to handle this carefully
-      // For now, we'll try to get settings from the first business or use defaults
+      // Get PWA settings from the first available business
       let pwaSettings = null;
       
-      // Try to get PWA settings from any business (in a real app, you'd determine business context differently)
       try {
         const allSettings = await storage.getAllPwaSettings();
         pwaSettings = allSettings[0] || null;
       } catch (error) {
         console.log("No PWA settings found, using defaults");
+      }
+
+      // Create proper icon array with fallback icons
+      const icons = [];
+      
+      if (pwaSettings?.iconUrl && 
+          !pwaSettings.iconUrl.startsWith('blob:') && 
+          (pwaSettings.iconUrl.startsWith('data:') || pwaSettings.iconUrl.startsWith('http'))) {
+        // Use user's uploaded icon if it exists and is a valid data URL or HTTP URL
+        icons.push(
+          {
+            src: pwaSettings.iconUrl,
+            sizes: "192x192",
+            type: "image/png"
+          },
+          {
+            src: pwaSettings.iconUrl,
+            sizes: "512x512", 
+            type: "image/png"
+          }
+        );
+      } else {
+        // Use default fallback icons
+        icons.push(
+          {
+            src: "/icon-192.png",
+            sizes: "192x192",
+            type: "image/png"
+          },
+          {
+            src: "/icon-512.png",
+            sizes: "512x512",
+            type: "image/png"
+          }
+        );
       }
 
       const manifest = {
@@ -1620,18 +1652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         display: "standalone",
         background_color: pwaSettings?.backgroundColor || "#ffffff",
         theme_color: pwaSettings?.themeColor || "#000000",
-        icons: [
-          {
-            src: pwaSettings?.iconUrl || "/icon-192.png",
-            sizes: "192x192",
-            type: "image/png"
-          },
-          {
-            src: pwaSettings?.iconUrl || "/icon-512.png", 
-            sizes: "512x512",
-            type: "image/png"
-          }
-        ]
+        icons
       };
       
       res.setHeader("Content-Type", "application/manifest+json");

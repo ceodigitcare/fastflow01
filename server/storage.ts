@@ -160,6 +160,7 @@ export class MemStorage implements IStorage {
     this.accounts = new Map();
     this.transfers = new Map();
     this.users = new Map();
+    this.pwaSettings = new Map();
     
     this.businessId = 1;
     this.productId = 1;
@@ -172,6 +173,7 @@ export class MemStorage implements IStorage {
     this.accountId = 1;
     this.transferId = 1;
     this.userId = 1;
+    this.pwaSettingsId = 1;
     
     // Initialize with some template data
     this.initializeTemplates();
