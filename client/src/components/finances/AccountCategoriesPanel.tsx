@@ -367,7 +367,7 @@ export default function AccountCategoriesPanel() {
       name: account.name,
       description: account.description || "",
       initialBalance: (account.initialBalance || 0) / 100, // Convert from cents to dollars
-      isActive: account.isActive,
+      isActive: Boolean(account.isActive),
     });
     setAccountDialogOpen(true);
   };
@@ -1026,9 +1026,13 @@ export default function AccountCategoriesPanel() {
       <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Account</DialogTitle>
+            <DialogTitle>
+              {editingAccount ? "Edit Account" : "Add New Account"}
+            </DialogTitle>
             <DialogDescription>
-              Add a new account under "{selectedCategory?.name}" category
+              {editingAccount 
+                ? `Update account details for "${editingAccount.name}"` 
+                : `Add a new account under "${selectedCategory?.name}" category`}
             </DialogDescription>
           </DialogHeader>
 
@@ -1065,51 +1069,59 @@ export default function AccountCategoriesPanel() {
                 )}
               />
 
-              <FormField
-                control={accountForm.control}
-                name="initialBalance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Balance</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Enter the starting balance for this account
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={accountForm.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                      <FormLabel>Active Account</FormLabel>
+              {/* Initial Balance and Active Status - Side by Side */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={accountForm.control}
+                  name="initialBalance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Initial Balance</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
                       <FormDescription>
-                        Account is available for transactions
+                        Starting balance
                       </FormDescription>
-                    </div>
-                    <FormControl>
-                      <input
-                        type="checkbox"
-                        checked={field.value}
-                        onChange={field.onChange}
-                        className="h-4 w-4"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={accountForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col justify-between">
+                      <FormLabel>Account Status</FormLabel>
+                      <div className="flex items-center space-x-2 rounded-lg border p-3">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={field.onChange}
+                            className="h-4 w-4"
+                          />
+                        </FormControl>
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-sm font-normal">
+                            Active Account
+                          </FormLabel>
+                        </div>
+                      </div>
+                      <FormDescription>
+                        Available for transactions
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <DialogFooter>
                 <Button
@@ -1121,13 +1133,45 @@ export default function AccountCategoriesPanel() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={createAccountMutation.isPending}
+                  disabled={createAccountMutation.isPending || updateAccountMutation.isPending}
                 >
-                  {createAccountMutation.isPending ? "Creating..." : "Create Account"}
+                  {createAccountMutation.isPending || updateAccountMutation.isPending ? 
+                    (editingAccount ? "Updating..." : "Creating...") : 
+                    (editingAccount ? "Update Account" : "Create Account")
+                  }
                 </Button>
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Account Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Account</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{accountToDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmDeleteAccount}
+              disabled={deleteAccountMutation.isPending}
+            >
+              {deleteAccountMutation.isPending ? "Deleting..." : "Delete Account"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>
