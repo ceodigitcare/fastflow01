@@ -1,0 +1,66 @@
+PWA App Icon Not Reflecting After Update in Installed App Button
+Although the updated PWA icon is correctly saved to the database and included in the generated manifest.json, the install button (in the browser address bar) still shows the old/default icon instead of the newly uploaded one.
+
+🔍 Issue Summary:
+Custom icon uploads are successful and saved correctly (no blob URLs)
+
+
+manifest.json shows correct new icon with static URL (e.g., /uploads/icon-512.png)
+
+
+Browser continues to show the old icon in the install popup/app list
+
+
+Even after reinstalling, the app uses the outdated icon
+
+
+Manifest and service worker cache may not reflect the updated icon
+
+
+
+✅ Possible Causes to Investigate:
+Service Worker & Manifest Caching
+
+
+Old manifest or icon may be cached by the service worker or browser
+
+
+Ensure proper cache busting is applied using versioning or URL query (e.g., icon-512.png?v=2)
+
+
+Update service-worker.js to bypass cache for the manifest and app icon
+
+
+Manifest Meta Tag
+
+
+Confirm that the <link rel="manifest" href="/manifest.json"> is correctly updated and not hardcoded with an old URL
+
+
+Reinstall Behavior
+
+
+PWA installation might still use previously cached icon; full uninstall and reinstall should force refresh — if not, caching rules are too aggressive
+
+
+MIME Type Validation
+
+
+Ensure the uploaded icon is served with correct MIME type (image/png) and status code 200 OK
+
+
+
+🛠 Recommended Fix:
+Implement cache-busting (e.g., using ?v=[timestamp]) on icon and manifest URLs
+
+
+Add a cache clear mechanism in service-worker.js when app icon changes
+
+
+Ensure the service worker installs a fresh version of the manifest when any PWA setting changes
+
+
+
+💡 Final Expectation:
+Once fixed, the PWA install prompt will reflect the newly uploaded app icon immediately or after clearing browser cache/installing fresh — without showing the old/default icon.
+Please help investigate and ensure the app icon is dynamically updated across all install-related UI surfaces.

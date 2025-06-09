@@ -173,13 +173,30 @@ export default function Settings() {
     mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
       return await apiRequest("POST", "/api/pwa-settings", data);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "PWA settings created",
         description: "Your PWA settings have been created successfully.",
       });
+      
+      // Clear service worker cache for PWA-related resources
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        const messageChannel = new MessageChannel();
+        messageChannel.port1.onmessage = function(event) {
+          if (event.data.success) {
+            console.log('PWA cache cleared successfully');
+          }
+        };
+        
+        navigator.serviceWorker.controller.postMessage(
+          { action: 'CLEAR_PWA_CACHE' }, 
+          [messageChannel.port2]
+        );
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
-      // Refresh PWA readiness status after settings are saved
+      
+      // Add delay before refreshing PWA readiness to allow cache clearing
       setTimeout(refreshPwaReadiness, 1000);
     },
     onError: () => {
@@ -195,13 +212,30 @@ export default function Settings() {
     mutationFn: async (data: z.infer<typeof pwaFormSchema>) => {
       return await apiRequest("PATCH", "/api/pwa-settings", data);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "PWA settings updated",
         description: "Your PWA settings have been updated successfully.",
       });
+      
+      // Clear service worker cache for PWA-related resources
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        const messageChannel = new MessageChannel();
+        messageChannel.port1.onmessage = function(event) {
+          if (event.data.success) {
+            console.log('PWA cache cleared successfully');
+          }
+        };
+        
+        navigator.serviceWorker.controller.postMessage(
+          { action: 'CLEAR_PWA_CACHE' }, 
+          [messageChannel.port2]
+        );
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/pwa-settings"] });
-      // Refresh PWA readiness status after settings are saved
+      
+      // Add delay before refreshing PWA readiness to allow cache clearing
       setTimeout(refreshPwaReadiness, 1000);
     },
     onError: () => {
@@ -266,14 +300,25 @@ export default function Settings() {
       installable: false,
     };
 
-    // Check for manifest
-    const manifestLink = document.querySelector('link[rel="manifest"]');
+    // Update manifest link with cache-busting timestamp
+    const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+    if (manifestLink) {
+      const timestamp = Date.now();
+      manifestLink.href = `/manifest.json?v=${timestamp}`;
+      
+      // Update timestamp meta tag for reference
+      const timestampMeta = document.getElementById('manifest-timestamp') as HTMLMetaElement;
+      if (timestampMeta) {
+        timestampMeta.content = timestamp.toString();
+      }
+    }
+    
     readiness.manifest = !!manifestLink;
 
-    // Force reload manifest to check if it's valid
+    // Force reload manifest to check if it's valid with cache-busting
     if (manifestLink) {
       try {
-        const manifestResponse = await fetch('/manifest.json');
+        const manifestResponse = await fetch(`/manifest.json?v=${Date.now()}`);
         if (manifestResponse.ok) {
           const manifestData = await manifestResponse.json();
           readiness.manifest = !!(manifestData.name && manifestData.short_name && manifestData.icons && manifestData.icons.length > 0);

@@ -1609,8 +1609,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("No PWA settings found, using defaults");
       }
 
-      // Create proper icon array with fallback icons
+      // Create proper icon array with cache-busting
       const icons = [];
+      const cacheVersion = pwaSettings?.updatedAt ? new Date(pwaSettings.updatedAt).getTime() : Date.now();
       
       if (pwaSettings?.iconUrl && 
           !pwaSettings.iconUrl.startsWith('blob:') && 
@@ -1629,15 +1630,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         );
       } else {
-        // Use default fallback icons
+        // Use default fallback icons with cache-busting
         icons.push(
           {
-            src: "/icon-192.png",
+            src: `/icon-192.png?v=${cacheVersion}`,
             sizes: "192x192",
             type: "image/png"
           },
           {
-            src: "/icon-512.png",
+            src: `/icon-512.png?v=${cacheVersion}`,
             sizes: "512x512",
             type: "image/png"
           }
@@ -1715,24 +1716,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.send(svg);
   });
 
-  // Service Worker
-  app.get("/sw.js", (req, res) => {
+  // Service Worker with dynamic versioning
+  app.get("/sw.js", async (req, res) => {
+    // Get latest PWA settings to determine cache version
+    let cacheVersion = 'v1';
+    try {
+      const allSettings = await storage.getAllPwaSettings();
+      const pwaSettings = allSettings[0] || null;
+      if (pwaSettings?.updatedAt) {
+        cacheVersion = `v${new Date(pwaSettings.updatedAt).getTime()}`;
+      }
+    } catch (error) {
+      // Use default version if no settings found
+    }
+
     const swContent = `
-// Service worker for PWA functionality
-const CACHE_NAME = 'business-manager-v1';
-const urlsToCache = [
-  '/',
-  '/manifest.json'
-];
+// Service worker for PWA functionality with dynamic cache versioning
+const CACHE_NAME = 'business-manager-${cacheVersion}';
+const DYNAMIC_CACHE_NAME = 'business-manager-dynamic-${cacheVersion}';
+
+// URLs that should always bypass cache (PWA-related resources)
+const BYPASS_CACHE_URLS = ['/manifest.json', '/api/pwa-settings'];
 
 // Install event - cache essential resources
 self.addEventListener('install', function(event) {
-  console.log('Service Worker installing...');
+  console.log('Service Worker installing with cache version:', CACHE_NAME);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
         console.log('Opened cache');
-        return cache.addAll(urlsToCache);
+        // Cache basic resources, but let manifest be fetched fresh
+        return cache.addAll(['/']);
       })
       .then(function() {
         return self.skipWaiting();
@@ -1747,7 +1761,7 @@ self.addEventListener('activate', function(event) {
     caches.keys().then(function(cacheNames) {
       return Promise.all(
         cacheNames.map(function(cacheName) {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheName !== CACHE_NAME && cacheName !== DYNAMIC_CACHE_NAME) {
             console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
@@ -1759,15 +1773,29 @@ self.addEventListener('activate', function(event) {
   );
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event - smart caching strategy
 self.addEventListener('fetch', function(event) {
+  const url = new URL(event.request.url);
+  const shouldBypassCache = BYPASS_CACHE_URLS.some(bypassUrl => url.pathname.includes(bypassUrl));
+  
+  if (shouldBypassCache) {
+    // Always fetch fresh for PWA-related resources
+    event.respondWith(
+      fetch(event.request).catch(function() {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
+  // Normal caching strategy for other resources
   event.respondWith(
     fetch(event.request)
       .then(function(response) {
-        // If we got a response, cache it
-        if (response.status === 200) {
+        // If we got a successful response, cache it
+        if (response.status === 200 && event.request.method === 'GET') {
           const responseToCache = response.clone();
-          caches.open(CACHE_NAME)
+          caches.open(DYNAMIC_CACHE_NAME)
             .then(function(cache) {
               cache.put(event.request, responseToCache);
             });
@@ -1779,6 +1807,24 @@ self.addEventListener('fetch', function(event) {
         return caches.match(event.request);
       })
   );
+});
+
+// Listen for messages from the main thread to clear cache
+self.addEventListener('message', function(event) {
+  if (event.data.action === 'CLEAR_PWA_CACHE') {
+    console.log('Clearing PWA-related cache...');
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(
+        cacheNames.map(function(cacheName) {
+          if (cacheName.includes('business-manager')) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(function() {
+      event.ports[0].postMessage({success: true});
+    });
+  }
 });
 `;
     
