@@ -1609,38 +1609,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("No PWA settings found, using defaults");
       }
 
-      // Create proper icon array with cache-busting
+      // Create proper icon array with enhanced cache-busting
       const icons = [];
       const cacheVersion = pwaSettings?.updatedAt ? new Date(pwaSettings.updatedAt).getTime() : Date.now();
       
       if (pwaSettings?.iconUrl && 
           !pwaSettings.iconUrl.startsWith('blob:') && 
           (pwaSettings.iconUrl.startsWith('data:') || pwaSettings.iconUrl.startsWith('http'))) {
-        // Use user's uploaded icon if it exists and is a valid data URL or HTTP URL
-        icons.push(
-          {
-            src: pwaSettings.iconUrl,
-            sizes: "192x192",
-            type: "image/png"
-          },
-          {
-            src: pwaSettings.iconUrl,
-            sizes: "512x512", 
-            type: "image/png"
-          }
-        );
+        
+        if (pwaSettings.iconUrl.startsWith('data:')) {
+          // For data URLs, create a dynamic endpoint to serve the icon with proper headers
+          icons.push(
+            {
+              src: `/api/pwa-icon?size=192&v=${cacheVersion}`,
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "any"
+            },
+            {
+              src: `/api/pwa-icon?size=512&v=${cacheVersion}`,
+              sizes: "512x512", 
+              type: "image/png",
+              purpose: "any"
+            },
+            {
+              src: `/api/pwa-icon?size=192&v=${cacheVersion}`,
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "maskable"
+            }
+          );
+        } else {
+          // For HTTP URLs, use directly with cache-busting
+          icons.push(
+            {
+              src: `${pwaSettings.iconUrl}?v=${cacheVersion}`,
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "any"
+            },
+            {
+              src: `${pwaSettings.iconUrl}?v=${cacheVersion}`,
+              sizes: "512x512", 
+              type: "image/png",
+              purpose: "any"
+            }
+          );
+        }
       } else {
         // Use default fallback icons with cache-busting
         icons.push(
           {
             src: `/icon-192.png?v=${cacheVersion}`,
             sizes: "192x192",
-            type: "image/png"
+            type: "image/png",
+            purpose: "any"
           },
           {
             src: `/icon-512.png?v=${cacheVersion}`,
             sizes: "512x512",
-            type: "image/png"
+            type: "image/png",
+            purpose: "any"
           }
         );
       }
@@ -1662,10 +1691,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       res.setHeader("Content-Type", "application/manifest+json");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
       res.json(manifest);
     } catch (error) {
       console.error("Error generating manifest:", error);
       res.status(500).json({ message: "Failed to generate manifest" });
+    }
+  });
+
+  // Dynamic PWA Icon endpoint for serving base64 icons
+  app.get("/api/pwa-icon", async (req, res) => {
+    try {
+      const size = req.query.size || "512";
+      const allSettings = await storage.getAllPwaSettings();
+      const pwaSettings = allSettings[0] || null;
+      
+      if (!pwaSettings?.iconUrl || !pwaSettings.iconUrl.startsWith('data:')) {
+        return res.status(404).json({ message: "Icon not found" });
+      }
+      
+      // Extract base64 data from data URL
+      const matches = pwaSettings.iconUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches) {
+        return res.status(400).json({ message: "Invalid icon format" });
+      }
+      
+      const mimeType = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Set proper headers for PWA icon caching
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', buffer.length);
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year cache
+      res.setHeader('ETag', `"${Date.now()}"`);
+      
+      // Version-based cache invalidation
+      const ifNoneMatch = req.headers['if-none-match'];
+      const currentVersion = pwaSettings.updatedAt ? new Date(pwaSettings.updatedAt).getTime() : Date.now();
+      
+      if (ifNoneMatch && ifNoneMatch.includes(currentVersion.toString())) {
+        return res.status(304).end();
+      }
+      
+      res.end(buffer);
+    } catch (error) {
+      console.error("Error serving PWA icon:", error);
+      res.status(500).json({ message: "Failed to serve icon" });
     }
   });
 
