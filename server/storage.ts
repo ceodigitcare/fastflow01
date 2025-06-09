@@ -118,6 +118,7 @@ export interface IStorage {
   getPwaSettings(businessId: number): Promise<PwaSettings | undefined>;
   createPwaSettings(settings: InsertPwaSettings): Promise<PwaSettings>;
   updatePwaSettings(businessId: number, data: Partial<PwaSettings>): Promise<PwaSettings | undefined>;
+  getAllPwaSettings(): Promise<PwaSettings[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -132,6 +133,7 @@ export class MemStorage implements IStorage {
   private accounts: Map<number, Account>;
   private transfers: Map<number, Transfer>;
   private users: Map<number, User>;
+  private pwaSettings: Map<number, PwaSettings>;
   
   private businessId: number;
   private productId: number;
@@ -144,6 +146,7 @@ export class MemStorage implements IStorage {
   private accountId: number;
   private transferId: number;
   private userId: number;
+  private pwaSettingsId: number;
   
   constructor() {
     this.businesses = new Map();
@@ -855,6 +858,42 @@ export class MemStorage implements IStorage {
     };
     this.conversations.set(id, updatedConversation);
     return updatedConversation;
+  }
+
+  // PWA Settings methods (MemStorage implementation)
+  async getPwaSettings(businessId: number): Promise<PwaSettings | undefined> {
+    return Array.from(this.pwaSettings.values())
+      .find(settings => settings.businessId === businessId);
+  }
+
+  async createPwaSettings(settings: InsertPwaSettings): Promise<PwaSettings> {
+    const id = this.pwaSettingsId++;
+    const now = new Date();
+    const newSettings: PwaSettings = {
+      ...settings,
+      id,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.pwaSettings.set(id, newSettings);
+    return newSettings;
+  }
+
+  async updatePwaSettings(businessId: number, data: Partial<PwaSettings>): Promise<PwaSettings | undefined> {
+    const settings = await this.getPwaSettings(businessId);
+    if (!settings) return undefined;
+    
+    const updatedSettings = {
+      ...settings,
+      ...data,
+      updatedAt: new Date(),
+    };
+    this.pwaSettings.set(settings.id, updatedSettings);
+    return updatedSettings;
+  }
+
+  async getAllPwaSettings(): Promise<PwaSettings[]> {
+    return Array.from(this.pwaSettings.values());
   }
 }
 
@@ -1871,6 +1910,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pwaSettings.businessId, businessId))
       .returning();
     return updatedSettings || undefined;
+  }
+
+  async getAllPwaSettings(): Promise<PwaSettings[]> {
+    const settings = await db
+      .select()
+      .from(pwaSettings);
+    return settings;
   }
 }
 

@@ -1596,26 +1596,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate manifest.json dynamically
+  // Generate manifest.json dynamically from PWA settings
   app.get("/manifest.json", async (req, res) => {
     try {
-      // For now, we'll use a default manifest. In a real app, you'd get this from PWA settings
+      // Try to get PWA settings for the current business
+      // Since manifest.json is accessed without authentication, we'll need to handle this carefully
+      // For now, we'll try to get settings from the first business or use defaults
+      let pwaSettings = null;
+      
+      // Try to get PWA settings from any business (in a real app, you'd determine business context differently)
+      try {
+        const allSettings = await storage.getAllPwaSettings();
+        pwaSettings = allSettings[0] || null;
+      } catch (error) {
+        console.log("No PWA settings found, using defaults");
+      }
+
       const manifest = {
-        name: "Business Manager",
-        short_name: "BizManager",
+        name: pwaSettings?.appName || "Business Manager",
+        short_name: pwaSettings?.shortName || "BizManager",
         description: "Comprehensive business management platform",
         start_url: "/",
         display: "standalone",
-        background_color: "#ffffff",
-        theme_color: "#000000",
+        background_color: pwaSettings?.backgroundColor || "#ffffff",
+        theme_color: pwaSettings?.themeColor || "#000000",
         icons: [
           {
-            src: "/icon-192.png",
+            src: pwaSettings?.iconUrl || "/icon-192.png",
             sizes: "192x192",
             type: "image/png"
           },
           {
-            src: "/icon-512.png", 
+            src: pwaSettings?.iconUrl || "/icon-512.png", 
             sizes: "512x512",
             type: "image/png"
           }
