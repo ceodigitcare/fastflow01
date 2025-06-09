@@ -56,7 +56,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Info, DollarSign, Lock } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Info, DollarSign, Lock, HelpCircle } from "lucide-react";
 
 // Form validation schema for categories
 const accountCategorySchema = z.object({
@@ -84,6 +84,7 @@ export default function AccountCategoriesPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<AccountCategory | null>(null);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<AccountCategory | null>(null);
@@ -710,15 +711,25 @@ export default function AccountCategoriesPanel() {
           <CardTitle>Chart of Accounts</CardTitle>
           <CardDescription>View and manage standard financial account categories</CardDescription>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex space-x-2 items-center">
           <Button variant="outline" size="sm" onClick={handlePrintChartOfAccounts}>
             <Printer className="h-4 w-4 mr-2" />
             Print Chart
           </Button>
-          <Button onClick={handleCreate}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add Category
-          </Button>
+          <div className="flex items-center space-x-1">
+            <Button onClick={handleCreate}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add Category
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setHelpModalOpen(true)}
+              className="h-9 w-9 p-0 text-gray-500 hover:text-gray-700"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -1170,6 +1181,162 @@ export default function AccountCategoriesPanel() {
               disabled={deleteAccountMutation.isPending}
             >
               {deleteAccountMutation.isPending ? "Deleting..." : "Delete Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Help Manual Modal */}
+      <Dialog open={helpModalOpen} onOpenChange={setHelpModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5" />
+              Chart of Accounts – User Manual
+            </DialogTitle>
+            <DialogDescription>
+              Learn how to manage categories and accounts in your Chart of Accounts system
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 text-sm">
+            {/* Adding a Category */}
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                📂 Adding a Category
+              </h3>
+              <ul className="space-y-2 ml-4">
+                <li>• Click the "Add Category" button to create a new category under Assets, Liabilities, Equity, Income, or Expenses.</li>
+                <li>• Each category must have a unique name and a short description.</li>
+                <li>• System-defined categories cannot be renamed or deleted.</li>
+              </ul>
+            </div>
+
+            {/* Editing a Category */}
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                ✏️ Editing a Category
+              </h3>
+              <ul className="space-y-2 ml-4">
+                <li>• Click the Edit icon (🖉) next to any editable category.</li>
+                <li>• You can modify the name and description of user-created categories.</li>
+                <li>• System-tagged categories cannot be edited.</li>
+              </ul>
+            </div>
+
+            {/* Deleting a Category */}
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                🗑️ Deleting a Category
+              </h3>
+              <ul className="space-y-2 ml-4">
+                <li>• Click the Delete icon (🗑️) to remove a user-created category.</li>
+                <li>• A category cannot be deleted if:</li>
+                <ul className="ml-6 mt-1 space-y-1">
+                  <li>- It contains one or more accounts.</li>
+                  <li>- It is system-defined.</li>
+                </ul>
+              </ul>
+            </div>
+
+            {/* Adding an Account */}
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                ➕ Adding an Account
+              </h3>
+              <ul className="space-y-2 ml-4">
+                <li>• Click "Add Account" under the appropriate category.</li>
+                <li>• Provide:</li>
+                <ul className="ml-6 mt-1 space-y-1">
+                  <li>- Account Name</li>
+                  <li>- Short Description</li>
+                  <li>- Initial Balance (optional)</li>
+                  <li>- Active Status (checkbox)</li>
+                </ul>
+                <li>• The account will be assigned a smart system-generated code (e.g., A0003).</li>
+              </ul>
+            </div>
+
+            {/* Editing an Account */}
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                ✏️ Editing an Account
+              </h3>
+              <ul className="space-y-2 ml-4">
+                <li>• Use the Edit icon (🖉) beside each account to update:</li>
+                <ul className="ml-6 mt-1 space-y-1">
+                  <li>- Name</li>
+                  <li>- Description</li>
+                  <li>- Initial Balance</li>
+                  <li>- Active status</li>
+                </ul>
+              </ul>
+            </div>
+
+            {/* Deleting an Account */}
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                🗑️ Deleting an Account
+              </h3>
+              <ul className="space-y-2 ml-4">
+                <li>• Click the Delete icon (🗑️) next to an account.</li>
+                <li>• An account cannot be deleted if:</li>
+                <ul className="ml-6 mt-1 space-y-1">
+                  <li>- It has associated transactions.</li>
+                </ul>
+                <li>• If deletable, a confirmation prompt will appear before deletion.</li>
+              </ul>
+            </div>
+
+            {/* Printing */}
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                🖨️ Printing the Chart of Accounts
+              </h3>
+              <ul className="space-y-2 ml-4">
+                <li>• Use the "Print" button at the top-right corner to print or save the full Chart of Accounts list.</li>
+                <li>• The print view includes all categories, accounts, and their descriptions.</li>
+              </ul>
+            </div>
+
+            {/* Expand/Collapse */}
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                🔄 Expand All / Collapse All
+              </h3>
+              <ul className="space-y-2 ml-4">
+                <li>• Use "Expand All" to open all category groups and display their accounts.</li>
+                <li>• Use "Collapse All" to hide all account listings and show only top-level categories.</li>
+              </ul>
+            </div>
+
+            {/* Transaction Info */}
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                🔍 Viewing Transaction Info
+              </h3>
+              <ul className="space-y-2 ml-4">
+                <li>• Use the "Show Transaction Info" toggle to display account balances and recent transaction details.</li>
+                <li>• This shows current balances, last transaction dates, and transaction descriptions for each account.</li>
+                <li>• Account activity history helps track financial movements and account usage.</li>
+              </ul>
+            </div>
+
+            {/* Account Codes */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                🧩 Smart Account Codes
+              </h3>
+              <p className="text-sm text-gray-700">
+                Each category and account is automatically assigned a smart code (e.g., A0001 for assets, L0002 for liabilities). 
+                This coding system helps organize and identify accounts quickly while maintaining consistency across your financial records.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setHelpModalOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,0 +1,90 @@
+Add Manual Help Modal to Chart of Accounts
+We have an existing Chart of Accounts (COA) system. Your task is to add a help/documentation modal to assist users in understanding how to manage categories and accounts.
+
+📌 UI Integration
+Next to the "Add Category" button, place a small question mark icon (?).
+
+The icon should be visually subtle and aligned to the right side of the button.
+
+When clicked, it will open a modal window (similar to the product variant modal) that displays a well-structured English-language user manual for the COA system.
+
+📘 Manual Content (To Display in Modal)
+Chart of Accounts – User Manual
+
+📂 Adding a Category
+Click the "Add Category" button to create a new category under Assets, Liabilities, Equity, Income, or Expenses.
+
+Each category must have a unique name and a short description.
+
+System-defined categories cannot be renamed or deleted.
+
+✏️ Editing a Category
+Click the Edit icon (🖉) next to any editable category.
+
+You can modify the name and description of user-created categories.
+
+System-tagged categories cannot be edited.
+
+🗑️ Deleting a Category
+Click the Delete icon (🗑️) to remove a user-created category.
+
+A category cannot be deleted if:
+
+It contains one or more accounts.
+
+It is system-defined.
+
+➕ Adding an Account
+Click "Add Account" under the appropriate category.
+
+Provide:
+
+Account Name
+
+Short Description
+
+Initial Balance (optional)
+
+Active Status (checkbox)
+
+The account will be assigned a smart system-generated code (e.g., A0003).
+
+✏️ Editing an Account
+Use the Edit icon (🖉) beside each account to update:
+
+Name
+
+Description
+
+Initial Balance
+
+Active status
+
+🗑️ Deleting an Account
+Click the Delete icon (🗑️) next to an account.
+
+An account cannot be deleted if:
+
+It has associated transactions.
+
+If deletable, a confirmation prompt will appear before deletion.
+
+🖨️ Printing the Chart of Accounts
+Use the "Print" button at the top-right corner to print or save the full Chart of Accounts list.
+
+The print view includes all categories, accounts, and their descriptions.
+
+🔄 Expand All / Collapse All
+Use "Expand All" to open all category groups and display their accounts.
+
+Use "Collapse All" to hide all account listings and show only top-level categories.
+
+🔍 Viewing Transaction Info
+Click on any account row to open a transaction summary modal or panel (depending on the system setup).
+
+It shows recent transactions, balances, and account activity history.
+
+🧩 Modal Design Suggestion
+The manual modal should follow the same styling as the modal used in the Product Variant section.
+
+Use clear headings, icons, bullet points, and sections for readability.
