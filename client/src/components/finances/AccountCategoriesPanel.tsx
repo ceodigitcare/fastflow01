@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { AccountCategory, InsertAccountCategory, Account, Transaction } from "@shared/schema";
+import { AccountCategory, InsertAccountCategory, Account, Transaction, InsertAccount } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -58,7 +58,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Info, DollarSign } from "lucide-react";
 
-// Form validation schema
+// Form validation schema for categories
 const accountCategorySchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   type: z.enum(["asset", "liability", "equity", "income", "expense"], {
@@ -69,10 +69,22 @@ const accountCategorySchema = z.object({
 
 type AccountCategoryFormValues = z.infer<typeof accountCategorySchema>;
 
+// Form validation schema for accounts
+const accountSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  description: z.string().optional(),
+  initialBalance: z.number().default(0),
+  isActive: z.boolean().default(true),
+});
+
+type AccountFormValues = z.infer<typeof accountSchema>;
+
 export default function AccountCategoriesPanel() {
   const [selectedType, setSelectedType] = useState("asset");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<AccountCategory | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<AccountCategory | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
   const [expandAll, setExpandAll] = useState(false);
   const [showTransactionInfo, setShowTransactionInfo] = useState(false);
@@ -684,6 +696,19 @@ export default function AccountCategoriesPanel() {
                           ) : (
                             <p className="text-sm text-gray-500 italic">No accounts in this category</p>
                           )}
+                          
+                          {/* Add Account Button */}
+                          <div className="mt-3 border-l-2 border-gray-200 pl-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                              onClick={() => handleAddAccount(category)}
+                            >
+                              <PlusCircle className="h-3 w-3 mr-1" />
+                              Add new account
+                            </Button>
+                          </div>
                         </div>
                       </CollapsibleContent>
                     </Collapsible>

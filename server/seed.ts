@@ -37,63 +37,224 @@ async function seedDatabase() {
   
   const businessId = demoBusiness.id;
   
-  // 2. Create standard e-commerce account categories if they don't exist
+  // 2. Create comprehensive e-commerce account categories if they don't exist
   const existingCategories = await storage.getAccountCategoriesByBusiness(businessId);
   
   if (existingCategories.length === 0) {
-    // Assets
-    const assetsCategory = await storage.createAccountCategory({
+    // ASSET CATEGORIES (System-tagged, non-deletable)
+    const cashBankCategory = await storage.createAccountCategory({
       businessId,
-      name: "Assets",
+      name: "Cash & Bank",
       type: "asset",
-      description: "Resources owned by the business",
+      description: "Cash on hand and bank accounts",
       isSystem: true
     });
     
-    // Liabilities
-    const liabilitiesCategory = await storage.createAccountCategory({
+    const inventoryCategory = await storage.createAccountCategory({
       businessId,
-      name: "Liabilities",
+      name: "Inventory", 
+      type: "asset",
+      description: "Products held for sale",
+      isSystem: true
+    });
+    
+    const receivablesCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Accounts Receivable",
+      type: "asset", 
+      description: "Money owed by customers",
+      isSystem: true
+    });
+    
+    const advanceSupplierCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Advance to Supplier",
+      type: "asset",
+      description: "Prepayments made to suppliers",
+      isSystem: true
+    });
+    
+    const officeEquipmentCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Office Equipment",
+      type: "asset",
+      description: "Computers, furniture, and office equipment",
+      isSystem: true
+    });
+    
+    // LIABILITY CATEGORIES (System-tagged, non-deletable)
+    const bankLoanCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Bank Loan",
       type: "liability",
-      description: "Debts and obligations owed by the business",
+      description: "Loans from banks and financial institutions",
       isSystem: true
     });
     
-    // Equity
-    const equityCategory = await storage.createAccountCategory({
+    const payablesCategory = await storage.createAccountCategory({
       businessId,
-      name: "Equity",
-      type: "equity",
-      description: "Owner's interest in the business",
+      name: "Accounts Payable",
+      type: "liability",
+      description: "Money owed to suppliers and vendors",
       isSystem: true
     });
     
-    // Income
-    const incomeCategory = await storage.createAccountCategory({
+    const taxesPayableCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Taxes Payable",
+      type: "liability",
+      description: "Taxes owed to government",
+      isSystem: true
+    });
+    
+    const customerAdvancesCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Customer Advances",
+      type: "liability",
+      description: "Prepayments received from customers",
+      isSystem: true
+    });
+    
+    // EQUITY CATEGORIES (System-tagged, non-deletable)
+    const ownersCapitalCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Owner's Capital",
+      type: "equity",
+      description: "Owner's investment in the business",
+      isSystem: true
+    });
+    
+    const retainedEarningsCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Retained Earnings",
+      type: "equity",
+      description: "Accumulated profits retained in business",
+      isSystem: true
+    });
+    
+    const drawingsCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Drawings",
+      type: "equity",
+      description: "Owner withdrawals from business",
+      isSystem: true
+    });
+    
+    // INCOME CATEGORIES (System-tagged, non-deletable)
+    const salesRevenueCategory = await storage.createAccountCategory({
       businessId,
       name: "Sales Revenue",
       type: "income",
-      description: "Revenue from sales and operations",
+      description: "Revenue from product sales",
       isSystem: true
     });
     
-    // Expenses
-    const expensesCategory = await storage.createAccountCategory({
+    const shippingIncomeCategory = await storage.createAccountCategory({
       businessId,
-      name: "Expenses",
-      type: "expense",
-      description: "Costs incurred in business operations",
+      name: "Shipping Income",
+      type: "income",
+      description: "Revenue from shipping charges",
       isSystem: true
     });
     
-    console.log("Created standard account categories");
+    const discountReceivedCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Discount Received",
+      type: "income",
+      description: "Discounts received from suppliers",
+      isSystem: true
+    });
     
-    // 3. Create common e-commerce accounts
+    const interestIncomeCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Interest Income",
+      type: "income",
+      description: "Interest earned on bank deposits",
+      isSystem: true
+    });
     
-    // Asset accounts
+    // EXPENSE CATEGORIES (System-tagged, non-deletable)
+    const cogsCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Cost of Goods Sold",
+      type: "expense",
+      description: "Direct costs of products sold",
+      isSystem: true
+    });
+    
+    const marketingCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Advertising & Marketing",
+      type: "expense",
+      description: "Marketing and promotional expenses",
+      isSystem: true
+    });
+    
+    const paymentGatewayCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Payment Gateway Charges",
+      type: "expense",
+      description: "Fees for payment processing",
+      isSystem: true
+    });
+    
+    const rentUtilitiesCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Rent & Utilities",
+      type: "expense",
+      description: "Office rent and utility expenses",
+      isSystem: true
+    });
+    
+    const internetCommCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Internet & Communication",
+      type: "expense",
+      description: "Internet, phone, and communication costs",
+      isSystem: true
+    });
+    
+    const salariesWagesCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Salaries & Wages",
+      type: "expense",
+      description: "Employee compensation",
+      isSystem: true
+    });
+    
+    const packagingMaterialsCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Packaging Materials",
+      type: "expense",
+      description: "Boxes, bubble wrap, and packaging supplies",
+      isSystem: true
+    });
+    
+    const softwareSubscriptionsCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Software Subscriptions",
+      type: "expense",
+      description: "Monthly software and SaaS subscriptions",
+      isSystem: true
+    });
+    
+    const officeSuppliesCategory = await storage.createAccountCategory({
+      businessId,
+      name: "Office Supplies",
+      type: "expense",
+      description: "Stationery and office consumables",
+      isSystem: true
+    });
+    
+    console.log("Created comprehensive e-commerce account categories");
+    
+    // 3. Create comprehensive e-commerce accounts with system tagging
+    
+    // ASSET ACCOUNTS
+    // Cash & Bank accounts
     await storage.createAccount({
       businessId,
-      categoryId: assetsCategory.id,
+      categoryId: cashBankCategory.id,
       name: "Cash",
       description: "Cash on hand",
       initialBalance: 5000_00, // $5,000.00
@@ -103,7 +264,7 @@ async function seedDatabase() {
     
     await storage.createAccount({
       businessId,
-      categoryId: assetsCategory.id,
+      categoryId: cashBankCategory.id,
       name: "Bank Account",
       description: "Primary business checking account",
       initialBalance: 25000_00, // $25,000.00
@@ -111,64 +272,99 @@ async function seedDatabase() {
       isActive: true
     });
     
+    // Inventory accounts
     await storage.createAccount({
       businessId,
-      categoryId: assetsCategory.id,
-      name: "Accounts Receivable",
+      categoryId: inventoryCategory.id,
+      name: "Product Inventory",
+      description: "Finished goods ready for sale",
+      initialBalance: 15000_00, // $15,000.00
+      currentBalance: 15000_00,
+      isActive: true
+    });
+    
+    await storage.createAccount({
+      businessId,
+      categoryId: inventoryCategory.id,
+      name: "Raw Materials",
+      description: "Materials used in production",
+      initialBalance: 3000_00, // $3,000.00
+      currentBalance: 3000_00,
+      isActive: true
+    });
+    
+    // Accounts Receivable
+    await storage.createAccount({
+      businessId,
+      categoryId: receivablesCategory.id,
+      name: "Customer Receivables",
       description: "Money owed by customers",
       initialBalance: 0,
       currentBalance: 0,
       isActive: true
     });
     
+    // Advance to Supplier
     await storage.createAccount({
       businessId,
-      categoryId: assetsCategory.id,
-      name: "Inventory",
-      description: "Products held for sale",
-      initialBalance: 15000_00, // $15,000.00
-      currentBalance: 15000_00,
+      categoryId: advanceSupplierCategory.id,
+      name: "Supplier Advances",
+      description: "Prepayments made to suppliers",
+      initialBalance: 0,
+      currentBalance: 0,
       isActive: true
     });
     
-    // Liability accounts
+    // Office Equipment
     await storage.createAccount({
       businessId,
-      categoryId: liabilitiesCategory.id,
-      name: "Accounts Payable",
+      categoryId: officeEquipmentCategory.id,
+      name: "Computer Equipment",
+      description: "Computers and IT equipment",
+      initialBalance: 8000_00, // $8,000.00
+      currentBalance: 8000_00,
+      isActive: true
+    });
+    
+    await storage.createAccount({
+      businessId,
+      categoryId: officeEquipmentCategory.id,
+      name: "Office Furniture",
+      description: "Desks, chairs, and office furniture",
+      initialBalance: 2500_00, // $2,500.00
+      currentBalance: 2500_00,
+      isActive: true
+    });
+    
+    // LIABILITY ACCOUNTS
+    // Bank Loan
+    await storage.createAccount({
+      businessId,
+      categoryId: bankLoanCategory.id,
+      name: "Business Term Loan",
+      description: "Long-term business loan",
+      initialBalance: 20000_00, // $20,000.00
+      currentBalance: 20000_00,
+      isActive: true
+    });
+    
+    // Accounts Payable
+    await storage.createAccount({
+      businessId,
+      categoryId: payablesCategory.id,
+      name: "Supplier Payables",
       description: "Money owed to suppliers",
       initialBalance: 5000_00, // $5,000.00
       currentBalance: 5000_00,
       isActive: true
     });
     
+    // Taxes Payable
     await storage.createAccount({
       businessId,
-      categoryId: liabilitiesCategory.id,
-      name: "Credit Card",
-      description: "Business credit card",
-      initialBalance: 2500_00, // $2,500.00
-      currentBalance: 2500_00,
-      isActive: true
-    });
-    
-    // Equity accounts
-    await storage.createAccount({
-      businessId,
-      categoryId: equityCategory.id,
-      name: "Owner's Capital",
-      description: "Owner's investment in the business",
-      initialBalance: 37500_00, // $37,500.00
-      currentBalance: 37500_00,
-      isActive: true
-    });
-    
-    // Income accounts
-    await storage.createAccount({
-      businessId,
-      categoryId: incomeCategory.id,
-      name: "Online Sales",
-      description: "Revenue from online sales",
+      categoryId: taxesPayableCategory.id,
+      name: "Sales Tax Payable",
+      description: "Sales tax collected from customers",
       initialBalance: 0,
       currentBalance: 0,
       isActive: true
@@ -176,20 +372,132 @@ async function seedDatabase() {
     
     await storage.createAccount({
       businessId,
-      categoryId: incomeCategory.id,
-      name: "In-Store Sales",
+      categoryId: taxesPayableCategory.id,
+      name: "Income Tax Payable",
+      description: "Corporate income tax owed",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Customer Advances
+    await storage.createAccount({
+      businessId,
+      categoryId: customerAdvancesCategory.id,
+      name: "Customer Prepayments",
+      description: "Advance payments from customers",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // EQUITY ACCOUNTS
+    // Owner's Capital
+    await storage.createAccount({
+      businessId,
+      categoryId: ownersCapitalCategory.id,
+      name: "Initial Capital",
+      description: "Owner's initial investment",
+      initialBalance: 50000_00, // $50,000.00
+      currentBalance: 50000_00,
+      isActive: true
+    });
+    
+    // Retained Earnings
+    await storage.createAccount({
+      businessId,
+      categoryId: retainedEarningsCategory.id,
+      name: "Accumulated Earnings",
+      description: "Profits retained in business",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Drawings
+    await storage.createAccount({
+      businessId,
+      categoryId: drawingsCategory.id,
+      name: "Owner Withdrawals",
+      description: "Money withdrawn by owner",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // INCOME ACCOUNTS
+    // Sales Revenue
+    await storage.createAccount({
+      businessId,
+      categoryId: salesRevenueCategory.id,
+      name: "Online Sales",
+      description: "Revenue from online store",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    await storage.createAccount({
+      businessId,
+      categoryId: salesRevenueCategory.id,
+      name: "Retail Sales",
       description: "Revenue from physical store",
       initialBalance: 0,
       currentBalance: 0,
       isActive: true
     });
     
-    // Expense accounts
+    // Shipping Income
     await storage.createAccount({
       businessId,
-      categoryId: expensesCategory.id,
-      name: "Cost of Goods Sold",
-      description: "Direct costs of products sold",
+      categoryId: shippingIncomeCategory.id,
+      name: "Shipping Charges",
+      description: "Revenue from shipping fees",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Discount Received
+    await storage.createAccount({
+      businessId,
+      categoryId: discountReceivedCategory.id,
+      name: "Purchase Discounts",
+      description: "Discounts received from suppliers",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Interest Income
+    await storage.createAccount({
+      businessId,
+      categoryId: interestIncomeCategory.id,
+      name: "Bank Interest",
+      description: "Interest earned on deposits",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // EXPENSE ACCOUNTS
+    // Cost of Goods Sold
+    await storage.createAccount({
+      businessId,
+      categoryId: cogsCategory.id,
+      name: "Product Costs",
+      description: "Direct cost of products sold",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Advertising & Marketing
+    await storage.createAccount({
+      businessId,
+      categoryId: marketingCategory.id,
+      name: "Digital Marketing",
+      description: "Online advertising expenses",
       initialBalance: 0,
       currentBalance: 0,
       isActive: true
@@ -197,9 +505,20 @@ async function seedDatabase() {
     
     await storage.createAccount({
       businessId,
-      categoryId: expensesCategory.id,
-      name: "Advertising",
-      description: "Marketing and advertising expenses",
+      categoryId: marketingCategory.id,
+      name: "Print Advertising",
+      description: "Traditional advertising costs",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Payment Gateway Charges
+    await storage.createAccount({
+      businessId,
+      categoryId: paymentGatewayCategory.id,
+      name: "Credit Card Fees",
+      description: "Credit card processing fees",
       initialBalance: 0,
       currentBalance: 0,
       isActive: true
@@ -207,9 +526,125 @@ async function seedDatabase() {
     
     await storage.createAccount({
       businessId,
-      categoryId: expensesCategory.id,
-      name: "Shipping & Fulfillment",
-      description: "Costs of shipping and order fulfillment",
+      categoryId: paymentGatewayCategory.id,
+      name: "PayPal Fees",
+      description: "PayPal transaction fees",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Rent & Utilities
+    await storage.createAccount({
+      businessId,
+      categoryId: rentUtilitiesCategory.id,
+      name: "Office Rent",
+      description: "Monthly office rent",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    await storage.createAccount({
+      businessId,
+      categoryId: rentUtilitiesCategory.id,
+      name: "Utilities",
+      description: "Electricity, water, gas",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Internet & Communication
+    await storage.createAccount({
+      businessId,
+      categoryId: internetCommCategory.id,
+      name: "Internet Service",
+      description: "Monthly internet charges",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    await storage.createAccount({
+      businessId,
+      categoryId: internetCommCategory.id,
+      name: "Phone Service",
+      description: "Business phone expenses",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Salaries & Wages
+    await storage.createAccount({
+      businessId,
+      categoryId: salariesWagesCategory.id,
+      name: "Employee Salaries",
+      description: "Full-time employee compensation",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    await storage.createAccount({
+      businessId,
+      categoryId: salariesWagesCategory.id,
+      name: "Part-time Wages",
+      description: "Hourly employee wages",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Packaging Materials
+    await storage.createAccount({
+      businessId,
+      categoryId: packagingMaterialsCategory.id,
+      name: "Shipping Boxes",
+      description: "Cardboard boxes and containers",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    await storage.createAccount({
+      businessId,
+      categoryId: packagingMaterialsCategory.id,
+      name: "Bubble Wrap & Padding",
+      description: "Protective packaging materials",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Software Subscriptions
+    await storage.createAccount({
+      businessId,
+      categoryId: softwareSubscriptionsCategory.id,
+      name: "E-commerce Platform",
+      description: "Monthly e-commerce software fees",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    await storage.createAccount({
+      businessId,
+      categoryId: softwareSubscriptionsCategory.id,
+      name: "Accounting Software",
+      description: "Monthly accounting software subscription",
+      initialBalance: 0,
+      currentBalance: 0,
+      isActive: true
+    });
+    
+    // Office Supplies
+    await storage.createAccount({
+      businessId,
+      categoryId: officeSuppliesCategory.id,
+      name: "Stationery",
+      description: "Pens, paper, and office supplies",
       initialBalance: 0,
       currentBalance: 0,
       isActive: true
