@@ -398,14 +398,26 @@ export default function AccountCategoriesPanel() {
 
   // Handle editing an account
   const handleEditAccount = (account: Account) => {
+    console.log("🔧 EDIT ACCOUNT - Original account data:", account);
+    console.log("🔧 EDIT ACCOUNT - Initial balance in cents:", account.initialBalance);
+    
+    const dollarValue = parseFloat(fromCents(account.initialBalance || 0));
+    console.log("🔧 EDIT ACCOUNT - Converted to dollar value:", dollarValue);
+    
     setEditingAccount(account);
     setSelectedCategory(categories?.find(cat => cat.id === account.categoryId) || null);
     accountForm.reset({
       name: account.name,
       description: account.description || "",
-      initialBalance: parseFloat(fromCents(account.initialBalance || 0)),
+      initialBalance: dollarValue,
       isActive: Boolean(account.isActive),
     });
+    
+    console.log("🔧 EDIT ACCOUNT - Form reset with values:", {
+      name: account.name,
+      initialBalance: dollarValue
+    });
+    
     setAccountDialogOpen(true);
   };
 
@@ -1120,6 +1132,22 @@ export default function AccountCategoriesPanel() {
                   </FormItem>
                 )}
               />
+
+              {/* DEBUG: Simple test input */}
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                <label className="block text-sm font-medium mb-2">DEBUG TEST (bypasses form):</label>
+                <input 
+                  type="text" 
+                  placeholder="Enter test value"
+                  className="w-full px-3 py-1 border rounded"
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const parsed = parseFloat(raw);
+                    const cents = toCents(parsed);
+                    console.log("🧪 BYPASS TEST - Raw:", raw, "Parsed:", parsed, "toCents:", cents);
+                  }} 
+                />
+              </div>
 
               {/* Initial Balance and Active Status - Side by Side */}
               <div className="grid grid-cols-2 gap-4">

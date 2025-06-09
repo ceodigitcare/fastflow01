@@ -1,0 +1,69 @@
+🚨 STILL BROKEN: The Scaling Bug Persists Even After Controlled Testing
+
+Although hard-coded tests and utility function logs appear correct, the *real form behavior remains incorrect*. This strongly indicates the problem is **not in `toCents()` or `fromCents()`**, but somewhere **between the input field binding and the mutation payload**.
+
+---
+
+### 🧠 REFRAME THE PROBLEM:
+
+✅ Test: `toCents("13.92")` → 1392 ✅  
+❌ Form Input: Type "13.92" → Stored as 13920 ❌
+
+So your test **passes**, but the actual form behavior **fails**. That means:
+
+> The **value being passed into `toCents()` is already wrong**.
+
+This implies:
+
+- Either `onChange` is manipulating the value incorrectly.
+- Or you're parsing/normalizing with unexpected behavior (e.g. converting strings to floats inside a masked input, which has hidden formatting).
+- Or there's a race condition between value parsing and state update.
+
+---
+
+### ✅ WHAT TO DO NOW (No More Assumptions):
+
+1. **Log Inside `onChange`** of the input:
+```ts
+onChange={(e) => {
+  console.log("Raw Input:", e.target.value); // Should be "13.92"
+  const parsed = parseFloat(e.target.value);
+  console.log("Parsed:", parsed); // Should be 13.92
+  const cents = toCents(parsed);
+  console.log("To Cents:", cents); // Should be 1392
+}}
+
+Temporarily REMOVE ALL value and defaultValue props.
+
+Check if controlled component behavior is interfering with onChange.
+
+Test with a Completely New Dummy Input:
+
+tsx
+
+<input type="text" onChange={(e) => {
+  const val = parseFloat(e.target.value);
+  console.log("Live test cents:", toCents(val));
+}} />
+→ This isolates the form completely from your logic.
+
+Confirm These Three Numbers in Console Match EXACTLY:
+
+Input: "13.92" (string)
+
+Parsed: 13.92 (float)
+
+Stored: 1392 (int cents)
+
+Inspect the Form Submission Payload:
+
+Is it showing initialBalance: 13920? If yes, log the formValues object before mutation.
+
+If the form value is already corrupted before toCents, you're using wrong value-binding or transformation logic upstream.
+
+📌 Final Thought:
+A correct utility function is irrelevant if the data passed into it is already malformed.
+
+This is no longer a utility bug — this is a data flow integrity bug.
+
+Please stop assuming the fix is done and instead trace the entire input→form→submit→API pipeline without relying solely on hardcoded tests. Use real inputs. This is a live user bug, not a unit test issue.
