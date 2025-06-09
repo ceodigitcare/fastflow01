@@ -30,6 +30,73 @@ import { updateAccountBalance, getAccountsWithBalances, syncAllAccountBalances }
 const PgSessionStore = connectPg(session);
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Static PWA Icon endpoints - must be registered first to avoid frontend routing conflicts
+  app.get("/pwa-icon-192.png", async (req, res) => {
+    try {
+      const allSettings = await storage.getAllPwaSettings();
+      const pwaSettings = allSettings[0] || null;
+      
+      if (!pwaSettings?.iconUrl || !pwaSettings.iconUrl.startsWith('data:')) {
+        return res.redirect('/icon-192.png');
+      }
+      
+      // Extract base64 data from data URL
+      const matches = pwaSettings.iconUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches) {
+        return res.redirect('/icon-192.png');
+      }
+      
+      const mimeType = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Set proper headers for PWA icon
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', buffer.length);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      res.end(buffer);
+    } catch (error) {
+      console.error("Error serving PWA icon 192:", error);
+      res.redirect('/icon-192.png');
+    }
+  });
+
+  app.get("/pwa-icon-512.png", async (req, res) => {
+    try {
+      const allSettings = await storage.getAllPwaSettings();
+      const pwaSettings = allSettings[0] || null;
+      
+      if (!pwaSettings?.iconUrl || !pwaSettings.iconUrl.startsWith('data:')) {
+        return res.redirect('/icon-512.png');
+      }
+      
+      // Extract base64 data from data URL
+      const matches = pwaSettings.iconUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches) {
+        return res.redirect('/icon-512.png');
+      }
+      
+      const mimeType = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Set proper headers for PWA icon
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', buffer.length);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      res.end(buffer);
+    } catch (error) {
+      console.error("Error serving PWA icon 512:", error);
+      res.redirect('/icon-512.png');
+    }
+  });
+
   // Setup authentication with Passport.js
   setupAuth(app);
 
@@ -1624,13 +1691,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               src: `/pwa-icon-192.png?v=${cacheVersion}`,
               sizes: "192x192",
               type: "image/png",
-              purpose: "any maskable"
+              purpose: "any"
             },
             {
               src: `/pwa-icon-512.png?v=${cacheVersion}`,
               sizes: "512x512", 
               type: "image/png",
-              purpose: "any maskable"
+              purpose: "any"
+            },
+            {
+              src: `/pwa-icon-192.png?v=${cacheVersion}`,
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "maskable"
             }
           );
         } else {
@@ -1695,72 +1768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Static PWA Icon endpoints for better browser compatibility
-  app.get("/pwa-icon-192.png", async (req, res) => {
-    try {
-      const allSettings = await storage.getAllPwaSettings();
-      const pwaSettings = allSettings[0] || null;
-      
-      if (!pwaSettings?.iconUrl || !pwaSettings.iconUrl.startsWith('data:')) {
-        return res.redirect('/icon-192.png');
-      }
-      
-      // Extract base64 data from data URL
-      const matches = pwaSettings.iconUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (!matches) {
-        return res.redirect('/icon-192.png');
-      }
-      
-      const mimeType = matches[1];
-      const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, 'base64');
-      
-      // Set proper headers for PWA icon
-      res.setHeader('Content-Type', mimeType);
-      res.setHeader('Content-Length', buffer.length);
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
-      res.end(buffer);
-    } catch (error) {
-      console.error("Error serving PWA icon 192:", error);
-      res.redirect('/icon-192.png');
-    }
-  });
 
-  app.get("/pwa-icon-512.png", async (req, res) => {
-    try {
-      const allSettings = await storage.getAllPwaSettings();
-      const pwaSettings = allSettings[0] || null;
-      
-      if (!pwaSettings?.iconUrl || !pwaSettings.iconUrl.startsWith('data:')) {
-        return res.redirect('/icon-512.png');
-      }
-      
-      // Extract base64 data from data URL
-      const matches = pwaSettings.iconUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (!matches) {
-        return res.redirect('/icon-512.png');
-      }
-      
-      const mimeType = matches[1];
-      const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, 'base64');
-      
-      // Set proper headers for PWA icon
-      res.setHeader('Content-Type', mimeType);
-      res.setHeader('Content-Length', buffer.length);
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
-      res.end(buffer);
-    } catch (error) {
-      console.error("Error serving PWA icon 512:", error);
-      res.redirect('/icon-512.png');
-    }
-  });
 
   // Dynamic PWA Icon endpoint for serving base64 icons (legacy support)
   app.get("/api/pwa-icon", async (req, res) => {
