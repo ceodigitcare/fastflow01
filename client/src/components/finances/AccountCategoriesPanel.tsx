@@ -109,13 +109,24 @@ export default function AccountCategoriesPanel() {
     enabled: showTransactionInfo, // Only fetch when transaction info is visible
   });
 
-  // Form setup
+  // Form setup for categories
   const form = useForm<AccountCategoryFormValues>({
     resolver: zodResolver(accountCategorySchema),
     defaultValues: {
       name: "",
       type: "asset",
       description: "",
+    },
+  });
+
+  // Form setup for accounts
+  const accountForm = useForm<AccountFormValues>({
+    resolver: zodResolver(accountSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      initialBalance: 0,
+      isActive: true,
     },
   });
 
@@ -190,6 +201,38 @@ export default function AccountCategoriesPanel() {
     },
   });
 
+  // Create account mutation
+  const createAccountMutation = useMutation({
+    mutationFn: async (values: AccountFormValues & { categoryId: number }) => {
+      const accountData = {
+        businessId: user?.id || 0, // Get businessId from authenticated user
+        categoryId: values.categoryId,
+        name: values.name,
+        description: values.description,
+        initialBalance: Math.round(values.initialBalance * 100), // Convert to cents
+        currentBalance: Math.round(values.initialBalance * 100), // Convert to cents
+        isActive: values.isActive,
+      };
+      return await apiRequest("POST", "/api/accounts", accountData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Account created",
+        description: "Your account has been created successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
+      setAccountDialogOpen(false);
+      accountForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create account",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Filter categories by type
   const filteredCategories = categories?.filter((category) => category.type === selectedType);
   
@@ -223,13 +266,32 @@ export default function AccountCategoriesPanel() {
     })[0];
   };
 
-  // Handle form submission
+  // Handle form submission for categories
   const onSubmit = (values: AccountCategoryFormValues) => {
     if (editingCategory) {
       updateCategoryMutation.mutate({ id: editingCategory.id, data: values });
     } else {
       createCategoryMutation.mutate(values);
     }
+  };
+
+  // Handle form submission for accounts
+  const onAccountSubmit = (values: AccountFormValues) => {
+    if (selectedCategory) {
+      createAccountMutation.mutate({ ...values, categoryId: selectedCategory.id });
+    }
+  };
+
+  // Handle adding account to a category
+  const handleAddAccount = (category: AccountCategory) => {
+    setSelectedCategory(category);
+    accountForm.reset({
+      name: "",
+      description: "",
+      initialBalance: 0,
+      isActive: true,
+    });
+    setAccountDialogOpen(true);
   };
 
   // Define type-safe account types
@@ -823,6 +885,115 @@ export default function AccountCategoriesPanel() {
                   ) : (
                     "Create Account Category"
                   )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Account Creation Dialog */}
+      <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Account</DialogTitle>
+            <DialogDescription>
+              Add a new account under "{selectedCategory?.name}" category
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...accountForm}>
+            <form onSubmit={accountForm.handleSubmit(onAccountSubmit)} className="space-y-6">
+              <FormField
+                control={accountForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Main Checking Account" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={accountForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter a description of this account"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={accountForm.control}
+                name="initialBalance"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Initial Balance</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Enter the starting balance for this account
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={accountForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel>Active Account</FormLabel>
+                      <FormDescription>
+                        Account is available for transactions
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAccountDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createAccountMutation.isPending}
+                >
+                  {createAccountMutation.isPending ? "Creating..." : "Create Account"}
                 </Button>
               </DialogFooter>
             </form>
