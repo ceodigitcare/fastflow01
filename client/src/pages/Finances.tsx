@@ -152,24 +152,30 @@ export default function Finances() {
     setActiveTab(getActiveTabFromPath());
   }, [location]);
   
-  // Check if summary cards should be hidden (for Transactions, Sales Invoice, Purchase Bill)
+  // Check if summary cards should be hidden (for Transactions, Sales Invoice, Purchase Bill, Chart of Accounts)
   const shouldHideSummaryCards = [
     "transactions", 
     "sales-invoice", 
-    "purchase-bill"
+    "purchase-bill",
+    "chart-of-accounts"
   ].includes(activeTab);
+  
+  // Check if header section should be hidden (for Chart of Accounts)
+  const shouldHideHeader = activeTab === "chart-of-accounts";
   
   return (
     <MainLayout>
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold">Finances</h1>
-          <p className="text-sm text-gray-500">Manage your business finances and track revenue</p>
+      {!shouldHideHeader && (
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-semibold">Finances</h1>
+            <p className="text-sm text-gray-500">Manage your business finances and track revenue</p>
+          </div>
+          <Button onClick={handleNewTransaction}>
+            <Plus className="mr-2 h-4 w-4" /> New Transaction
+          </Button>
         </div>
-        <Button onClick={handleNewTransaction}>
-          <Plus className="mr-2 h-4 w-4" /> New Transaction
-        </Button>
-      </div>
+      )}
       
       {/* Only show summary cards when not in restricted sections */}
       {!shouldHideSummaryCards && (
@@ -259,15 +265,17 @@ export default function Finances() {
           }
         }}
       >
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="sales-invoice">Sales Invoice</TabsTrigger>
-          <TabsTrigger value="purchase-bill">Purchase Bill</TabsTrigger>
-          <TabsTrigger value="user">User</TabsTrigger>
-          <TabsTrigger value="accounts">Accounts</TabsTrigger>
-          <TabsTrigger value="chart-of-accounts">Chart of Accounts</TabsTrigger>
-        </TabsList>
+        {!shouldHideHeader && (
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="transactions">Transactions</TabsTrigger>
+            <TabsTrigger value="sales-invoice">Sales Invoice</TabsTrigger>
+            <TabsTrigger value="purchase-bill">Purchase Bill</TabsTrigger>
+            <TabsTrigger value="user">User</TabsTrigger>
+            <TabsTrigger value="accounts">Accounts</TabsTrigger>
+            <TabsTrigger value="chart-of-accounts">Chart of Accounts</TabsTrigger>
+          </TabsList>
+        )}
         
         <TabsContent value="overview" className="mt-6 relative">
           {/* Financial Insight Bubble - only shown in Overview tab */}
@@ -427,7 +435,7 @@ export default function Finances() {
           <AccountsPanel />
         </TabsContent>
         
-        <TabsContent value="chart-of-accounts" className="mt-6">
+        <TabsContent value="chart-of-accounts" className={shouldHideHeader ? "mt-0" : "mt-6"}>
           <AccountCategoriesPanel />
         </TabsContent>
         

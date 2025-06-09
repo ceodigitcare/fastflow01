@@ -1,0 +1,46 @@
+Chart of Accounts System Adjustment
+We have an existing Chart of Accounts system with pre-defined structure, icons, layout, and UI language. Please make the following adjustments strictly following the current system’s patterns and components.
+
+🎯 Required Changes
+Remove Dashboard Header Section
+On the "Chart of Accounts" page, completely remove the header/dashboard section that includes:
+
+"Finances", "Manage your business finances and track revenue"
+
+Metrics such as Total Revenue, Monthly Revenue, Total Orders, Profit Margin
+
+The New Transaction button
+
+Tab links such as Overview, Transactions, etc.
+
+✅ Keep the layout clean and focused only on Chart of Accounts. The background page should not include the red-marked dashboard segment (see attached image).
+
+Use System Icons and Texts Only
+
+Do not use new icons or styles.
+
+Use the same icons, colors, text labels, tooltips, and interaction flow already used in the current COA system.
+
+For edit and delete icons on accounts, reuse the exact same icons used for categories (🖉 and 🗑️ or their system equivalents).
+
+All button texts, modals, and confirmation dialogs must follow existing terminology and structure.
+
+Follow Existing UI/UX Logic
+
+All edit/delete modals, confirmations, form fields, and toggles should behave exactly the same as they currently do for categories.
+
+Do not introduce new patterns or processes. Just extend current patterns to accounts where needed.
+
+Recheck Prompt from Previous Instruction
+
+Keep the account description field as a single-line input.
+
+Display account descriptions in the Chart of Accounts view, just like how category descriptions are shown.
+
+Place Initial Balance and Active checkbox on the same row.
+
+Make all accounts editable, and deletable only if they have no transactions.
+
+Show proper warning before deletion, including a message when deletion is blocked due to existing transactions.
+
+This prompt ensures minimal disruption and maximum consistency with the current system's behavior and design language. Do not implement anything new unless it mirrors existing functionality.
