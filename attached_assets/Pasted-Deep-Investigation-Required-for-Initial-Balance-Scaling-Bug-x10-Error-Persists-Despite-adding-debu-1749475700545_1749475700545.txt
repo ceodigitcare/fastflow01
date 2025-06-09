@@ -1,0 +1,54 @@
+Deep Investigation Required for Initial Balance Scaling Bug (x10 Error Persists)
+Despite adding debugging for initial balance processing, the value "12" still gets transformed and displayed as "120.00" in the Chart of Accounts.
+
+This confirms that the x10 scaling bug has not been resolved and indicates the issue might be happening in one of the following places:
+
+🔍 What to Recheck in Depth:
+✅ 1. Raw Input Handling
+Confirm that the input field in the frontend form captures "12" as a string or number.
+
+Log the value immediately as the user types and also on blur or form submit.
+
+Watch for any implicit conversion like parseFloat, parseInt, or auto-scaling logic applied before saving.
+
+✅ 2. Form Submission / Mutation Handler
+Verify if any scaling (e.g., value × 10, value × 100) is accidentally applied in the form submit handler or mutation function.
+
+Carefully check whether any currency library or helper is used (e.g., accounting.js, Intl.NumberFormat, etc.) and whether it multiplies instead of formats.
+
+✅ 3. Backend or API Layer
+Make sure the backend (or mock API if used) receives the exact same number sent from the frontend.
+
+If storing in cents or sub-units (e.g., 1200 = $12.00), then ensure the UI divides properly when displaying.
+
+✅ 4. Chart of Accounts Rendering Logic
+Confirm that the value rendered in the chart view is the exact numeric value received, not altered or scaled up.
+
+Look out for value * 10 or toFixed() type functions applied after scaling.
+
+🧪 Suggested Debug Test
+Enter: 12
+
+Log chain:
+
+Input value: 12 (type: number)
+
+Form state: 12
+
+Data passed to mutation: 12
+
+Payload sent to API: { initialBalance: 12 }
+
+Value stored/returned: 12
+
+Value displayed in UI: 12.00
+
+→ At which step does the value become 120?
+
+📌 Important:
+This is a mission-critical bug because it compromises the accuracy of all financial data.
+
+Until resolved, any report or transaction will be misleading.
+
+Please track the value at every transformation stage to catch any silent multipliers.
+

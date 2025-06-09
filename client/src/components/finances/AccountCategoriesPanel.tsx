@@ -208,22 +208,15 @@ export default function AccountCategoriesPanel() {
   // Create account mutation
   const createAccountMutation = useMutation({
     mutationFn: async (values: AccountFormValues & { categoryId: number }) => {
-      console.log("Create mutation values:", values);
-      console.log("Initial balance from mutation:", values.initialBalance, typeof values.initialBalance);
-      
-      const balanceInCents = Math.round(values.initialBalance * 100);
-      console.log("Converting to cents:", values.initialBalance, "×100 =", balanceInCents);
-      
       const accountData = {
         businessId: user?.id || 0, // Get businessId from authenticated user
         categoryId: values.categoryId,
         name: values.name,
         description: values.description,
-        initialBalance: balanceInCents,
-        currentBalance: balanceInCents,
+        initialBalance: Math.round(values.initialBalance * 100), // Convert to cents
+        currentBalance: Math.round(values.initialBalance * 100), // Convert to cents
         isActive: values.isActive,
       };
-      console.log("Final account data to send:", accountData);
       return await apiRequest("POST", "/api/accounts", accountData);
     },
     onSuccess: () => {
@@ -255,11 +248,8 @@ export default function AccountCategoriesPanel() {
       
       // Only update initial balance if provided
       if (values.data.initialBalance !== undefined) {
-        console.log("Update mutation - initial balance:", values.data.initialBalance, typeof values.data.initialBalance);
-        const balanceInCents = Math.round(values.data.initialBalance * 100);
-        console.log("Update mutation - converting to cents:", values.data.initialBalance, "×100 =", balanceInCents);
-        accountData.initialBalance = balanceInCents;
-        accountData.currentBalance = balanceInCents;
+        accountData.initialBalance = Math.round(values.data.initialBalance * 100);
+        accountData.currentBalance = Math.round(values.data.initialBalance * 100);
       }
       
       return await apiRequest("PATCH", `/api/accounts/${values.id}`, accountData);
@@ -1103,19 +1093,16 @@ export default function AccountCategoriesPanel() {
                           type="number"
                           step="0.01"
                           placeholder="0.00"
-                          value={field.value || ''}
+                          {...field}
+                          value={field.value === 0 ? '' : field.value}
                           onChange={(e) => {
                             const value = e.target.value;
-                            console.log("Input field change - raw value:", value, typeof value);
-                            if (value === '') {
-                              console.log("Empty value, setting to 0");
+                            if (value === '' || value === undefined) {
                               field.onChange(0);
                             } else {
-                              const numValue = parseFloat(value);
-                              console.log("Parsed value:", numValue, typeof numValue, "isNaN:", isNaN(numValue));
+                              const numValue = Number(value);
                               if (!isNaN(numValue)) {
                                 field.onChange(numValue);
-                                console.log("Field value set to:", numValue);
                               }
                             }
                           }}
