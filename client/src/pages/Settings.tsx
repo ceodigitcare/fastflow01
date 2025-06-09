@@ -301,16 +301,22 @@ export default function Settings() {
       const manifestLink = document.querySelector('link[rel="manifest"]');
       readiness.manifest = !!manifestLink;
 
-      // Check if app is installable
-      window.addEventListener('beforeinstallprompt', () => {
-        readiness.installable = true;
-        setPwaReadiness({ ...readiness });
-      });
-
       setPwaReadiness(readiness);
     };
 
+    // Listen for PWA install prompt availability
+    const handlePwaInstallable = () => {
+      setPwaReadiness(prev => prev ? { ...prev, installable: true } : null);
+    };
+
+    // Listen for custom installable event from main.tsx
+    window.addEventListener('pwa-installable', handlePwaInstallable);
+
     checkPwaReadiness();
+
+    return () => {
+      window.removeEventListener('pwa-installable', handlePwaInstallable);
+    };
   }, []);
   
   if (isLoading) {

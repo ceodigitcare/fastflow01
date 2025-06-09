@@ -1649,9 +1649,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         short_name: pwaSettings?.shortName || "BizManager",
         description: "Comprehensive business management platform",
         start_url: "/",
+        scope: "/",
         display: "standalone",
+        orientation: "portrait-primary",
         background_color: pwaSettings?.backgroundColor || "#ffffff",
         theme_color: pwaSettings?.themeColor || "#000000",
+        categories: ["business", "finance", "productivity"],
+        prefer_related_applications: false,
+        lang: "en",
         icons
       };
       
@@ -1663,37 +1668,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Default PWA Icons
+  app.get("/icon-192.png", (req, res) => {
+    // Create a simple SVG icon and convert to PNG format
+    const svg = `
+      <svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <rect width="192" height="192" rx="24" fill="url(#gradient)"/>
+        <rect x="48" y="48" width="96" height="96" rx="12" fill="white" opacity="0.9"/>
+        <rect x="64" y="64" width="16" height="64" fill="#4F46E5"/>
+        <rect x="80" y="80" width="16" height="48" fill="#7C3AED"/>
+        <rect x="96" y="72" width="16" height="56" fill="#4F46E5"/>
+        <rect x="112" y="88" width="16" height="40" fill="#7C3AED"/>
+      </svg>
+    `;
+    
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.send(svg);
+  });
+
+  app.get("/icon-512.png", (req, res) => {
+    // Create a larger version of the same icon
+    const svg = `
+      <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="64" fill="url(#gradient)"/>
+        <rect x="128" y="128" width="256" height="256" rx="32" fill="white" opacity="0.9"/>
+        <rect x="172" y="172" width="42" height="168" fill="#4F46E5"/>
+        <rect x="214" y="214" width="42" height="126" fill="#7C3AED"/>
+        <rect x="256" y="192" width="42" height="148" fill="#4F46E5"/>
+        <rect x="298" y="234" width="42" height="106" fill="#7C3AED"/>
+      </svg>
+    `;
+    
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.send(svg);
+  });
+
   // Service Worker
   app.get("/sw.js", (req, res) => {
     const swContent = `
-// Basic service worker for PWA functionality
+// Service worker for PWA functionality
 const CACHE_NAME = 'business-manager-v1';
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json'
 ];
 
+// Install event - cache essential resources
 self.addEventListener('install', function(event) {
+  console.log('Service Worker installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
+        console.log('Opened cache');
         return cache.addAll(urlsToCache);
+      })
+      .then(function() {
+        return self.skipWaiting();
       })
   );
 });
 
+// Activate event - clean up old caches
+self.addEventListener('activate', function(event) {
+  console.log('Service Worker activating...');
+  event.waitUntil(
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(
+        cacheNames.map(function(cacheName) {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(function() {
+      return self.clients.claim();
+    })
+  );
+});
+
+// Fetch event - network first, fallback to cache
 self.addEventListener('fetch', function(event) {
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then(function(response) {
-        if (response) {
-          return response;
+        // If we got a response, cache it
+        if (response.status === 200) {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME)
+            .then(function(cache) {
+              cache.put(event.request, responseToCache);
+            });
         }
-        return fetch(event.request);
-      }
-    )
+        return response;
+      })
+      .catch(function() {
+        // Network failed, try cache
+        return caches.match(event.request);
+      })
   );
 });
 `;

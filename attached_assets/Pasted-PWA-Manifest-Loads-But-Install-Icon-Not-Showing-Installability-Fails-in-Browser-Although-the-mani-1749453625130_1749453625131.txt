@@ -1,0 +1,82 @@
+PWA Manifest Loads But Install Icon Not Showing — Installability Fails in Browser
+Although the manifest.json appears to load correctly and includes the required fields (name, short_name, start_url, display, icons, theme_color, etc.), the browser does not show the PWA install icon in the address bar, and the app is not being recognized as installable.
+
+🔍 Key Observations:
+Manifest is reachable and valid in DevTools
+
+
+Service worker is registered successfully
+
+
+App is served over HTTPS
+
+
+No critical manifest errors in the console
+
+
+However, beforeinstallprompt event does not fire, and install icon does not appear in Chrome or Edge
+
+
+
+✅ Checklist to Reconfirm:
+Please ensure the following are correctly implemented:
+Manifest File Requirements
+
+
+"display" is set to "standalone" or "minimal-ui"
+
+
+"start_url" is relative (e.g., "/" or "./")
+
+
+Valid "icons" array with at least one icon (512x512) and proper MIME type ("image/png")
+
+
+Service Worker
+
+
+Service worker is registered and controls the start URL
+
+
+At least one fetch handler is present to enable offline capability
+
+
+HTTPS & Scope
+
+
+App is served via HTTPS
+
+
+"scope" in manifest (if provided) must match or contain the start_url
+
+
+User Engagement
+
+
+Chrome only triggers installability if the user has interacted with the page (e.g., clicked or stayed for a few seconds)
+
+
+Avoid Auto-Redirection
+
+
+Any auto-redirect (e.g., from / to /dashboard) can break installability
+
+
+Ensure that start_url remains under service worker scope and no redirects interfere
+
+
+
+🧪 Suggested Next Steps:
+Confirm that beforeinstallprompt event is being listened to correctly in your code (e.g., window.addEventListener('beforeinstallprompt', ...))
+
+
+Manually test installability via Chrome DevTools > Application tab > Manifest → Should show “Installable”
+
+
+Review if caching or misconfigured response headers prevent installability
+
+
+
+🔁 Expected Outcome:
+Once properly configured, the browser should display the PWA install icon in the address bar (or overflow menu) and allow installation with the custom icon.
+Please investigate this behavior and ensure all installability requirements are fully met and debugged.
