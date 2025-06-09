@@ -1,0 +1,78 @@
+ompletely Rebuild the Initial Balance Calculation Function
+
+The initial balance calculation STILL suffers from a ×10 scaling bug despite all prior fixes. To resolve this once and for all, **you must fully rewrite the calculation logic from scratch**. Do NOT patch the current function — rebuild it with the following clear rules:
+
+---
+
+### 🎯 Goals
+
+- Accept numeric input like `12`, `123.45`, or `0`
+- Convert it to cents by multiplying by 100 (e.g., 123.45 → 12345)
+- Store the cents value (e.g., in the database or API)
+- While displaying, divide the stored cents by 100 and show 2 decimal points (e.g., 12345 → 123.45)
+
+---
+
+### 🔒 Constraints (You MUST follow these)
+
+- ❌ Do NOT apply multiple `*100` conversions in different layers
+- ❌ Do NOT use any formatter (e.g., `.toFixed()`) **before** storing the value
+- ✅ Only apply `*100` ONCE before storage
+- ✅ Only apply `/100` ONCE during display
+- ✅ Validate and restrict invalid inputs (e.g., non-numeric)
+
+---
+
+### 🔧 Required Helper Functions
+
+Please implement clean and reusable utility functions:
+
+```ts
+// Converts dollars to cents before storage
+function toCents(value: string | number): number {
+  return Math.round(parseFloat(value.toString()) * 100);
+}
+
+// Converts cents to dollars for display
+function fromCents(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
+✅ Integration Guidelines
+On form input:
+
+
+Capture input as a string/number (e.g., "12" or 12)
+
+
+Convert to cents using toCents() just before saving
+
+
+On API fetch / database read:
+
+
+Convert the stored cents back to display format using fromCents()
+
+
+In display fields (e.g., Chart of Accounts):
+
+
+Ensure display always uses fromCents(storedValue)
+
+
+
+❗ Final Notes
+All previous scaling issues occurred due to multiple, untracked conversions scattered across the input, mutation, and display layers. This new approach provides centralized control over numeric formatting. Once implemented, test thoroughly using:
+Input: 1 → Display: $1.00
+
+
+Input: 12 → Display: $12.00
+
+
+Input: 123.45 → Display: $123.45
+
+
+Input: 0 → Display: $0.00
+
+
+Please confirm this new version eliminates all scaling or rounding bugs.
