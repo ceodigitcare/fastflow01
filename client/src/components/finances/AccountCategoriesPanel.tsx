@@ -272,6 +272,9 @@ export default function AccountCategoriesPanel() {
   // Update account mutation
   const updateAccountMutation = useMutation({
     mutationFn: async (values: { id: number; data: Partial<AccountFormValues> }) => {
+      console.log("🚀 UPDATE MUTATION - Input values:", values);
+      console.log("🚀 UPDATE MUTATION - Initial balance from form:", values.data.initialBalance);
+      
       const accountData: any = {
         name: values.data.name,
         description: values.data.description,
@@ -280,12 +283,17 @@ export default function AccountCategoriesPanel() {
       
       // Only update initial balance if provided
       if (values.data.initialBalance !== undefined) {
+        console.log("🚀 UPDATE MUTATION - Processing initial balance:", values.data.initialBalance);
         const balanceInCents = toCents(values.data.initialBalance);
+        console.log("🚀 UPDATE MUTATION - Converted to cents:", balanceInCents);
         accountData.initialBalance = balanceInCents;
         accountData.currentBalance = balanceInCents;
       }
       
-      return await apiRequest("PATCH", `/api/accounts/${values.id}`, accountData);
+      console.log("🚀 UPDATE MUTATION - Final API payload:", accountData);
+      const result = await apiRequest("PATCH", `/api/accounts/${values.id}`, accountData);
+      console.log("🚀 UPDATE MUTATION - API Response:", result);
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -373,13 +381,24 @@ export default function AccountCategoriesPanel() {
 
   // Handle form submission for accounts
   const onAccountSubmit = (values: AccountFormValues) => {
-    console.log("📝 STAGE C - Pre-Mutation Values:", values);
-    console.log("📝 STAGE C - Initial Balance Before Mutation:", values.initialBalance, typeof values.initialBalance);
+    console.log("🔍 FINAL PAYLOAD CHECK - Form Values:", values);
+    console.log("🔍 FINAL PAYLOAD CHECK - Initial Balance:", values.initialBalance, typeof values.initialBalance);
+    
+    // HARDCODED TEST - Force a known value to confirm mutation works
+    const testPayload = {
+      ...values,
+      initialBalance: 2222 // Should result in $22.22
+    };
+    console.log("🧪 HARDCODED TEST - Forced payload:", testPayload);
     
     if (editingAccount) {
-      updateAccountMutation.mutate({ id: editingAccount.id, data: values });
+      console.log("🔍 EDIT MODE - Updating account:", editingAccount.id);
+      // Use hardcoded test first
+      updateAccountMutation.mutate({ id: editingAccount.id, data: testPayload });
     } else if (selectedCategory) {
-      createAccountMutation.mutate({ ...values, categoryId: selectedCategory.id });
+      console.log("🔍 CREATE MODE - Creating account in category:", selectedCategory.id);
+      // Use hardcoded test first
+      createAccountMutation.mutate({ ...testPayload, categoryId: selectedCategory.id });
     }
   };
 
