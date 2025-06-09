@@ -1,0 +1,97 @@
+🚨 URGENT: Scaling Bug Still Persists Despite Diagnostic Logs – Immediate Revalidation Required
+
+Based on the latest visual test (input: `13.92`, displayed: `$139.20`), the ×10 scaling error **still exists**, indicating that the current diagnostic system is **not effectively tracking or solving the root cause**.
+
+This suggests one or more of the following:
+
+---
+
+### ❗ Likely Root Causes (Recheck Immediately)
+
+1. **The input value is already pre-scaled before calling `toCents()`**  
+   - Meaning `13.92` is being transformed to `139.2` even before the `*100` happens.  
+   - This results in `139.2 * 100 = 13920` cents ⇒ `$139.20`
+
+2. **There is a silent coercion or intermediate transformation happening in the form input field**  
+   - Example: `parseFloat(value) * 10` or a locale-based misinterpretation (e.g. comma as decimal separator)
+
+3. **Your `toCents()` is correct, but the input passed into it is already corrupt**
+
+4. **The displayed value is mistakenly calling `fromCents()` on an already-decimal number**  
+   - Example: if backend sends `13.92` and UI shows `13.92 / 100 = 0.1392 → $0.14`, OR
+   - backend sends `1392` and UI multiplies again ⇒ `$139.20`
+
+---
+
+### 🔍 REQUIRED ACTIONS (Do These Again, Thoroughly)
+
+1. 🔁 **Refactor `toCents(value)` and `fromCents(value)` as pure functions:**
+   ```ts
+   const toCents = (value: string | number) => Math.round(parseFloat(value) * 100);
+   const fromCents = (value: number) => (value / 100).toFixed(2);
+
+
+🧪 Add console.log for each of these stages (again!):
+
+
+✅ What’s captured from the input field (exact raw string)
+
+
+✅ What’s stored in form state
+
+
+✅ What value is passed to toCents()
+
+
+✅ What toCents() returns
+
+
+✅ What is sent to the API
+
+
+✅ What comes back from API
+
+
+✅ What is passed into fromCents() before displaying
+
+
+🧼 Sanitize input so that only one transformation happens:
+
+
+No repeated *100 or *10 steps
+
+
+Confirm no multiplication inside onChange, useEffect, or useFormik
+
+
+✅ Hard-code test with a known good value:
+
+ js
+
+const initialBalance = "13.92";
+const cents = toCents(initialBalance); // Should be 1392
+console.log({ initialBalance, cents });
+
+
+⚠️ Confirm that the API doesn’t do another ×10 inside a backend formatter or serializer
+
+
+
+
+
+
+✅ Final Expected Behavior
+Input Value
+Stored (Cents)
+Displayed
+13.92
+     1392
+$13.92
+1
+    100
+$1.00
+123.45
+    12345
+$123.45
+
+Please use this updated prompt as a precise checklist to revalidate and re-debug the full flow, especially around input parsing and transformation. The scaling bug cannot be considered resolved until the actual numeric consistency is visually and programmatically verified.
