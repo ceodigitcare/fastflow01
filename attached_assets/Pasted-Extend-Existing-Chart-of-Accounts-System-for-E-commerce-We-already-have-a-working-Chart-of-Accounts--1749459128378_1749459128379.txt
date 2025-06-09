@@ -1,0 +1,94 @@
+Extend Existing Chart of Accounts System for E-commerce
+We already have a working Chart of Accounts (COA) system with a smart and consistent account code format (e.g., A0001 - Cash & Bank). Do not change or replace the current numbering system.
+
+Your task is to enhance the existing COA module by extending it for e-commerce use with the following specific instructions:
+
+🔧 Enhancement Scope
+1. Use Existing Numbering Format
+Continue using the current intelligent account code format (e.g., A0001, L0002, E0005) for all default and user-created accounts.
+
+Do not introduce new numeric or 4-digit coding schemes like 1010, 2020, etc.
+
+2. Attach Accounts Directly to Categories
+Allow adding new accounts directly under existing categories from the UI.
+
+There should be an "Add Account" button under each category to streamline quick entry.
+
+3. Auto-Create Common E-commerce Categories and Accounts
+Add the following system-tagged categories and accounts automatically upon setup.
+
+These should be non-deletable, clearly marked with a "system" tag, and shown as fixed/default items.
+
+Users may only create/edit/delete non-system-tagged categories/accounts.
+
+📦 Default Categories and Accounts (System-Tagged)
+🟦 Assets
+Cash & Bank (already exists, retain as-is)
+
+Inventory
+
+Accounts Receivable
+
+Advance to Supplier
+
+Office Equipment
+
+🟥 Liabilities
+Bank Loan
+
+Accounts Payable
+
+Taxes Payable
+
+Customer Advances
+
+🟩 Equity
+Owner's Capital
+
+Retained Earnings
+
+Drawings
+
+🟨 Income
+Sales Revenue
+
+Shipping Income
+
+Discount Received
+
+Interest Income
+
+🟧 Expense
+Cost of Goods Sold
+
+Advertising & Marketing
+
+Payment Gateway Charges
+
+Rent & Utilities
+
+Internet & Communication
+
+Salaries & Wages
+
+Packaging Materials
+
+Software Subscriptions
+
+Office Supplies
+
+All of the above should be initialized with system tags and follow the existing smart code format (A000X, L000X, E000X, etc.), matched appropriately to the category.
+
+✏️ User Permissions and Flexibility
+Users can create additional custom categories and accounts.
+
+System-tagged items must not be deletable, but custom ones can be edited or removed.
+
+Users may rename custom accounts or assign them under any existing or new category.
+
+🖥️ UI Behavior
+In the Chart of Accounts screen:
+
+Display an "Add new account" option directly below each category.
+
+System-tagged items must be shown with a visual label (e.g., lock icon or "system" tag) and cannot be deleted.
