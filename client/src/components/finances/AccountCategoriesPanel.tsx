@@ -56,7 +56,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Info, DollarSign } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Info, DollarSign, Lock } from "lucide-react";
 
 // Form validation schema for categories
 const accountCategorySchema = z.object({
@@ -83,8 +83,11 @@ export default function AccountCategoriesPanel() {
   const [selectedType, setSelectedType] = useState("asset");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<AccountCategory | null>(null);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<AccountCategory | null>(null);
+  const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
   const [expandAll, setExpandAll] = useState(false);
   const [showTransactionInfo, setShowTransactionInfo] = useState(false);
@@ -233,6 +236,65 @@ export default function AccountCategoriesPanel() {
     },
   });
 
+  // Update account mutation
+  const updateAccountMutation = useMutation({
+    mutationFn: async (values: { id: number; data: Partial<AccountFormValues> }) => {
+      const accountData: any = {
+        name: values.data.name,
+        description: values.data.description,
+        isActive: values.data.isActive,
+      };
+      
+      // Only update initial balance if provided
+      if (values.data.initialBalance !== undefined) {
+        accountData.initialBalance = Math.round(values.data.initialBalance * 100);
+        accountData.currentBalance = Math.round(values.data.initialBalance * 100);
+      }
+      
+      return await apiRequest("PATCH", `/api/accounts/${values.id}`, accountData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Account updated",
+        description: "Your account has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
+      setAccountDialogOpen(false);
+      setEditingAccount(null);
+      accountForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update account",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete account mutation
+  const deleteAccountMutation = useMutation({
+    mutationFn: async (accountId: number) => {
+      return await apiRequest("DELETE", `/api/accounts/${accountId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Account deleted",
+        description: "Your account has been deleted successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
+      setDeleteDialogOpen(false);
+      setAccountToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete account",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Filter categories by type
   const filteredCategories = categories?.filter((category) => category.type === selectedType);
   
@@ -277,7 +339,9 @@ export default function AccountCategoriesPanel() {
 
   // Handle form submission for accounts
   const onAccountSubmit = (values: AccountFormValues) => {
-    if (selectedCategory) {
+    if (editingAccount) {
+      updateAccountMutation.mutate({ id: editingAccount.id, data: values });
+    } else if (selectedCategory) {
       createAccountMutation.mutate({ ...values, categoryId: selectedCategory.id });
     }
   };
@@ -285,6 +349,7 @@ export default function AccountCategoriesPanel() {
   // Handle adding account to a category
   const handleAddAccount = (category: AccountCategory) => {
     setSelectedCategory(category);
+    setEditingAccount(null);
     accountForm.reset({
       name: "",
       description: "",
@@ -292,6 +357,44 @@ export default function AccountCategoriesPanel() {
       isActive: true,
     });
     setAccountDialogOpen(true);
+  };
+
+  // Handle editing an account
+  const handleEditAccount = (account: Account) => {
+    setEditingAccount(account);
+    setSelectedCategory(categories?.find(cat => cat.id === account.categoryId) || null);
+    accountForm.reset({
+      name: account.name,
+      description: account.description || "",
+      initialBalance: (account.initialBalance || 0) / 100, // Convert from cents to dollars
+      isActive: account.isActive,
+    });
+    setAccountDialogOpen(true);
+  };
+
+  // Handle account deletion with transaction checks
+  const handleDeleteAccount = async (account: Account) => {
+    // Check if account has transactions
+    const accountTransactions = getTransactionsForAccount(account.id);
+    
+    if (accountTransactions.length > 0) {
+      toast({
+        title: "Cannot delete account",
+        description: "This account cannot be deleted because it has existing transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAccountToDelete(account);
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirm account deletion
+  const confirmDeleteAccount = () => {
+    if (accountToDelete) {
+      deleteAccountMutation.mutate(accountToDelete.id);
+    }
   };
 
   // Define type-safe account types
@@ -725,32 +828,59 @@ export default function AccountCategoriesPanel() {
                                 }).format((account.currentBalance || 0) / 100); // Convert from cents to dollars
                                 
                                 return (
-                                  <div key={account.id} className="py-1">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm font-medium">
-                                        <span className="text-xs text-gray-500 font-mono mr-2">{accountCode}</span>
-                                        {account.name}
-                                      </span>
-                                      <div className="flex gap-2 items-center">
-                                        {showTransactionInfo && (
-                                          <span className="text-sm font-medium text-blue-600">{formattedBalance}</span>
-                                        )}
-                                        {!account.isActive && (
-                                          <Badge variant="outline" className="text-xs bg-gray-100">
-                                            Inactive
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                    
-                                    {showTransactionInfo && lastTransaction && (
-                                      <div className="mt-1 ml-8 text-xs text-gray-500">
-                                        <div className="flex justify-between">
-                                          <span>Last transaction: {formatTransactionDate(lastTransaction)}</span>
-                                          <span>{lastTransaction.description || lastTransaction.reference || 'No description'}</span>
+                                  <div key={account.id} className="py-2 flex items-center justify-between group hover:bg-gray-50 rounded px-2 -mx-2">
+                                    <div className="flex-1">
+                                      <div className="flex items-center">
+                                        <span className="text-sm font-medium">
+                                          <span className="text-xs text-gray-500 font-mono mr-2">{accountCode}</span>
+                                          {account.name}
+                                        </span>
+                                        <div className="flex gap-1 items-center ml-2">
+                                          {showTransactionInfo && (
+                                            <span className="text-sm font-medium text-blue-600">{formattedBalance}</span>
+                                          )}
+                                          {!account.isActive && (
+                                            <Badge variant="outline" className="text-xs bg-gray-100">
+                                              Inactive
+                                            </Badge>
+                                          )}
                                         </div>
                                       </div>
-                                    )}
+                                      
+                                      {/* Account description - shown like category descriptions */}
+                                      {account.description && (
+                                        <p className="text-sm text-gray-500 mt-1 ml-8">{account.description}</p>
+                                      )}
+                                      
+                                      {showTransactionInfo && lastTransaction && (
+                                        <div className="mt-1 ml-8 text-xs text-gray-500">
+                                          <div className="flex justify-between">
+                                            <span>Last transaction: {formatTransactionDate(lastTransaction)}</span>
+                                            <span>{lastTransaction.description || lastTransaction.reference || 'No description'}</span>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Edit and Delete icons - same style as categories */}
+                                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleEditAccount(account)}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteAccount(account)}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                      </Button>
+                                    </div>
                                   </div>
                                 );
                               })}

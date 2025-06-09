@@ -1,0 +1,49 @@
+ UI and Functional Enhancements for Chart of Accounts System
+We already have a working Chart of Accounts (COA) system with proper category-based structure and smart account codes (e.g., A0001). Your task is to enhance the existing interface and behavior with the following refinements. Do not rebuild the COA system from scratch.
+
+🎨 UI Design & Behavior Updates
+1. Account Description Field: Input & Display
+The account description field should appear as a single-line input when creating or editing an account.
+
+In the main Chart of Accounts list view, show the account description exactly the same way category descriptions are displayed—i.e., smaller, subdued text below the account name.
+
+2. Initial Balance & Active Status Layout
+During account creation/editing, show:
+
+Initial Balance field
+
+Active checkbox or toggle
+
+Place both elements side by side on the same row to save vertical space and maintain layout consistency.
+
+3. Account Edit & Delete Icons
+Each account row must display Edit and Delete icons identical to those used for categories.
+👉 Use the same style, placement, and icon set as currently used in category rows.
+Do not introduce custom or different icons.
+
+4. Delete Logic with Confirmation & Restrictions
+If an account has any transactions, prevent deletion and display a warning modal:
+
+“This account cannot be deleted because it has existing transactions.”
+
+If the account has no transactions, allow deletion but show a confirmation prompt:
+
+“Are you sure you want to delete this account? This action cannot be undone.”
+
+Once deleted, remove the account visually and from the database.
+
+🖥️ Summary of Feature Enhancements
+ Inline, single-line account description field.
+
+ Display account description like category descriptions: small, secondary text under name.
+
+ Initial Balance + Active toggle: shown side by side.
+
+ Use same Edit/Delete icons as categories (style, behavior, alignment).
+
+ Prevent deletion if transactions exist, with a clear message.
+
+ Show confirmation modal for accounts without transactions before deleting.
+
+ All accounts should remain fully editable (name, description, balance, status).
+
