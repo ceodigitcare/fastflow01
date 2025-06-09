@@ -1,0 +1,59 @@
+🚨 Critical Investigation Prompt: Full-System Audit Required for Initial Balance Bug
+
+Although you've rebuilt the Initial Balance calculation system and introduced clean `toCents()` and `fromCents()` functions, the ×10 scaling issue STILL persists. This clearly indicates the bug lies **elsewhere in the full data flow**.
+
+To properly resolve this once and for all, you MUST now conduct a **full-system diagnostic trace** — from input to final display — and isolate where the unintended numeric transformation occurs.
+
+---
+
+### 🔍 Required Diagnostic Actions
+
+1. **Trace and Log the ENTIRE Lifecycle of `initialBalance`:**
+
+   #### Stage A: Raw Input
+   - Console log what the user types in the input field.
+   - Check both string and parsed number values.
+
+   #### Stage B: Form State
+   - Log what’s stored in the form state (e.g., Formik, useState).
+
+   #### Stage C: Pre-Mutation
+   - Log the exact value right before calling the mutation/API.
+   - Confirm only one `*100` transformation happens here.
+
+   #### Stage D: API/Backend Payload
+   - Log what’s being sent to the backend.
+   - Confirm backend receives expected value in cents.
+
+   #### Stage E: Backend Storage (Database or Mock)
+   - Log or inspect what’s actually stored (if using a mock DB or local state).
+   - Check if there's any accidental transformation (e.g., ×10) there.
+
+   #### Stage F: API Response
+   - Log value returned from backend to frontend.
+
+   #### Stage G: UI Display
+   - Log the raw value before rendering it in Chart of Accounts.
+   - Ensure `fromCents()` is applied only once, and the final output matches expected currency format.
+
+---
+
+### 📌 Additional Checks:
+
+- Verify no hidden `value * 10`, `* 100`, or `.toFixed()` used anywhere in `useEffect`, mutations, or conditional render blocks.
+- Check if input field is defined with `type="number"` and does not auto-format or round behind the scenes.
+- Ensure `Number(value)` or `parseFloat(value)` isn't applied **after** the value is already processed by `toCents()`.
+
+---
+
+### ✅ Required Outcome:
+
+- `Input: 1` → Stored: 100 → Display: $1.00  
+- `Input: 12` → Stored: 1200 → Display: $12.00  
+- `Input: 123.45` → Stored: 12345 → Display: $123.45
+
+---
+
+⚠️ Until you validate and match each of these stages with debug logs, the bug will remain unresolved. Please complete a full end-to-end diagnostic pass and confirm at which exact stage the number is unintentionally transformed.
+
+Once located, fix that specific layer and re-test all three cases.

@@ -60,13 +60,23 @@ import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight, ChevronUp
 
 // Clean utility functions for currency conversion
 function toCents(value: string | number): number {
+  console.log("🔍 toCents INPUT:", value, typeof value);
   const numValue = parseFloat(value.toString());
-  if (isNaN(numValue)) return 0;
-  return Math.round(numValue * 100);
+  console.log("🔍 toCents PARSED:", numValue);
+  if (isNaN(numValue)) {
+    console.log("🔍 toCents RESULT (NaN case):", 0);
+    return 0;
+  }
+  const result = Math.round(numValue * 100);
+  console.log("🔍 toCents RESULT:", numValue, "* 100 =", result);
+  return result;
 }
 
 function fromCents(cents: number): string {
-  return (cents / 100).toFixed(2);
+  console.log("🔍 fromCents INPUT:", cents);
+  const result = (cents / 100).toFixed(2);
+  console.log("🔍 fromCents RESULT:", cents, "/ 100 =", result);
+  return result;
 }
 
 // Form validation schema for categories
@@ -219,7 +229,11 @@ export default function AccountCategoriesPanel() {
   // Create account mutation
   const createAccountMutation = useMutation({
     mutationFn: async (values: AccountFormValues & { categoryId: number }) => {
+      console.log("📝 STAGE D - Mutation Function Values:", values);
+      console.log("📝 STAGE D - Raw Initial Balance:", values.initialBalance, typeof values.initialBalance);
+      
       const balanceInCents = toCents(values.initialBalance);
+      console.log("📝 STAGE D - After toCents:", balanceInCents);
       
       const accountData = {
         businessId: user?.id || 0,
@@ -230,7 +244,11 @@ export default function AccountCategoriesPanel() {
         currentBalance: balanceInCents,
         isActive: values.isActive,
       };
-      return await apiRequest("POST", "/api/accounts", accountData);
+      console.log("📝 STAGE D - API Payload:", accountData);
+      
+      const result = await apiRequest("POST", "/api/accounts", accountData);
+      console.log("📝 STAGE F - API Response:", result);
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -354,6 +372,9 @@ export default function AccountCategoriesPanel() {
 
   // Handle form submission for accounts
   const onAccountSubmit = (values: AccountFormValues) => {
+    console.log("📝 STAGE C - Pre-Mutation Values:", values);
+    console.log("📝 STAGE C - Initial Balance Before Mutation:", values.initialBalance, typeof values.initialBalance);
+    
     if (editingAccount) {
       updateAccountMutation.mutate({ id: editingAccount.id, data: values });
     } else if (selectedCategory) {
@@ -568,11 +589,16 @@ export default function AccountCategoriesPanel() {
           if (categoryAccounts.length > 0) {
             categoryAccounts.forEach(account => {
               const accountCode = generateAccountCode(category.type, account.id);
+              const rawBalance = account.currentBalance || 0;
+              console.log("📝 STAGE G - Display Raw Balance:", rawBalance);
+              const dollarAmount = parseFloat(fromCents(rawBalance));
+              console.log("📝 STAGE G - After fromCents Parsing:", dollarAmount);
               const formattedBalance = new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: 'USD',
                 minimumFractionDigits: 2
-              }).format(parseFloat(fromCents(account.currentBalance || 0)));
+              }).format(dollarAmount);
+              console.log("📝 STAGE G - Final Formatted:", formattedBalance);
               
               // Only include transaction info when showTransactionInfo is enabled
               const lastTransaction = showTransactionInfo ? getLastTransactionForAccount(account.id) : null;
@@ -1111,12 +1137,16 @@ export default function AccountCategoriesPanel() {
                           value={field.value === 0 ? '' : field.value}
                           onChange={(e) => {
                             const value = e.target.value;
+                            console.log("📝 STAGE A - Raw Input:", value, typeof value);
                             if (value === '' || value === undefined) {
+                              console.log("📝 STAGE B - Setting empty to 0");
                               field.onChange(0);
                             } else {
                               const numValue = parseFloat(value);
+                              console.log("📝 STAGE B - Parsed Value:", numValue, typeof numValue);
                               if (!isNaN(numValue)) {
                                 field.onChange(numValue);
+                                console.log("📝 STAGE B - Form State Set:", numValue);
                               }
                             }
                           }}
