@@ -1,0 +1,50 @@
+🔧 Critical Fix Prompt: Initial Balance ×10 Scaling Issue Still Exists
+
+Despite your recent fixes, the original issue **still persists**. When entering `12` as initial balance, the system still shows `120.00` in the Chart of Accounts display, which proves the ×10 scaling bug is not resolved.
+
+Please follow these updated and more rigorous debugging steps:
+
+---
+
+### ✅ You MUST Log & Verify All 6 Stages of Value Transformation:
+
+1. **Raw Input**
+   - What value is received from the input field? (Check type and raw value: e.g., "12" as string or number)
+
+2. **Form State**
+   - How is this value stored in component state (e.g., `useState` or `formik`)? Confirm no implicit conversion is being applied.
+
+3. **Pre-Submission Processing**
+   - Are you applying `.toFixed()`, `parseFloat()`, or `value * 100` before sending it to mutation? Log it.
+
+4. **Mutation / API Payload**
+   - What is actually sent to backend? Log and inspect payload before the fetch/axios/post call.
+
+5. **Backend (Mock or Real) Storage**
+   - What value is being stored? If stored in cents, confirm it's exactly `input * 100`.
+
+6. **UI Display Formatting**
+   - Are you dividing back by 100 before showing in the UI? Confirm and log again.
+
+---
+
+### ❌ Current Bug Evidence:
+
+| Input | Expected Display | Actual Display |
+|-------|------------------|----------------|
+| 1     | $1.00            | $10.00         |
+| 12    | $12.00           | $120.00        |
+| 123.45| $123.45          | $1234.50       |
+
+---
+
+### ✅ Must-Have Fixes Checklist:
+
+- Ensure input is only multiplied once by 100 before storing (for cents).
+- Ensure output is divided exactly once by 100 when displaying.
+- Do not apply multiple conversions at multiple places.
+- Use centralized helpers to handle currency transform if needed (e.g., `toCents`, `fromCents`).
+
+---
+
+**⚠️ Without fixing this, all financial reporting will be completely inaccurate. Please investigate this seriously, reproduce it with test data, and validate all 6 stages explicitly.**

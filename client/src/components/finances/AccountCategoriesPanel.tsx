@@ -208,16 +208,25 @@ export default function AccountCategoriesPanel() {
   // Create account mutation
   const createAccountMutation = useMutation({
     mutationFn: async (values: AccountFormValues & { categoryId: number }) => {
+      console.log("STAGE 4 - Mutation function values:", values);
+      console.log("STAGE 4 - Initial balance in mutation:", values.initialBalance, typeof values.initialBalance);
+      
+      const balanceInCents = Math.round(values.initialBalance * 100);
+      console.log("STAGE 4 - Converting to cents:", values.initialBalance, "* 100 =", balanceInCents);
+      
       const accountData = {
         businessId: user?.id || 0, // Get businessId from authenticated user
         categoryId: values.categoryId,
         name: values.name,
         description: values.description,
-        initialBalance: Math.round(values.initialBalance * 100), // Convert to cents
-        currentBalance: Math.round(values.initialBalance * 100), // Convert to cents
+        initialBalance: balanceInCents,
+        currentBalance: balanceInCents,
         isActive: values.isActive,
       };
-      return await apiRequest("POST", "/api/accounts", accountData);
+      console.log("STAGE 5 - API payload:", accountData);
+      const result = await apiRequest("POST", "/api/accounts", accountData);
+      console.log("STAGE 5 - API response:", result);
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -240,6 +249,9 @@ export default function AccountCategoriesPanel() {
   // Update account mutation
   const updateAccountMutation = useMutation({
     mutationFn: async (values: { id: number; data: Partial<AccountFormValues> }) => {
+      console.log("STAGE 4 - Update mutation values:", values);
+      console.log("STAGE 4 - Update initial balance:", values.data.initialBalance, typeof values.data.initialBalance);
+      
       const accountData: any = {
         name: values.data.name,
         description: values.data.description,
@@ -248,11 +260,16 @@ export default function AccountCategoriesPanel() {
       
       // Only update initial balance if provided
       if (values.data.initialBalance !== undefined) {
-        accountData.initialBalance = Math.round(values.data.initialBalance * 100);
-        accountData.currentBalance = Math.round(values.data.initialBalance * 100);
+        const balanceInCents = Math.round(values.data.initialBalance * 100);
+        console.log("STAGE 4 - Update converting to cents:", values.data.initialBalance, "* 100 =", balanceInCents);
+        accountData.initialBalance = balanceInCents;
+        accountData.currentBalance = balanceInCents;
       }
       
-      return await apiRequest("PATCH", `/api/accounts/${values.id}`, accountData);
+      console.log("STAGE 5 - Update API payload:", accountData);
+      const result = await apiRequest("PATCH", `/api/accounts/${values.id}`, accountData);
+      console.log("STAGE 5 - Update API response:", result);
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -340,6 +357,9 @@ export default function AccountCategoriesPanel() {
 
   // Handle form submission for accounts
   const onAccountSubmit = (values: AccountFormValues) => {
+    console.log("STAGE 3 - Pre-submission values:", values);
+    console.log("STAGE 3 - Initial balance before mutation:", values.initialBalance, typeof values.initialBalance);
+    
     if (editingAccount) {
       updateAccountMutation.mutate({ id: editingAccount.id, data: values });
     } else if (selectedCategory) {
@@ -554,11 +574,14 @@ export default function AccountCategoriesPanel() {
           if (categoryAccounts.length > 0) {
             categoryAccounts.forEach(account => {
               const accountCode = generateAccountCode(category.type, account.id);
+              const balanceFromDb = account.currentBalance || 0;
+              const balanceInDollars = balanceFromDb / 100;
+              console.log("STAGE 6 - Display conversion:", balanceFromDb, "cents /100 =", balanceInDollars, "dollars");
               const formattedBalance = new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: 'USD',
                 minimumFractionDigits: 2
-              }).format((account.currentBalance || 0) / 100); // Convert from cents to dollars
+              }).format(balanceInDollars);
               
               // Only include transaction info when showTransactionInfo is enabled
               const lastTransaction = showTransactionInfo ? getLastTransactionForAccount(account.id) : null;
@@ -832,11 +855,14 @@ export default function AccountCategoriesPanel() {
                               {getAccountsForCategory(category.id).map(account => {
                                 const accountCode = generateAccountCode(category.type, account.id);
                                 const lastTransaction = showTransactionInfo ? getLastTransactionForAccount(account.id) : null;
+                                const balanceFromDb2 = account.currentBalance || 0;
+                                const balanceInDollars2 = balanceFromDb2 / 100;
+                                console.log("STAGE 6 - Display conversion (detailed view):", balanceFromDb2, "cents /100 =", balanceInDollars2, "dollars");
                                 const formattedBalance = new Intl.NumberFormat('en-US', {
                                   style: 'currency',
                                   currency: 'USD',
                                   minimumFractionDigits: 2
-                                }).format((account.currentBalance || 0) / 100); // Convert from cents to dollars
+                                }).format(balanceInDollars2);
                                 
                                 return (
                                   <div key={account.id} className="py-2 flex items-center justify-between group hover:bg-gray-50 rounded px-2 -mx-2">
@@ -1097,12 +1123,16 @@ export default function AccountCategoriesPanel() {
                           value={field.value === 0 ? '' : field.value}
                           onChange={(e) => {
                             const value = e.target.value;
+                            console.log("STAGE 1 - Raw Input:", value, typeof value);
                             if (value === '' || value === undefined) {
+                              console.log("STAGE 2 - Setting empty value to 0");
                               field.onChange(0);
                             } else {
                               const numValue = Number(value);
+                              console.log("STAGE 2 - Parsed number:", numValue, typeof numValue, "isNaN:", isNaN(numValue));
                               if (!isNaN(numValue)) {
                                 field.onChange(numValue);
+                                console.log("STAGE 2 - Form state set to:", numValue);
                               }
                             }
                           }}
