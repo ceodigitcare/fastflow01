@@ -1,0 +1,67 @@
+🚨 URGENT: Scaling Bug Still NOT Fixed — Misdiagnosed React Hook Form Field Blamed Incorrectly
+
+Although `{...field}` spread was removed and custom `onChange` was introduced, the core ×10 scaling issue **still persists**. The root cause has NOT been fixed.
+
+---
+
+### 🧠 Clarification:
+
+This is **NOT a React Hook Form conflict** issue. The actual problem lies in the value transformation pipeline:
+
+1. ✅ Input field receives "13.92"
+2. ❌ Somewhere before calling `toCents()`, this is silently converted to "139.2"
+3. ✅ Then `toCents()` multiplies by 100 = 13920
+4. ✅ `fromCents()` divides 13920 / 100 = **$139.20**
+5. ❌ This means a rogue ×10 operation is happening **before** or **within** toCents()
+
+---
+
+### 🔎 Root-Level Investigation Required:
+
+Please follow this checklist strictly:
+
+---
+
+### 🔁 Replace & Isolate All Transformation Logic
+
+#### ✅ Step 1: Pure Utility Functions (No Implicit Parsing)
+```ts
+const toCents = (value: string | number): number => {
+  const parsed = typeof value === "string" ? parseFloat(value) : value;
+  return Math.round(parsed * 100);
+};
+
+const fromCents = (cents: number): string => (cents / 100).toFixed(2);
+
+✅ Step 2: Log This EXACT Chain for Any Input (Ex: 13.92)
+ts
+Copy
+Edit
+console.log("Raw Input Value: ", value); // string
+console.log("Parsed Number: ", parseFloat(value));
+console.log("toCents Output: ", toCents(value));
+console.log("Sent to API: ", { initialBalance: toCents(value) });
+console.log("API Response: ", response.balance); // should be 1392
+console.log("Display fromCents: ", fromCents(response.balance));
+✅ Step 3: HARD-CODE for CONTROLLED TESTING
+Just test:
+
+ts
+
+const raw = "13.92";
+const cents = toCents(raw); // Should be 1392
+console.log(cents); // If it’s 13920 → the issue is BEFORE toCents
+🛑 Do NOT Proceed With UI Changes Until These Confirmations Are Met:
+⛔ No auto-formatting on input (e.g., browser locale, thousands separator)
+
+⛔ No hidden rounding/multiplying inside onChange or useEffect
+
+⛔ No implicit ×10 in form controller or schema casting
+
+✅ Final Expected Results:
+Input	Stored (in cents)	Display
+1	100			$1.00
+12	1200			$12.00
+13.92	1392			$13.92
+
+Please treat this as a full system bug, not just a frontend form field issue. Every stage from input, form state, mutation, API, and display must be re-traced with actual logged outputs to ensure no unintended transformation occurs. Only then can the bug be considered fixed.

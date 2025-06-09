@@ -58,26 +58,27 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Info, DollarSign, Lock, HelpCircle } from "lucide-react";
 
-// Clean utility functions for currency conversion
+// Pure utility functions for currency conversion
 function toCents(value: string | number): number {
-  console.log("🔍 toCents INPUT:", value, typeof value);
-  const numValue = parseFloat(value.toString());
-  console.log("🔍 toCents PARSED:", numValue);
-  if (isNaN(numValue)) {
-    console.log("🔍 toCents RESULT (NaN case):", 0);
-    return 0;
-  }
-  const result = Math.round(numValue * 100);
-  console.log("🔍 toCents RESULT:", numValue, "* 100 =", result);
+  console.log("🔍 CONTROLLED TEST - toCents INPUT:", value, typeof value);
+  const parsed = typeof value === "string" ? parseFloat(value) : value;
+  console.log("🔍 CONTROLLED TEST - Parsed:", parsed);
+  const result = Math.round(parsed * 100);
+  console.log("🔍 CONTROLLED TEST - Result:", parsed, "* 100 =", result);
   return result;
 }
 
 function fromCents(cents: number): string {
-  console.log("🔍 fromCents INPUT:", cents);
   const result = (cents / 100).toFixed(2);
-  console.log("🔍 fromCents RESULT:", cents, "/ 100 =", result);
+  console.log("🔍 CONTROLLED TEST - fromCents:", cents, "/ 100 =", result);
   return result;
 }
+
+// Hard-coded test for debugging
+console.log("🧪 HARD-CODED TEST:");
+const testValue = "13.92";
+const testCents = toCents(testValue);
+console.log("Test Input:", testValue, "→ Cents:", testCents, "→ Display:", fromCents(testCents));
 
 // Form validation schema for categories
 const accountCategorySchema = z.object({
@@ -1136,17 +1137,24 @@ export default function AccountCategoriesPanel() {
                           name={field.name}
                           value={field.value === 0 ? '' : field.value}
                           onChange={(e) => {
-                            const value = e.target.value;
-                            console.log("📝 STAGE A - Raw Input:", value, typeof value);
-                            if (value === '' || value === undefined) {
-                              console.log("📝 STAGE B - Setting empty to 0");
+                            const rawValue = e.target.value;
+                            console.log("🔬 EXACT VALUE TRACE - Raw DOM Input:", rawValue, typeof rawValue);
+                            console.log("🔬 EXACT VALUE TRACE - Input Element Value:", e.target.value);
+                            console.log("🔬 EXACT VALUE TRACE - Input Element Type:", e.target.type);
+                            
+                            if (rawValue === '' || rawValue === undefined) {
                               field.onChange(0);
                             } else {
-                              const numValue = parseFloat(value);
-                              console.log("📝 STAGE B - Parsed Value:", numValue, typeof numValue);
-                              if (!isNaN(numValue)) {
-                                field.onChange(numValue);
-                                console.log("📝 STAGE B - Form State Set:", numValue);
+                              const parsed = parseFloat(rawValue);
+                              console.log("🔬 EXACT VALUE TRACE - parseFloat Result:", parsed);
+                              
+                              if (!isNaN(parsed)) {
+                                console.log("🔬 EXACT VALUE TRACE - Setting field to:", parsed);
+                                field.onChange(parsed);
+                                
+                                // Immediate test of conversion chain
+                                const testCents = toCents(parsed);
+                                console.log("🔬 IMMEDIATE TEST - Input to Cents:", parsed, "→", testCents);
                               }
                             }
                           }}
