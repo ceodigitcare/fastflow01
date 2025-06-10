@@ -73,6 +73,22 @@ export default function PurchaseBillFormSplit({
 }: PurchaseBillFormSplitProps) {
   const { toast } = useToast();
   
+  // Function to calculate vendor balance from Chart of Accounts
+  const getVendorBalance = (vendorId: number) => {
+    if (!accounts || !vendorId) return null;
+    
+    // Find vendor account by contactId or name matching
+    const selectedVendor = vendors?.find(v => v.id === vendorId);
+    if (!selectedVendor) return null;
+    
+    const vendorAccount = accounts.find(acc => 
+      acc.contactId === vendorId || 
+      acc.name.toLowerCase().includes(selectedVendor.name.toLowerCase())
+    );
+    
+    return vendorAccount?.currentBalance || 0;
+  };
+  
   // Local state for line items and dialogs
   // Initialize bill items with a function to properly handle complex logic
   const [billItems, setBillItems] = useState<PurchaseBillItem[]>(() => {
@@ -1938,18 +1954,14 @@ export default function PurchaseBillFormSplit({
                     const selectedVendor = vendors?.find(v => v.id === field.value);
                     if (selectedVendor) {
                       // Calculate vendor balance from Chart of Accounts
-                      const vendorAccount = accounts?.find(acc => 
-                        acc.name.toLowerCase().includes(selectedVendor.name.toLowerCase()) ||
-                        acc.contactId === selectedVendor.id
-                      );
+                      const vendorBalance = getVendorBalance(field.value);
                       
-                      if (vendorAccount && vendorAccount.currentBalance !== undefined && vendorAccount.currentBalance !== 0) {
-                        const balance = vendorAccount.currentBalance;
+                      if (vendorBalance !== null && vendorBalance !== 0) {
                         return (
                           <div className="text-sm text-gray-600 whitespace-nowrap">
                             <span className="font-medium">Current Balance: </span>
-                            <span className={`font-semibold ${balance > 0 ? 'text-red-600' : balance < 0 ? 'text-green-600' : 'text-gray-600'}`}>
-                              {formatCurrencyDisplay(Math.abs(balance))} {balance > 0 ? 'Due' : balance < 0 ? 'Advance' : ''}
+                            <span className={`font-semibold ${vendorBalance > 0 ? 'text-red-600' : vendorBalance < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                              {formatCurrencyDisplay(Math.abs(vendorBalance))} {vendorBalance > 0 ? 'Due' : vendorBalance < 0 ? 'Advance' : ''}
                             </span>
                           </div>
                         );
