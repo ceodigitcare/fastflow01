@@ -1,0 +1,407 @@
+client:495 [vite] connecting...
+client:618 [vite] connected.
+share-modal.js:1 Uncaught TypeError: Cannot read properties of null (reading 'addEventListener')
+    at share-modal.js:1:135
+main.tsx:11 SW registered:  ServiceWorkerRegistration
+/api/auth/me:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 (Unauthorized)
+/auth:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+main.tsx:22 beforeinstallprompt event fired
+/auth:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:1140 INPUT - Raw value from field: 2 string
+AccountCategoriesPanel.tsx:1147 INPUT - Parsed value: 2 number
+AccountCategoriesPanel.tsx:1149 INPUT - Setting field to: 2
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:1140 INPUT - Raw value from field: 22 string
+AccountCategoriesPanel.tsx:1147 INPUT - Parsed value: 22 number
+AccountCategoriesPanel.tsx:1149 INPUT - Setting field to: 22
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:227 CREATE - Input value: 22 number
+AccountCategoriesPanel.tsx:64 toCents - Input: 22 Type: number Parsed: 22
+AccountCategoriesPanel.tsx:67 toCents - Result: 2200
+AccountCategoriesPanel.tsx:229 CREATE - Converted to cents: 2200
+AccountCategoriesPanel.tsx:241 CREATE - Final payload: Object
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account test 01 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account test 01 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account test 01 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
+AccountCategoriesPanel.tsx:871 Account Customer Receivables - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Customer Receivables - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Customer Receivables - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Supplier Advances - Raw balance (cents): 0
+AccountCategoriesPanel.tsx:873 Account Supplier Advances - After fromCents: 0.00
+AccountCategoriesPanel.tsx:879 Account Supplier Advances - Final formatted: $0.00
+AccountCategoriesPanel.tsx:871 Account Cash - Raw balance (cents): 49999376341
+AccountCategoriesPanel.tsx:873 Account Cash - After fromCents: 499993763.41
+AccountCategoriesPanel.tsx:879 Account Cash - Final formatted: $499,993,763.41
+AccountCategoriesPanel.tsx:871 Account EBL Plc - Raw balance (cents): 14500
+AccountCategoriesPanel.tsx:873 Account EBL Plc - After fromCents: 145.00
+AccountCategoriesPanel.tsx:879 Account EBL Plc - Final formatted: $145.00
+AccountCategoriesPanel.tsx:871 Account BB 3 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account BB 3 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account BB 3 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account test 01 - Raw balance (cents): 22000
+AccountCategoriesPanel.tsx:873 Account test 01 - After fromCents: 220.00
+AccountCategoriesPanel.tsx:879 Account test 01 - Final formatted: $220.00
+AccountCategoriesPanel.tsx:871 Account Product Inventory - Raw balance (cents): 15000000
+AccountCategoriesPanel.tsx:873 Account Product Inventory - After fromCents: 150000.00
+AccountCategoriesPanel.tsx:879 Account Product Inventory - Final formatted: $150,000.00
+AccountCategoriesPanel.tsx:871 Account Computer Equipment - Raw balance (cents): 8000000
+AccountCategoriesPanel.tsx:873 Account Computer Equipment - After fromCents: 80000.00
+AccountCategoriesPanel.tsx:879 Account Computer Equipment - Final formatted: $80,000.00
+AccountCategoriesPanel.tsx:871 Account Office Furniture - Raw balance (cents): 2500000
+AccountCategoriesPanel.tsx:873 Account Office Furniture - After fromCents: 25000.00
+AccountCategoriesPanel.tsx:879 Account Office Furniture - Final formatted: $25,000.00
+AccountCategoriesPanel.tsx:871 Account Laptop 2 - Raw balance (cents): 2222000
+AccountCategoriesPanel.tsx:873 Account Laptop 2 - After fromCents: 22220.00
+AccountCategoriesPanel.tsx:879 Account Laptop 2 - Final formatted: $22,220.00
