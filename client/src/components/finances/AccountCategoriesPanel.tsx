@@ -872,9 +872,7 @@ export default function AccountCategoriesPanel() {
                                           {account.name}
                                         </span>
                                         <div className="flex gap-1 items-center ml-2">
-                                          {showTransactionInfo && (
-                                            <span className="text-sm font-medium text-blue-600">{formattedBalance}</span>
-                                          )}
+                                          <span className="text-sm font-medium text-blue-600">{formattedBalance}</span>
                                           {!account.isActive && (
                                             <Badge variant="outline" className="text-xs bg-gray-100">
                                               Inactive
