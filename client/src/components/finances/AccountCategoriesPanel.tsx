@@ -647,20 +647,25 @@ export default function AccountCategoriesPanel() {
               }).format(dollarAmount);
               console.log("📝 STAGE G - Final Formatted:", formattedBalance);
               
-              // Only include transaction info when showTransactionInfo is enabled
-              const lastTransaction = showTransactionInfo ? getLastTransactionForAccount(account.id) : null;
+              // Always include transaction info in print view when expandAll is true
+              const lastTransaction = expandAll ? getLastTransactionForAccount(account.id) : null;
               
               html += `
-                <div style="margin-bottom: 10px; font-size: 14px;">
-                  <div style="display: flex; justify-content: space-between;">
+                <div style="margin-bottom: 12px; font-size: 14px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-weight: 500;">${accountCode} - ${account.name}</span>
-                    <div>
-                      ${showTransactionInfo ? `<span style="font-weight: 500; color: #0052CC; margin-right: 8px;">${formattedBalance}</span>` : ''}
-                      ${!account.isActive ? '<span style="background-color: #f0f0f0; padding: 1px 6px; border-radius: 10px; font-size: 11px;">Inactive</span>' : ''}
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-weight: 600; color: #0052CC;">${formattedBalance}</span>
+                      ${!account.isActive ? '<span style="background-color: #f0f0f0; padding: 2px 8px; border-radius: 12px; font-size: 11px;">Inactive</span>' : ''}
                     </div>
                   </div>
-                  ${showTransactionInfo && lastTransaction ? `
-                    <div style="margin-top: 4px; margin-left: 20px; font-size: 12px; color: #666;">
+                  ${account.description ? `
+                    <div style="margin-top: 4px; margin-left: 20px; font-size: 12px; color: #666; font-style: italic;">
+                      ${account.description}
+                    </div>
+                  ` : ''}
+                  ${expandAll && lastTransaction ? `
+                    <div style="margin-top: 6px; margin-left: 20px; font-size: 11px; color: #666; border-left: 2px solid #e0e0e0; padding-left: 8px;">
                       <div style="display: flex; justify-content: space-between;">
                         <span>Last transaction: ${formatTransactionDate(lastTransaction)}</span>
                         <span>${lastTransaction.description || lastTransaction.reference || 'No description'}</span>
