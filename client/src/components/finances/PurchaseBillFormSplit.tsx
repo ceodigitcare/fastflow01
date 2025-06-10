@@ -1801,100 +1801,8 @@ export default function PurchaseBillFormSplit({
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            {/* Vendor Selection */}
-            <FormField
-              control={form.control}
-              name="vendorId"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex justify-between items-center">
-                    <FormLabel>Vendor</FormLabel>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 px-2 text-xs"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setAddVendorDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" />
-                      Add Vendor
-                    </Button>
-                  </div>
-                  <Select 
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a vendor" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {vendorsLoading ? (
-                        <SelectItem value="loading" disabled>Loading vendors...</SelectItem>
-                      ) : vendors && vendors.length > 0 ? (
-                        vendors.map((vendor) => (
-                          <SelectItem key={vendor.id} value={vendor.id.toString()}>
-                            {vendor.name}
-                            {vendor.balance !== undefined && vendor.balance !== null && vendor.balance !== 0 && (
-                              <span className={`ml-2 text-xs ${(vendor.balance || 0) > 0 ? 'text-green-500' : 'text-amber-500'}`}>
-                                {(vendor.balance || 0) > 0 
-                                  ? `(Advance: ${formatCurrencyDisplay((vendor.balance || 0) / 100)})` 
-                                  : `(Due: ${formatCurrencyDisplay(Math.abs((vendor.balance || 0)) / 100)})`}
-                              </span>
-                            )}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>No vendors found</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Account Selection */}
-            <FormField
-              control={form.control}
-              name="accountId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Pay From Account</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an account" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accountsLoading ? (
-                        <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
-                      ) : accounts && accounts.length > 0 ? (
-                        accounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id.toString()}>
-                            {account.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>No accounts found</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
+          {/* First Row: Bill Number, Bill Date, Due Date */}
+          <div className="grid grid-cols-3 gap-4">
             {/* Bill Number */}
             <FormField
               control={form.control}
@@ -1975,23 +1883,85 @@ export default function PurchaseBillFormSplit({
                 </FormItem>
               )}
             />
-            
-            {/* Auto-calculated Status - Read Only Display */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
-              <div className="flex items-center">
-                {(() => {
-                  const status = getCurrentBillStatus();
-                  const { colorClass, label } = renderStatusBadge(status);
-                  return (
-                    <div className={`px-3 py-1 text-sm font-medium border rounded-full ${colorClass}`}>
-                      {label}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
           </div>
+          
+          {/* Second Row: Vendor Selection with Balance Display */}
+          <FormField
+            control={form.control}
+            name="vendorId"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex justify-between items-center">
+                  <FormLabel>Vendor</FormLabel>
+                  <Button 
+                    type="button" 
+                    variant="link"
+                    size="sm" 
+                    className="text-blue-600 hover:text-blue-800 text-xs p-0 h-auto"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setAddVendorDialogOpen(true);
+                    }}
+                  >
+                    + Add Vendor
+                  </Button>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <Select 
+                      onValueChange={(value) => field.onChange(parseInt(value))}
+                      value={field.value?.toString() || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a vendor" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {vendorsLoading ? (
+                          <SelectItem value="loading" disabled>Loading vendors...</SelectItem>
+                        ) : vendors && vendors.length > 0 ? (
+                          vendors.map((vendor) => (
+                            <SelectItem key={vendor.id} value={vendor.id.toString()}>
+                              {vendor.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none" disabled>No vendors found</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Vendor Balance Display */}
+                  {field.value && field.value > 0 && (() => {
+                    const selectedVendor = vendors?.find(v => v.id === field.value);
+                    if (selectedVendor) {
+                      // Calculate vendor balance from Chart of Accounts
+                      const vendorAccount = accounts?.find(acc => 
+                        acc.name.toLowerCase().includes(selectedVendor.name.toLowerCase()) ||
+                        acc.contactId === selectedVendor.id
+                      );
+                      
+                      if (vendorAccount && vendorAccount.currentBalance !== undefined && vendorAccount.currentBalance !== 0) {
+                        const balance = vendorAccount.currentBalance;
+                        return (
+                          <div className="text-sm text-gray-600 whitespace-nowrap">
+                            <span className="font-medium">Current Balance: </span>
+                            <span className={`font-semibold ${balance > 0 ? 'text-red-600' : balance < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                              {formatCurrencyDisplay(Math.abs(balance))} {balance > 0 ? 'Due' : balance < 0 ? 'Advance' : ''}
+                            </span>
+                          </div>
+                        );
+                      }
+                    }
+                    return null;
+                  })()}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           
           {/* Line Items */}
           <div className="space-y-4">

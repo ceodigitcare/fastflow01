@@ -116,12 +116,9 @@ function BillPrintContent({ bill, businessData }: BillPrintProps) {
       )}
       
       {/* Signature Lines */}
-      <div className="grid grid-cols-3 gap-4 mt-12">
+      <div className="grid grid-cols-2 gap-8 mt-12">
         <div className="border-t border-gray-300 pt-2 text-center">
           <p className="text-sm text-gray-600">Vendor's Signature</p>
-        </div>
-        <div className="border-t border-gray-300 pt-2 text-center">
-          <p className="text-sm text-gray-600">Date</p>
         </div>
         <div className="border-t border-gray-300 pt-2 text-center">
           <p className="text-sm text-gray-600">Authorized Signature</p>
