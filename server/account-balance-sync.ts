@@ -57,8 +57,10 @@ export async function calculateAccountBalance(accountId: number, businessId: num
     const totalOutgoing = outgoingResult[0]?.total || 0;
 
     // Calculate current balance: Initial + Incoming - Outgoing
-    // Ensure all calculations maintain proper decimal precision (2 decimal places)
-    const currentBalance = Number((initialBalance + totalIncoming - totalOutgoing).toFixed(2));
+    // All values are in cents, so no decimal conversion needed
+    const currentBalance = initialBalance + totalIncoming - totalOutgoing;
+    
+    console.log(`Updated account ${accountId} balance to ${currentBalance}`);
 
     return currentBalance;
   } catch (error) {
