@@ -867,16 +867,11 @@ export default function AccountCategoriesPanel() {
                               {getAccountsForCategory(category.id).map(account => {
                                 const accountCode = generateAccountCode(category.type, account.id);
                                 const lastTransaction = showTransactionInfo ? getLastTransactionForAccount(account.id) : null;
-                                const rawBalance = account.currentBalance || 0;
-                                console.log(`Account ${account.name} - Raw balance (cents):`, rawBalance);
-                                const dollarValue = fromCents(rawBalance);
-                                console.log(`Account ${account.name} - After fromCents:`, dollarValue);
                                 const formattedBalance = new Intl.NumberFormat('en-US', {
                                   style: 'currency',
                                   currency: 'USD',
                                   minimumFractionDigits: 2
-                                }).format(parseFloat(dollarValue));
-                                console.log(`Account ${account.name} - Final formatted:`, formattedBalance);
+                                }).format(parseFloat(fromCents(account.currentBalance || 0)));
                                 
                                 return (
                                   <div key={account.id} className="py-2 flex items-center justify-between group hover:bg-gray-50 rounded px-2 -mx-2">

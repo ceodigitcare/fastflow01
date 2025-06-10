@@ -1,0 +1,58 @@
+🚨 URGENT: Transaction System Ignores Partial Payment Amounts
+
+There is a critical bug in the payment handling logic for purchase bills.
+
+---
+
+## 🧾 Problem Summary:
+
+A bill (e.g., `#BILL-20250610-3688`) was created with a total of **$15.00**.
+
+- A partial payment of **$10.00** was applied.
+- The bill correctly shows **$5.00 due**.
+- ✅ Bill-level UI reflects the correct payment status.
+- ❌ However, the **created payment transaction** records **$15.00** as paid.
+- ❌ The Chart of Accounts and Bank ledger also reflect **$15.00 debit**, which is incorrect.
+
+---
+
+## 🧠 Root Cause Hypothesis:
+
+The transaction creation logic likely pulls the `bill.totalAmount` instead of the actual `payment.amount` when generating the journal entry.
+
+---
+
+## 🔍 Action Items:
+
+1. **Review the transaction mutation or handler for payment submissions.**
+   - Specifically look at:
+     ```ts
+     amount = bill.totalAmount; // ❌ Wrong
+     amount = payment.amount;   // ✅ Correct
+     ```
+
+2. **Verify that the transaction ledger only reflects the actual paid amount (partial or full).**
+
+3. **Ensure that Chart of Accounts and Bank account are only impacted by the actual cash movement.**
+
+---
+
+## ✅ Example Test Case:
+
+| Scenario                | Input     | Expected Ledger Entry |
+|-------------------------|-----------|------------------------|
+| Bill Total              | $15.00    |                        |
+| Partial Payment         | $10.00    | $10.00 Bank → Payables |
+| Remaining Balance Due   | $5.00     | Unchanged              |
+| Current Implementation  | $10.00    | ❌ Bank shows $15.00   |
+
+---
+
+## 🛡️ Security Reminder:
+
+As this system handles financial data, ensure:
+- All monetary fields are validated in cents.
+- All mutations log `payment.amount`, not `bill.amount`.
+- Avoid trusting frontend totals; always derive from `paymentPayload.amount`.
+
+Please fix this as a priority. Let me know if you need trace logs or example payloads.

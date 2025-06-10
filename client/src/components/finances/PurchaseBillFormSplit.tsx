@@ -975,12 +975,16 @@ export default function PurchaseBillFormSplit({
       // First, round the total amount to 2 decimal places to ensure consistency
       const roundedTotalAmount = Math.round(data.totalAmount * 100) / 100;
       
+      // CRITICAL FIX: Transaction amount should reflect actual payment, not total bill amount
+      const paymentAmount = data.paymentMade || 0;
+      const roundedPaymentAmount = Math.round(paymentAmount * 100) / 100;
+      
       const transactionData: any = {
         type: "expense",
         accountId: data.accountId,
-        amount: Math.round(roundedTotalAmount * 100), // Convert to cents after ensuring consistent decimal places
+        amount: Math.round(roundedPaymentAmount * 100), // ✅ Use actual payment amount for ledger entry
         date: data.billDate, // Use the bill date for the transaction date
-        description: `Bill #${data.billNumber}`,
+        description: `Bill #${data.billNumber}${paymentAmount < roundedTotalAmount ? ' (Partial Payment)' : ''}`,
         category: "Purchases",
         documentType: "bill",
         documentNumber: data.billNumber,
@@ -1039,7 +1043,7 @@ export default function PurchaseBillFormSplit({
         const updateData = {
           id: editingBill.id,
           accountId: data.accountId,
-          amount: Math.round(data.totalAmount * 100),
+          amount: Math.round(roundedPaymentAmount * 100), // ✅ Use payment amount for ledger consistency
           date: data.billDate,
           documentNumber: data.billNumber,
           status: data.status || "draft",
