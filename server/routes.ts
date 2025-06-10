@@ -793,13 +793,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/accounts", requireAuth, async (req, res) => {
     try {
       const businessId = getBusinessId(req);
+      console.log("SERVER - Received POST data:", req.body);
+      console.log("SERVER - Initial balance value:", req.body.initialBalance, typeof req.body.initialBalance);
+      
       const accountData = insertAccountSchema.parse({
         ...req.body,
         businessId,
         currentBalance: req.body.initialBalance || 0,
       });
       
+      console.log("SERVER - Parsed account data:", accountData);
       const account = await storage.createAccount(accountData);
+      console.log("SERVER - Created account:", account);
       
       // Immediately sync the account balance after creation
       await updateAccountBalance(account.id, businessId);

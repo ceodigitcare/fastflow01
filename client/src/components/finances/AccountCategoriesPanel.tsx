@@ -61,8 +61,11 @@ import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight, ChevronUp
 // Clean utility functions for currency conversion
 function toCents(value: string | number): number {
   const parsed = typeof value === "string" ? parseFloat(value) : value;
+  console.log("toCents - Input:", value, "Type:", typeof value, "Parsed:", parsed);
   if (isNaN(parsed)) return 0;
-  return Math.round(parsed * 100);
+  const result = Math.round(parsed * 100);
+  console.log("toCents - Result:", result);
+  return result;
 }
 
 function fromCents(cents: number): string {
