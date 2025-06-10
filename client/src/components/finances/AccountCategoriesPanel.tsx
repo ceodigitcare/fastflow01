@@ -221,7 +221,9 @@ export default function AccountCategoriesPanel() {
   // Create account mutation
   const createAccountMutation = useMutation({
     mutationFn: async (values: AccountFormValues & { categoryId: number }) => {
+      console.log("CREATE - Input value:", values.initialBalance, typeof values.initialBalance);
       const balanceInCents = toCents(values.initialBalance);
+      console.log("CREATE - Converted to cents:", balanceInCents);
       
       const accountData = {
         businessId: user?.id || 0,
@@ -233,6 +235,7 @@ export default function AccountCategoriesPanel() {
         isActive: values.isActive,
       };
       
+      console.log("CREATE - Final payload:", accountData);
       return await apiRequest("POST", "/api/accounts", accountData);
     },
     onSuccess: () => {
@@ -256,6 +259,7 @@ export default function AccountCategoriesPanel() {
   // Update account mutation
   const updateAccountMutation = useMutation({
     mutationFn: async (values: { id: number; data: Partial<AccountFormValues> }) => {
+      console.log("UPDATE - Input data:", values.data);
       const accountData: any = {
         name: values.data.name,
         description: values.data.description,
@@ -264,11 +268,14 @@ export default function AccountCategoriesPanel() {
       
       // Only update initial balance if provided
       if (values.data.initialBalance !== undefined) {
+        console.log("UPDATE - Input value:", values.data.initialBalance, typeof values.data.initialBalance);
         const balanceInCents = toCents(values.data.initialBalance);
+        console.log("UPDATE - Converted to cents:", balanceInCents);
         accountData.initialBalance = balanceInCents;
         accountData.currentBalance = balanceInCents;
       }
       
+      console.log("UPDATE - Final payload:", accountData);
       return await apiRequest("PATCH", `/api/accounts/${values.id}`, accountData);
     },
     onSuccess: () => {
@@ -1127,12 +1134,16 @@ export default function AccountCategoriesPanel() {
                           value={field.value === 0 ? '' : field.value}
                           onChange={(e) => {
                             const rawValue = e.target.value;
+                            console.log("INPUT - Raw value from field:", rawValue, typeof rawValue);
                             
                             if (rawValue === '' || rawValue === undefined) {
+                              console.log("INPUT - Setting to 0");
                               field.onChange(0);
                             } else {
                               const parsed = parseFloat(rawValue);
+                              console.log("INPUT - Parsed value:", parsed, typeof parsed);
                               if (!isNaN(parsed)) {
+                                console.log("INPUT - Setting field to:", parsed);
                                 field.onChange(parsed);
                               }
                             }
