@@ -58,27 +58,18 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PlusCircle, Edit, Trash2, Printer, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Info, DollarSign, Lock, HelpCircle } from "lucide-react";
 
-// Pure utility functions for currency conversion
+// Clean utility functions for currency conversion
 function toCents(value: string | number): number {
-  console.log("🔍 CONTROLLED TEST - toCents INPUT:", value, typeof value);
   const parsed = typeof value === "string" ? parseFloat(value) : value;
-  console.log("🔍 CONTROLLED TEST - Parsed:", parsed);
-  const result = Math.round(parsed * 100);
-  console.log("🔍 CONTROLLED TEST - Result:", parsed, "* 100 =", result);
-  return result;
+  if (isNaN(parsed)) return 0;
+  return Math.round(parsed * 100);
 }
 
 function fromCents(cents: number): string {
-  const result = (cents / 100).toFixed(2);
-  console.log("🔍 CONTROLLED TEST - fromCents:", cents, "/ 100 =", result);
-  return result;
+  return (cents / 100).toFixed(2);
 }
 
-// Hard-coded test for debugging
-console.log("🧪 HARD-CODED TEST:");
-const testValue = "13.92";
-const testCents = toCents(testValue);
-console.log("Test Input:", testValue, "→ Cents:", testCents, "→ Display:", fromCents(testCents));
+// Utility functions ready for use
 
 // Form validation schema for categories
 const accountCategorySchema = z.object({
@@ -230,11 +221,7 @@ export default function AccountCategoriesPanel() {
   // Create account mutation
   const createAccountMutation = useMutation({
     mutationFn: async (values: AccountFormValues & { categoryId: number }) => {
-      console.log("📝 STAGE D - Mutation Function Values:", values);
-      console.log("📝 STAGE D - Raw Initial Balance:", values.initialBalance, typeof values.initialBalance);
-      
       const balanceInCents = toCents(values.initialBalance);
-      console.log("📝 STAGE D - After toCents:", balanceInCents);
       
       const accountData = {
         businessId: user?.id || 0,
@@ -245,11 +232,8 @@ export default function AccountCategoriesPanel() {
         currentBalance: balanceInCents,
         isActive: values.isActive,
       };
-      console.log("📝 STAGE D - API Payload:", accountData);
       
-      const result = await apiRequest("POST", "/api/accounts", accountData);
-      console.log("📝 STAGE F - API Response:", result);
-      return result;
+      return await apiRequest("POST", "/api/accounts", accountData);
     },
     onSuccess: () => {
       toast({
@@ -272,9 +256,6 @@ export default function AccountCategoriesPanel() {
   // Update account mutation
   const updateAccountMutation = useMutation({
     mutationFn: async (values: { id: number; data: Partial<AccountFormValues> }) => {
-      console.log("🚀 UPDATE MUTATION - Input values:", values);
-      console.log("🚀 UPDATE MUTATION - Initial balance from form:", values.data.initialBalance);
-      
       const accountData: any = {
         name: values.data.name,
         description: values.data.description,
@@ -283,17 +264,12 @@ export default function AccountCategoriesPanel() {
       
       // Only update initial balance if provided
       if (values.data.initialBalance !== undefined) {
-        console.log("🚀 UPDATE MUTATION - Processing initial balance:", values.data.initialBalance);
         const balanceInCents = toCents(values.data.initialBalance);
-        console.log("🚀 UPDATE MUTATION - Converted to cents:", balanceInCents);
         accountData.initialBalance = balanceInCents;
         accountData.currentBalance = balanceInCents;
       }
       
-      console.log("🚀 UPDATE MUTATION - Final API payload:", accountData);
-      const result = await apiRequest("PATCH", `/api/accounts/${values.id}`, accountData);
-      console.log("🚀 UPDATE MUTATION - API Response:", result);
-      return result;
+      return await apiRequest("PATCH", `/api/accounts/${values.id}`, accountData);
     },
     onSuccess: () => {
       toast({
@@ -381,24 +357,10 @@ export default function AccountCategoriesPanel() {
 
   // Handle form submission for accounts
   const onAccountSubmit = (values: AccountFormValues) => {
-    console.log("🔍 FINAL PAYLOAD CHECK - Form Values:", values);
-    console.log("🔍 FINAL PAYLOAD CHECK - Initial Balance:", values.initialBalance, typeof values.initialBalance);
-    
-    // HARDCODED TEST - Force a known value to confirm mutation works
-    const testPayload = {
-      ...values,
-      initialBalance: 2222 // Should result in $22.22
-    };
-    console.log("🧪 HARDCODED TEST - Forced payload:", testPayload);
-    
     if (editingAccount) {
-      console.log("🔍 EDIT MODE - Updating account:", editingAccount.id);
-      // Use hardcoded test first
-      updateAccountMutation.mutate({ id: editingAccount.id, data: testPayload });
+      updateAccountMutation.mutate({ id: editingAccount.id, data: values });
     } else if (selectedCategory) {
-      console.log("🔍 CREATE MODE - Creating account in category:", selectedCategory.id);
-      // Use hardcoded test first
-      createAccountMutation.mutate({ ...testPayload, categoryId: selectedCategory.id });
+      createAccountMutation.mutate({ ...values, categoryId: selectedCategory.id });
     }
   };
 
@@ -417,11 +379,7 @@ export default function AccountCategoriesPanel() {
 
   // Handle editing an account
   const handleEditAccount = (account: Account) => {
-    console.log("🔧 EDIT ACCOUNT - Original account data:", account);
-    console.log("🔧 EDIT ACCOUNT - Initial balance in cents:", account.initialBalance);
-    
     const dollarValue = parseFloat(fromCents(account.initialBalance || 0));
-    console.log("🔧 EDIT ACCOUNT - Converted to dollar value:", dollarValue);
     
     setEditingAccount(account);
     setSelectedCategory(categories?.find(cat => cat.id === account.categoryId) || null);
@@ -430,11 +388,6 @@ export default function AccountCategoriesPanel() {
       description: account.description || "",
       initialBalance: dollarValue,
       isActive: Boolean(account.isActive),
-    });
-    
-    console.log("🔧 EDIT ACCOUNT - Form reset with values:", {
-      name: account.name,
-      initialBalance: dollarValue
     });
     
     setAccountDialogOpen(true);
@@ -1152,21 +1105,7 @@ export default function AccountCategoriesPanel() {
                 )}
               />
 
-              {/* DEBUG: Simple test input */}
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                <label className="block text-sm font-medium mb-2">DEBUG TEST (bypasses form):</label>
-                <input 
-                  type="text" 
-                  placeholder="Enter test value"
-                  className="w-full px-3 py-1 border rounded"
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const parsed = parseFloat(raw);
-                    const cents = toCents(parsed);
-                    console.log("🧪 BYPASS TEST - Raw:", raw, "Parsed:", parsed, "toCents:", cents);
-                  }} 
-                />
-              </div>
+
 
               {/* Initial Balance and Active Status - Side by Side */}
               <div className="grid grid-cols-2 gap-4">
@@ -1185,23 +1124,13 @@ export default function AccountCategoriesPanel() {
                           value={field.value === 0 ? '' : field.value}
                           onChange={(e) => {
                             const rawValue = e.target.value;
-                            console.log("🔬 EXACT VALUE TRACE - Raw DOM Input:", rawValue, typeof rawValue);
-                            console.log("🔬 EXACT VALUE TRACE - Input Element Value:", e.target.value);
-                            console.log("🔬 EXACT VALUE TRACE - Input Element Type:", e.target.type);
                             
                             if (rawValue === '' || rawValue === undefined) {
                               field.onChange(0);
                             } else {
                               const parsed = parseFloat(rawValue);
-                              console.log("🔬 EXACT VALUE TRACE - parseFloat Result:", parsed);
-                              
                               if (!isNaN(parsed)) {
-                                console.log("🔬 EXACT VALUE TRACE - Setting field to:", parsed);
                                 field.onChange(parsed);
-                                
-                                // Immediate test of conversion chain
-                                const testCents = toCents(parsed);
-                                console.log("🔬 IMMEDIATE TEST - Input to Cents:", parsed, "→", testCents);
                               }
                             }
                           }}
