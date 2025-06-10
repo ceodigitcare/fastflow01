@@ -793,14 +793,10 @@ export default function PurchaseBillSplitView({
             {/* Signature Line */}
             <div className="border-t pt-6 mt-6">
               <div className="flex justify-between">
-                <div className="w-1/3 border-t border-gray-300 mt-8 pt-2 text-center">
+                <div className="w-1/2 border-t border-gray-300 mt-8 pt-2 text-center">
                   <p className="text-sm text-gray-600">Vendor's signature</p>
                 </div>
-                <div className="w-1/3 text-center">
-                  <p className="text-sm text-gray-600">Received by</p>
-                  <p className="font-semibold">{businessData?.name || "Business Name"}</p>
-                </div>
-                <div className="w-1/3 border-t border-gray-300 mt-8 pt-2 text-right">
+                <div className="w-1/2 border-t border-gray-300 mt-8 pt-2 text-right">
                   <p className="text-sm text-gray-600">Authorized Signature</p>
                 </div>
               </div>

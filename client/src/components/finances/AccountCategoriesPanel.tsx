@@ -5,6 +5,58 @@ import { AccountCategory, InsertAccountCategory, Account, Transaction, InsertAcc
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+// Print styles for Chart of Accounts
+const printStyles = `
+  @media print {
+    .print\\:hidden { display: none !important; }
+    .account-row {
+      break-inside: avoid;
+      margin-bottom: 8px;
+    }
+    .account-name {
+      font-weight: 600 !important;
+      color: #000 !important;
+    }
+    .account-code {
+      color: #666 !important;
+      font-family: monospace !important;
+    }
+    .account-balance {
+      color: #000 !important;
+      font-weight: 600 !important;
+      text-align: right;
+    }
+    .account-description {
+      color: #666 !important;
+      margin-top: 4px !important;
+      font-size: 12px !important;
+    }
+    .last-transaction {
+      color: #666 !important;
+      font-size: 11px !important;
+      margin-top: 4px !important;
+    }
+    .category-header {
+      font-weight: bold !important;
+      color: #000 !important;
+      border-bottom: 1px solid #ccc !important;
+      padding-bottom: 4px !important;
+      margin-bottom: 8px !important;
+    }
+    .accounts-container {
+      margin-left: 20px !important;
+    }
+  }
+`;
+
+// Inject print styles
+if (typeof document !== 'undefined' && !document.getElementById('chart-of-accounts-print-styles')) {
+  const style = document.createElement('style');
+  style.id = 'chart-of-accounts-print-styles';
+  style.textContent = printStyles;
+  document.head.appendChild(style);
+}
+
 // Helper function to safely format transaction dates
 function formatTransactionDate(transaction: any): string {
   if (!transaction) return '';
@@ -785,15 +837,6 @@ export default function AccountCategoriesPanel() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowTransactionInfo(!showTransactionInfo)}
-                    className={`text-xs flex items-center gap-1 ${showTransactionInfo ? 'bg-blue-50' : ''}`}
-                  >
-                    <Info className="h-3.5 w-3.5" />
-                    {showTransactionInfo ? "Hide Transaction Info" : "Show Transaction Info"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
                     onClick={toggleExpandAll}
                     className="text-xs flex items-center gap-1"
                   >
@@ -813,10 +856,10 @@ export default function AccountCategoriesPanel() {
                 <div className="space-y-3">
                   {filteredCategories.map((category) => (
                     <Collapsible key={category.id} open={!!expandedCategories[category.id]} onOpenChange={() => {}}>
-                      <div className="flex items-center justify-between p-4 rounded-md border">
+                      <div className="flex items-center justify-between p-4 rounded-md border category-header">
                         <div className="flex items-center">
                           <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="sm" className="p-0 h-6 w-6" 
+                            <Button variant="ghost" size="sm" className="p-0 h-6 w-6 print:hidden" 
                               onClick={() => toggleCategoryExpanded(category.id)}>
                               {expandedCategories[category.id] ? 
                                 <ChevronDown className="h-4 w-4" /> : 
@@ -830,7 +873,7 @@ export default function AccountCategoriesPanel() {
                               </span>
                               {category.name}
                               {category.isSystem && (
-                                <Badge variant="outline" className="text-xs bg-gray-100 px-2 py-1">
+                                <Badge variant="outline" className="text-xs bg-gray-100 px-2 py-1 print:hidden">
                                   System
                                 </Badge>
                               )}
@@ -840,7 +883,7 @@ export default function AccountCategoriesPanel() {
                             )}
                           </div>
                         </div>
-                        <div className="flex space-x-1">
+                        <div className="flex space-x-1 print:hidden">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -861,12 +904,12 @@ export default function AccountCategoriesPanel() {
                       </div>
                       
                       <CollapsibleContent>
-                        <div className="pl-10 pr-4 pb-2 pt-1">
+                        <div className="pl-10 pr-4 pb-2 pt-1 accounts-container">
                           {getAccountsForCategory(category.id).length > 0 ? (
                             <div className="space-y-1 border-l-2 border-gray-200 pl-4">
                               {getAccountsForCategory(category.id).map(account => {
                                 const accountCode = generateAccountCode(category.type, account.id);
-                                const lastTransaction = showTransactionInfo ? getLastTransactionForAccount(account.id) : null;
+                                const lastTransaction = expandAll ? getLastTransactionForAccount(account.id) : null;
                                 const formattedBalance = new Intl.NumberFormat('en-US', {
                                   style: 'currency',
                                   currency: 'USD',
@@ -874,30 +917,30 @@ export default function AccountCategoriesPanel() {
                                 }).format(parseFloat(fromCents(account.currentBalance || 0)));
                                 
                                 return (
-                                  <div key={account.id} className="py-2 flex items-center justify-between group hover:bg-gray-50 rounded px-2 -mx-2">
+                                  <div key={account.id} className="py-2 flex items-center justify-between group hover:bg-gray-50 rounded px-2 -mx-2 account-row">
                                     <div className="flex-1">
-                                      <div className="flex items-center">
-                                        <span className="text-sm font-medium">
-                                          <span className="text-xs text-gray-500 font-mono mr-2">{accountCode}</span>
-                                          {account.name}
-                                        </span>
-                                        <div className="flex gap-1 items-center ml-2">
-                                          <span className="text-sm font-medium text-blue-600">{formattedBalance}</span>
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center">
+                                          <span className="text-sm font-medium account-name">
+                                            <span className="text-xs text-gray-500 font-mono mr-2 account-code">{accountCode}</span>
+                                            {account.name}
+                                          </span>
                                           {!account.isActive && (
-                                            <Badge variant="outline" className="text-xs bg-gray-100">
+                                            <Badge variant="outline" className="text-xs bg-gray-100 ml-2">
                                               Inactive
                                             </Badge>
                                           )}
                                         </div>
+                                        <span className="text-sm font-medium text-blue-600 account-balance">{formattedBalance}</span>
                                       </div>
                                       
                                       {/* Account description - shown like category descriptions */}
                                       {account.description && (
-                                        <p className="text-sm text-gray-500 mt-1 ml-8">{account.description}</p>
+                                        <p className="text-sm text-gray-500 mt-1 ml-8 account-description">{account.description}</p>
                                       )}
                                       
-                                      {showTransactionInfo && lastTransaction && (
-                                        <div className="mt-1 ml-8 text-xs text-gray-500">
+                                      {expandAll && lastTransaction && (
+                                        <div className="mt-1 ml-8 text-xs text-gray-500 last-transaction">
                                           <div className="flex justify-between">
                                             <span>Last transaction: {formatTransactionDate(lastTransaction)}</span>
                                             <span>{lastTransaction.description || lastTransaction.reference || 'No description'}</span>
@@ -907,7 +950,7 @@ export default function AccountCategoriesPanel() {
                                     </div>
                                     
                                     {/* Edit and Delete icons - same style as categories */}
-                                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -934,7 +977,7 @@ export default function AccountCategoriesPanel() {
                           )}
                           
                           {/* Add Account Button */}
-                          <div className="mt-3 border-l-2 border-gray-200 pl-4">
+                          <div className="mt-3 border-l-2 border-gray-200 pl-4 print:hidden">
                             <Button
                               variant="outline"
                               size="sm"
