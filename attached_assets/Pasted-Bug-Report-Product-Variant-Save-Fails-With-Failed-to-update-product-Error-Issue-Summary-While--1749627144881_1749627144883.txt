@@ -1,0 +1,95 @@
+Bug Report: Product Variant Save Fails With “Failed to update product” Error
+Issue Summary:
+While trying to save a product with variants, the frontend shows the error message:
+"Failed to update product. Please try again."
+This happens only when variants are added. Products without variants save correctly.
+
+✅ Expected Behavior:
+User creates a product
+
+Adds variants (e.g. Color: Black, SKU: 6550C, Inventory: 10)
+
+Clicks Save
+
+The product and its variants should persist successfully
+
+❌ Actual Behavior:
+Variants generate successfully in the UI
+
+On clicking Save, the red error box appears:
+"Failed to update product. Please try again."
+
+Product is not saved, and no network/log explanation is visible to the user
+
+🧪 Possible Root Cause:
+Payload mismatch between frontend and backend
+
+Backend may expect a nested array like:
+
+json
+
+{
+  "variants": [
+    {
+      "attributes": { "Color": "Black" },
+      "sku": "6550C",
+      "inventory": 10
+    }
+  ]
+}
+But frontend may be sending:
+
+json
+Copy
+Edit
+{
+  "sku": "6550C",
+  "inventory": 10,
+  "variant": "Black"
+}
+Missing required keys (e.g. attributes, price, or product_id) may also cause backend rejection
+
+📋 Steps to Reproduce:
+Go to Edit Product
+
+Add Variant: Color → Black
+
+Set SKU: 6550C and Inventory: 10
+
+Click Save
+
+Error message shown, nothing saved
+
+🛠️ Suggested Fix:
+Inspect the actual JSON payload being sent on save
+
+Align the frontend variant structure to match the backend schema
+
+Ensure each variant includes:
+
+sku (optional but unique if present)
+
+inventory (required)
+
+attributes (required: object with key-value of variant types)
+
+(Optional) price
+
+Return more meaningful error messages from backend to help debugging
+
+🔁 Optional: Example Working Payload (Expected)
+json
+
+{
+  "name": "Urban Laptop Backpack",
+  "variants": [
+    {
+      "attributes": {
+        "Color": "Black"
+      },
+      "sku": "6550C",
+      "inventory": 10
+    }
+  ]
+}
+This issue is blocking variant-based product functionality. Please prioritize this fix. If needed, I can supply request/response logs for deeper inspection.
