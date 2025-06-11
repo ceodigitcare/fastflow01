@@ -546,12 +546,17 @@ export default function ProductPanel({
         return existingCombo;
       }
       
-      return {
+      const newCombo = {
         options,
         sku: "",
         price: undefined, // undefined means use the base product price
         inventory: 0
       };
+      
+      // Auto-generate SKU for new variants
+      newCombo.sku = generateVariantSku(newCombo);
+      
+      return newCombo;
     });
     
     setVariantCombinations(newCombinations);
@@ -610,10 +615,7 @@ export default function ProductPanel({
     checkForDuplicateSKUs(updatedCombinations);
   };
   
-  // Calculate total inventory across all variants
-  const getTotalVariantInventory = () => {
-    return variantCombinations.reduce((total, combo) => total + (combo.inventory || 0), 0);
-  };
+  // Note: Inventory tracking for variants is managed through purchase bills
   
   // Get the total number of variant combinations
   const getVariantCombinationsCount = () => {
@@ -704,10 +706,7 @@ export default function ProductPanel({
         }))
       };
       
-      // If we have variants, set the main inventory to the sum of variant inventories
-      if (variantCombinations.length > 0) {
-        formattedValues.inventory = getTotalVariantInventory();
-      }
+      // Note: Inventory for variants is managed through purchase bills only
     }
     
     onSubmit(formattedValues);
@@ -1511,8 +1510,7 @@ export default function ProductPanel({
                           {variantCombinations.length > 0 && (
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                               <div>
-                                Total variants: <strong>{variantCombinations.length}</strong> | 
-                                Total inventory: <strong>{getTotalVariantInventory()}</strong>
+                                Total variants: <strong>{variantCombinations.length}</strong>
                               </div>
                               {skuDuplicates.length > 0 && (
                                 <p className="text-destructive">
