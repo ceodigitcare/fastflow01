@@ -1181,13 +1181,88 @@ export default function ProductPanel({
                     )}
                   />
                   
+                  {/* Existing Variants Display */}
+                  {form.watch("hasVariants") && variantCombinations.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium flex items-center gap-2">
+                          <PackageCheck className="h-4 w-4" />
+                          Existing Product Variants
+                        </h3>
+                        <Badge variant="outline" className="text-xs">
+                          {variantCombinations.length} Variants
+                        </Badge>
+                      </div>
+                      
+                      <div className="rounded-lg border overflow-hidden">
+                        <div className="bg-muted/30 px-4 py-2 border-b">
+                          <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground">
+                            <div className="col-span-4">Variant</div>
+                            <div className="col-span-3">SKU</div>
+                            <div className="col-span-3">Price</div>
+                            <div className="col-span-2 text-center">Delete</div>
+                          </div>
+                        </div>
+                        
+                        <div className="divide-y">
+                          {variantCombinations.map((combo, index) => (
+                            <div key={index} className="px-4 py-3 hover:bg-muted/20">
+                              <div className="grid grid-cols-12 gap-2 items-center">
+                                <div className="col-span-4">
+                                  <div className="flex flex-wrap gap-1">
+                                    {combo.options.map((option, optIndex) => (
+                                      <Badge key={optIndex} variant="secondary" className="text-xs">
+                                        {option.group}: {option.value}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="col-span-3">
+                                  <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                                    {combo.sku || generateVariantSku(combo)}
+                                  </code>
+                                </div>
+                                <div className="col-span-3">
+                                  <span className="text-sm font-medium">
+                                    ${(combo.price !== undefined ? combo.price : form.watch("price") || 0).toFixed(2)}
+                                  </span>
+                                </div>
+                                <div className="col-span-2 flex justify-center">
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleRemoveVariantCombination(index)}
+                                  >
+                                    <Trash className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="text-xs text-muted-foreground bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <PackageCheck className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium text-blue-900">Inventory Management</span>
+                        </div>
+                        <p className="text-blue-700">
+                          Inventory for variants is managed through purchase bills. Create purchase bills to add stock for each variant.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {form.watch("hasVariants") && (
                     <div className="space-y-4 border rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-medium flex items-center gap-2">
                             <PackageCheck className="h-4 w-4" />
-                            Variant Management
+                            {variantCombinations.length > 0 ? "Manage Variants" : "Variant Management"}
                           </h3>
                           
                           {/* Help button with tooltip */}
@@ -1241,7 +1316,7 @@ export default function ProductPanel({
                                 <li>Enter a variant name (like "Size")</li>
                                 <li>Add values (like "Small", "Medium", "Large")</li>
                                 <li>(Optional) Add another variant type (like "Color")</li>
-                                <li>Click <strong>"Generate All"</strong> to create combinations</li>
+                                <li>Click <strong>"Generate All"</strong> (or "Generate More") to create combinations</li>
                               </ol>
                             </div>
                             
@@ -1269,11 +1344,12 @@ export default function ProductPanel({
                             </div>
                             
                             <div className="border-t pt-2">
-                              <h4 className="font-medium">Tips</h4>
+                              <h4 className="font-medium">Managing Your Variants</h4>
                               <ul className="text-sm text-muted-foreground space-y-1 ml-5 list-disc">
+                                <li>Once created, view all variants in the <strong>Inventory tab</strong></li>
                                 <li>Leave the price field empty to use the main product price</li>
                                 <li>Each SKU must be unique across all variants</li>
-                                <li>The total inventory shown on your product page will be the sum of all variant inventories</li>
+                                <li>Inventory for variants is managed through purchase bills only</li>
                               </ul>
                             </div>
                           </div>
@@ -1439,7 +1515,7 @@ export default function ProductPanel({
                               disabled={!hasValidVariantGroups}
                             >
                               <RefreshCw className="h-3 w-3 mr-1" />
-                              Generate All
+                              {variantCombinations.length > 0 ? "Generate More" : "Generate All"}
                             </Button>
                           </div>
                           

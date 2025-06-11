@@ -1,0 +1,58 @@
+📦 Feature Request: Display Existing Variants Inside the Inventory Tab
+Current Behavior:
+
+Product variants are created successfully with auto-generated SKUs and deletion functionality.
+
+Variants are not visible or accessible from the Inventory tab after they are created.
+
+When editing a product later, the previously created variants cannot be viewed directly within the product form.
+
+✅ Proposed Improvement:
+Goal:
+Ensure users can view and manage all existing product variants directly from the Inventory tab, even after the initial creation. This will allow seamless review and prevent redundant variant generation.
+
+🔍 What Needs to Change:
+1. Show Existing Variants in the Inventory Tab
+Under the Inventory tab of the product edit view, display a table/list of all generated variants.
+
+For each variant, show:
+
+Variant options (e.g., Size: Medium, Color: Red)
+
+SKU (read-only unless empty)
+
+Purchase price (optional display)
+
+Delete icon
+
+2. Avoid Re-generating the Same Variants
+If variants already exist for a product:
+
+Show them immediately on visiting the Inventory tab.
+
+Disable re-generation unless new variant values are added.
+
+Provide a “Generate More” option instead of “Generate All”.
+
+3. Highlight Data Source
+Add a simple label or tooltip next to purchase price/inventory fields like:
+
+“Inventory is managed through purchase bills”
+
+4. Preserve Variant Visibility Across Edits
+Once variants are created, they should always be visible from the Inventory tab when the product is reopened for editing, without needing to re-add variant types.
+
+💡 Benefits:
+Prevents user confusion about whether variants were saved.
+
+Eliminates unnecessary re-generation.
+
+Gives a full snapshot of variant configuration in one place.
+
+Aligns with inventory logic that’s now handled via purchase bills.
+
+🧩 Example Layout (within Inventory tab):
+Variant	SKU	Purchase Price	Delete
+Red / Small	TSHIRT-RED-S	$10.00	🗑️
+Blue / Medium	TSHIRT-BLU-M	$10.00	🗑️
+
