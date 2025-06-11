@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, PackageCheck, DollarSign, ImageIcon, FileText, Plus, Minus, Upload, Trash, PlusCircle, AlertCircle, Loader2, RefreshCw, HelpCircle } from "lucide-react";
+import { X, PackageCheck, DollarSign, ImageIcon, FileText, Plus, Minus, Upload, Trash, PlusCircle, AlertCircle, Loader2, RefreshCw, HelpCircle, ShoppingCart } from "lucide-react";
+import { useLocation } from "wouter";
 import { Product, ProductCategory } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -64,7 +65,7 @@ interface ProductPanelProps {
   isSubmitting: boolean;
 }
 
-// Product form schema
+// Product form schema - inventory field only for editing existing products
 const productFormSchema = z.object({
   name: z.string().min(2, "Product name must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
@@ -74,7 +75,7 @@ const productFormSchema = z.object({
   tags: z.array(z.string()).default([]),
   imageUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
   additionalImages: z.array(z.string()).optional(),
-  inventory: z.coerce.number().min(0, "Inventory must be a positive number").default(0),
+  inventory: z.coerce.number().min(0, "Inventory must be a positive number").default(0).optional(),
   inStock: z.boolean().default(true),
   hasVariants: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
@@ -91,6 +92,7 @@ export default function ProductPanel({
   onSubmit, 
   isSubmitting 
 }: ProductPanelProps) {
+  const [location, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("general");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
@@ -398,6 +400,17 @@ export default function ProductPanel({
     const currentInventory = form.getValues("inventory") || 0;
     const newInventory = Math.max(0, currentInventory + amount); // Never go below 0
     form.setValue("inventory", newInventory);
+  };
+
+  // Handle "Add Inventory" button click - navigate to purchase bill with pre-filled product
+  const handleAddInventory = () => {
+    if (product) {
+      // Close the product panel
+      onClose();
+      // Navigate to purchase bill page
+      // We'll pass the product ID as a query parameter to pre-fill the form
+      navigate(`/finances/purchase-bill?preselect_product=${product.id}`);
+    }
   };
   
   // Variant management functions
