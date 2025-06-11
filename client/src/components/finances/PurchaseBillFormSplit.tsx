@@ -64,12 +64,14 @@ interface PurchaseBillFormSplitProps {
   onCancel: () => void;
   onSave: (bill: Transaction) => void;
   editingBill?: Transaction | null;
+  preselectedProductId?: number | null;
 }
 
 export default function PurchaseBillFormSplit({ 
   onCancel, 
   onSave,
-  editingBill = null 
+  editingBill = null,
+  preselectedProductId = null
 }: PurchaseBillFormSplitProps) {
   const { toast } = useToast();
   
@@ -567,6 +569,37 @@ export default function PurchaseBillFormSplit({
       });
     }
   }, [editingBill]);
+
+  // Handle preselected product ID - add it as the first item
+  useEffect(() => {
+    if (preselectedProductId && !editingBill && products) {
+      const preselectedProduct = products.find(p => p.id === preselectedProductId);
+      if (preselectedProduct) {
+        // Add the preselected product as the first item
+        const newItem = {
+          productId: preselectedProduct.id,
+          description: preselectedProduct.name,
+          quantity: 1,
+          unitPrice: preselectedProduct.price / 100, // Convert from cents to dollars
+          quantityReceived: 0,
+          taxRate: 0,
+          discount: 0,
+          taxType: 'percentage' as const,
+          discountType: 'percentage' as const,
+          amount: preselectedProduct.price / 100 // Convert from cents to dollars
+        };
+        
+        // Set the form items with the preselected product
+        form.setValue('items', [newItem]);
+        setBillItems([newItem]);
+        
+        toast({
+          title: "Product Added",
+          description: `${preselectedProduct.name} has been added to the purchase bill`,
+        });
+      }
+    }
+  }, [preselectedProductId, editingBill, products, form]);
   
   // Mutation for creating a new vendor
   const createVendorMutation = useMutation({

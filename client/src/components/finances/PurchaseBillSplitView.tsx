@@ -43,6 +43,7 @@ export default function PurchaseBillSplitView({
   businessData, 
   initialBill = null,
   isCreatingNew: externalCreatingNew = false,
+  preselectedProductId = null,
   onCreateCancel,
   onSelectBill,
   billPanelVisible = true,
@@ -828,6 +829,7 @@ export default function PurchaseBillSplitView({
                 setEditingBill(null);
               }}
               editingBill={editingBill}
+              preselectedProductId={preselectedProductId}
             />
           </div>
         ) : (
