@@ -668,6 +668,15 @@ export default function ProductPanel({
       salePrice: values.salePrice ? Math.round(values.salePrice * 100) : undefined, // Convert dollars to cents
       additionalImages: additionalImages,
     };
+
+    // Handle inventory field based on product state
+    if (!product) {
+      // For new products: always set inventory to 0 (will be managed via purchase bills)
+      formattedValues.inventory = 0;
+    } else {
+      // For existing products: exclude inventory field from submission (managed via purchase bills)
+      delete formattedValues.inventory;
+    }
     
     // Add variant data if hasVariants is enabled
     if (values.hasVariants && hasValidVariantGroups) {
@@ -1055,18 +1064,20 @@ export default function ProductPanel({
                   {/* Added space for better visual separation */}
                   <div className="h-3"></div>
                   
-                  {/* Live Available Inventory Display */}
-                  <div className="bg-muted/40 rounded-lg p-3 mb-1 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <PackageCheck className="h-5 w-5 text-primary" />
-                      <span className="font-medium">
-                        Available Inventory: {form.watch("inventory")}
-                      </span>
+                  {/* Live Available Inventory Display - Only for existing products */}
+                  {product && (
+                    <div className="bg-muted/40 rounded-lg p-3 mb-1 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <PackageCheck className="h-5 w-5 text-primary" />
+                        <span className="font-medium">
+                          Available Inventory: {product.inventory || 0}
+                        </span>
+                      </div>
+                      <Badge variant={form.watch("inStock") ? "default" : "destructive"}>
+                        {form.watch("inStock") ? "In Stock" : "Out of Stock"}
+                      </Badge>
                     </div>
-                    <Badge variant={form.watch("inStock") ? "default" : "destructive"}>
-                      {form.watch("inStock") ? "In Stock" : "Out of Stock"}
-                    </Badge>
-                  </div>
+                  )}
                   
                   <FormField
                     control={form.control}
@@ -1107,43 +1118,44 @@ export default function ProductPanel({
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="inventory"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Inventory Quantity</FormLabel>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleAdjustInventory(-1)}
-                            disabled={field.value <= 0}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="0" 
-                              step="1"
-                              {...field}
-                            />
-                          </FormControl>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleAdjustInventory(1)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Inventory Management - Different UI for new vs existing products */}
+                  {product ? (
+                    // For existing products: Show "Add Inventory" button
+                    <div className="rounded-lg border p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium">Inventory Management</h3>
+                        <Badge variant={form.watch("inStock") ? "default" : "destructive"}>
+                          {form.watch("inStock") ? "In Stock" : "Out of Stock"}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        To add inventory, create a purchase bill with this product. This ensures proper inventory tracking and cost management.
+                      </p>
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        onClick={handleAddInventory}
+                        className="w-full"
+                      >
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        Add Inventory via Purchase Bill
+                      </Button>
+                    </div>
+                  ) : (
+                    // For new products: No inventory field - explain workflow
+                    <div className="rounded-lg border p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <PackageCheck className="h-5 w-5 text-primary" />
+                        <h3 className="font-medium">Inventory Setup</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        After creating this product, you can add inventory by creating purchase bills. This ensures proper cost tracking and inventory management from the start.
+                      </p>
+                      <div className="text-xs text-muted-foreground bg-muted/40 rounded p-2">
+                        <strong>Next steps:</strong> Create product → Go to Purchase Bills → Add inventory with supplier details
+                      </div>
+                    </div>
+                  )}
                   
                   <FormField
                     control={form.control}

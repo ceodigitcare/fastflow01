@@ -32,6 +32,7 @@ interface PurchaseBillSplitViewProps {
   businessData?: any;
   initialBill?: Transaction | null;
   isCreatingNew?: boolean;
+  preselectedProductId?: number | null;
   onCreateCancel?: () => void;
   onSelectBill?: (bill: Transaction) => void;
   billPanelVisible?: boolean;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import MainLayout from "@/components/layout/MainLayout";
 import PurchaseBillSplitView from "@/components/finances/PurchaseBillSplitView";
 import { Transaction } from "@shared/schema";
@@ -7,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
 export default function PurchaseBill() {
+  const [location] = useLocation();
   const [showNewForm, setShowNewForm] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Transaction | null>(null);
+  const [preselectedProductId, setPreselectedProductId] = useState<number | null>(null);
   const [rightPanelVisible, setRightPanelVisible] = useState(() => {
     // On desktop (lg and above), default to visible
     return window.innerWidth >= 1024;
@@ -34,15 +37,32 @@ export default function PurchaseBill() {
     queryKey: ["/api/business"],
   });
   
+  // Check for product pre-selection in URL query parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselectedProduct = urlParams.get('preselect_product');
+    
+    if (preselectedProduct) {
+      const productId = parseInt(preselectedProduct);
+      if (!isNaN(productId)) {
+        setPreselectedProductId(productId);
+        setShowNewForm(true);
+        setSelectedBill(null);
+        // Clear the URL parameter to avoid re-triggering
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [location]);
+
   // Automatically select the most recent bill when loaded
   useEffect(() => {
-    if (bills && bills.length > 0 && !selectedBill && !showNewForm) {
+    if (bills && bills.length > 0 && !selectedBill && !showNewForm && !preselectedProductId) {
       // Set after a small timeout to ensure React has completed other rendering tasks
       setTimeout(() => {
         setSelectedBill(bills[0]);
       }, 100);
     }
-  }, [bills]);
+  }, [bills, preselectedProductId]);
 
   // Handle new bill button click
   const handleNewBill = () => {
@@ -78,10 +98,15 @@ export default function PurchaseBill() {
           }}
           initialBill={selectedBill}
           isCreatingNew={showNewForm}
-          onCreateCancel={() => setShowNewForm(false)}
+          preselectedProductId={preselectedProductId}
+          onCreateCancel={() => {
+            setShowNewForm(false);
+            setPreselectedProductId(null);
+          }}
           onSelectBill={(bill) => {
             setSelectedBill(bill);
             setShowNewForm(false);
+            setPreselectedProductId(null);
           }}
           billPanelVisible={rightPanelVisible}
           onToggleBillPanel={() => setRightPanelVisible(!rightPanelVisible)}
