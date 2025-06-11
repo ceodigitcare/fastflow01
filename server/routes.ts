@@ -176,9 +176,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         category: z.string().optional().nullish(),
         inventory: z.number().min(0).optional().default(0),
         hasVariants: z.boolean().optional().default(false),
-        variants: z.array(z.any()).optional().default([]),
+        variants: z.union([
+          z.array(z.any()),  // Legacy array format
+          z.object({         // New frontend format with groups and combinations
+            groups: z.array(z.object({
+              name: z.string(),
+              values: z.array(z.string())
+            })),
+            combinations: z.array(z.object({
+              options: z.array(z.object({
+                group: z.string(),
+                value: z.string()
+              })),
+              sku: z.string().optional(),
+              price: z.number().optional(),
+              inventory: z.number().default(0)
+            }))
+          })
+        ]).optional().default([]),
         additionalImages: z.array(z.string()).optional().default([]),
-        weight: z.union([z.number(), z.string()]).optional().nullish(),
+        weight: z.string().optional().nullish(),
         dimensions: z.record(z.string(), z.any()).optional().default({}),
         tags: z.array(z.string()).optional().default([]),
         isFeatured: z.boolean().optional().default(false),
@@ -193,7 +210,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         variants: req.body.variants ? JSON.parse(JSON.stringify(req.body.variants)) : [],
         additionalImages: req.body.additionalImages ? JSON.parse(JSON.stringify(req.body.additionalImages)) : [],
         dimensions: req.body.dimensions ? JSON.parse(JSON.stringify(req.body.dimensions)) : {},
-        tags: Array.isArray(req.body.tags) ? req.body.tags : (req.body.tags ? [req.body.tags] : [])
+        tags: Array.isArray(req.body.tags) ? req.body.tags : (req.body.tags ? [req.body.tags] : []),
+        weight: req.body.weight ? String(req.body.weight) : undefined
       };
       
       // Auto-update inStock status based on inventory levels
@@ -277,9 +295,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         category: z.string().optional().nullish(),
         inventory: z.number().min(0).optional(),
         hasVariants: z.boolean().optional(),
-        variants: z.array(z.any()).optional(),
+        variants: z.union([
+          z.array(z.any()),  // Legacy array format
+          z.object({         // New frontend format with groups and combinations
+            groups: z.array(z.object({
+              name: z.string(),
+              values: z.array(z.string())
+            })),
+            combinations: z.array(z.object({
+              options: z.array(z.object({
+                group: z.string(),
+                value: z.string()
+              })),
+              sku: z.string().optional(),
+              price: z.number().optional(),
+              inventory: z.number().default(0)
+            }))
+          })
+        ]).optional(),
         additionalImages: z.array(z.string()).optional(),
-        weight: z.union([z.number(), z.string()]).optional().nullish(),
+        weight: z.string().optional().nullish(),
         dimensions: z.record(z.string(), z.any()).optional(),
         tags: z.array(z.string()).optional(),
         isFeatured: z.boolean().optional(),
@@ -294,7 +329,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         variants: req.body.variants ? JSON.parse(JSON.stringify(req.body.variants)) : undefined,
         additionalImages: req.body.additionalImages ? JSON.parse(JSON.stringify(req.body.additionalImages)) : undefined,
         dimensions: req.body.dimensions ? JSON.parse(JSON.stringify(req.body.dimensions)) : undefined,
-        tags: req.body.tags ? (Array.isArray(req.body.tags) ? req.body.tags : [req.body.tags]) : undefined
+        tags: req.body.tags ? (Array.isArray(req.body.tags) ? req.body.tags : [req.body.tags]) : undefined,
+        weight: req.body.weight ? String(req.body.weight) : undefined
       };
       
       // Auto-update inStock status based on inventory levels
