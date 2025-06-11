@@ -211,7 +211,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         additionalImages: req.body.additionalImages ? JSON.parse(JSON.stringify(req.body.additionalImages)) : [],
         dimensions: req.body.dimensions ? JSON.parse(JSON.stringify(req.body.dimensions)) : {},
         tags: Array.isArray(req.body.tags) ? req.body.tags : (req.body.tags ? [req.body.tags] : []),
-        weight: req.body.weight ? String(req.body.weight) : undefined
+        weight: req.body.weight ? String(req.body.weight) : undefined,
+        imageUrl: req.body.imageUrl || undefined  // Convert null/empty to undefined
       };
       
       // Auto-update inStock status based on inventory levels

@@ -73,7 +73,10 @@ const productFormSchema = z.object({
   sku: z.string().optional(),
   category: z.string().optional(),
   tags: z.array(z.string()).default([]),
-  imageUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+  imageUrl: z.string().optional().refine(
+    (val) => !val || val === "" || z.string().url().safeParse(val).success,
+    { message: "Invalid URL" }
+  ),
   additionalImages: z.array(z.string()).optional(),
   inventory: z.coerce.number().min(0, "Inventory must be a positive number").default(0).optional(),
   inStock: z.boolean().default(true),
@@ -715,6 +718,7 @@ export default function ProductPanel({
       price: Math.round(values.price * 100), // Convert dollars to cents
       salePrice: values.salePrice ? Math.round(values.salePrice * 100) : undefined, // Convert dollars to cents
       additionalImages: additionalImages,
+      imageUrl: values.imageUrl || null, // Convert empty string to null
     };
 
     // Handle inventory field based on product state

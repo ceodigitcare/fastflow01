@@ -67,6 +67,11 @@ export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  imageUrl: z.string().nullable().optional().refine(
+    (val) => !val || val === "" || z.string().url().safeParse(val).success,
+    { message: "Invalid URL format" }
+  ),
 });
 
 // Product variant schema for frontend validation
