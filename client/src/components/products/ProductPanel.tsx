@@ -254,12 +254,49 @@ export default function ProductPanel({
         setAdditionalImages([]);
       }
       
-      // Reset variant management state
-      // In a real implementation, we would fetch variant data from the database
-      setVariantGroups([]);
-      setNewVariantValues([]);
-      setVariantCombinations([]);
-      setSkuDuplicates([]);
+      // Load existing variants if they exist
+      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+        try {
+          // Reconstruct variant groups from existing combinations
+          const existingCombinations = product.variants as VariantCombination[];
+          setVariantCombinations(existingCombinations);
+          
+          // Reconstruct variant groups from combinations
+          const groupsMap = new Map<string, Set<string>>();
+          existingCombinations.forEach(combo => {
+            combo.options.forEach(option => {
+              if (!groupsMap.has(option.group)) {
+                groupsMap.set(option.group, new Set());
+              }
+              groupsMap.get(option.group)!.add(option.value);
+            });
+          });
+          
+          const reconstructedGroups: VariantGroup[] = Array.from(groupsMap.entries()).map(([name, valuesSet]) => ({
+            name,
+            values: Array.from(valuesSet)
+          }));
+          
+          setVariantGroups(reconstructedGroups);
+          setNewVariantValues(new Array(reconstructedGroups.length).fill(''));
+          
+          // Check for duplicate SKUs in existing variants
+          checkForDuplicateSKUs(existingCombinations);
+        } catch (error) {
+          console.error('Error loading existing variants:', error);
+          // Reset to empty state if there's an error
+          setVariantGroups([]);
+          setNewVariantValues([]);
+          setVariantCombinations([]);
+          setSkuDuplicates([]);
+        }
+      } else {
+        // Reset variant management state for new products
+        setVariantGroups([]);
+        setNewVariantValues([]);
+        setVariantCombinations([]);
+        setSkuDuplicates([]);
+      }
       
     } else {
       // Reset form and images for a new product
