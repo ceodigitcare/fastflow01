@@ -1261,7 +1261,7 @@ export default function ProductPanel({
                                 </div>
                                 <div className="col-span-3">
                                   <span className="text-sm font-medium">
-                                    ${(combo.price ?? form.watch("price") ?? 0).toFixed(2)}
+                                    ${Number(combo.price ?? form.watch("price") ?? 0).toFixed(2)}
                                   </span>
                                 </div>
                                 <div className="col-span-2 flex justify-center">
@@ -1596,7 +1596,7 @@ export default function ProductPanel({
                                     </div>
                                     <div>
                                       <div className="h-7 px-2 py-1 bg-muted/40 rounded text-xs flex items-center text-muted-foreground">
-                                        ${(combo.price ?? form.watch("price") ?? 0).toFixed(2)}
+                                        ${Number(combo.price ?? form.watch("price") ?? 0).toFixed(2)}
                                       </div>
                                     </div>
                                     <Button 
