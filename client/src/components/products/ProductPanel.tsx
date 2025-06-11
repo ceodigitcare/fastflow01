@@ -590,13 +590,17 @@ export default function ProductPanel({
     setVariantCombinations(updatedCombinations);
   };
   
-  // Update a variant's inventory
-  const handleVariantInventoryChange = (index: number, inventory: number) => {
-    const updatedCombinations = [...variantCombinations];
-    updatedCombinations[index].inventory = inventory;
-    setVariantCombinations(updatedCombinations);
-  };
+  // Note: Inventory management for variants is handled through purchase bills only
   
+  // Generate default SKU for a variant combination
+  const generateVariantSku = (combo: VariantCombination) => {
+    const baseSku = form.getValues("sku") || "PROD";
+    const variantCode = combo.options
+      .map(option => option.value.substring(0, 1).toUpperCase())
+      .join("-");
+    return `${baseSku}-${variantCode}`;
+  };
+
   // Remove a variant combination
   const handleRemoveVariantCombination = (index: number) => {
     const updatedCombinations = variantCombinations.filter((_, i) => i !== index);
@@ -757,7 +761,7 @@ export default function ProductPanel({
             
             <div className="flex-1 overflow-y-auto pb-[70px]">
               <Tabs value={activeTab}>
-                <TabsContent value="general" className="mt-0 p-4 space-y-4">
+                <TabsContent value="general" className="ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 mt-0 p-4 space-y-4 pt-[25px] pb-[25px] pl-[16px] pr-[16px]">
                   <FormField
                     control={form.control}
                     name="name"
@@ -988,7 +992,7 @@ export default function ProductPanel({
                   />
                 </TabsContent>
                 
-                <TabsContent value="pricing" className="mt-0 p-4 space-y-4">
+                <TabsContent value="pricing" className="ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 mt-0 p-4 space-y-4 pt-[25px] pb-[25px] pl-[16px] pr-[16px]">
                   <FormField
                     control={form.control}
                     name="price"
@@ -1060,7 +1064,7 @@ export default function ProductPanel({
                   {/* SKU field has been moved to the Inventory tab */}
                 </TabsContent>
                 
-                <TabsContent value="inventory" className="mt-0 p-4 space-y-4">
+                <TabsContent value="inventory" className="ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 mt-0 p-4 space-y-4 pt-[25px] pb-[25px] pl-[16px] pr-[16px]">
                   {/* Added space for better visual separation */}
                   <div className="h-3"></div>
                   
@@ -1441,10 +1445,10 @@ export default function ProductPanel({
                           </div>
                           
                           <div className="border rounded-md">
-                            <div className="grid grid-cols-[2fr,1fr,1fr,auto] gap-2 p-2 bg-muted/30 border-b text-xs font-medium">
+                            <div className="grid grid-cols-[2.5fr,1fr,1fr,auto] gap-2 p-2 bg-muted/30 border-b text-xs font-medium">
                               <div>Variant</div>
-                              <div>Price ($)</div>
-                              <div>Stock</div>
+                              <div>SKU</div>
+                              <div>Purchase Price ($)</div>
                               <div></div>
                             </div>
                             
@@ -1454,22 +1458,24 @@ export default function ProductPanel({
                                   <div 
                                     key={index} 
                                     className={cn(
-                                      "grid grid-cols-[2fr,1fr,1fr,auto] gap-2 p-2 items-center border-b",
+                                      "grid grid-cols-[2.5fr,1fr,1fr,auto] gap-2 p-2 items-center border-b",
                                       index % 2 === 0 ? "bg-muted/10" : ""
                                     )}
                                   >
                                     <div>
-                                      <div className="flex flex-wrap items-center gap-1 mb-1">
+                                      <div className="flex flex-wrap items-center gap-1">
                                         {combo.options.map((option, i) => (
                                           <Badge key={i} variant="secondary" className="text-xs">
                                             {option.value}
                                           </Badge>
                                         ))}
                                       </div>
+                                    </div>
+                                    <div>
                                       <Input 
                                         value={combo.sku || ''} 
                                         onChange={(e) => handleVariantSkuChange(index, e.target.value)}
-                                        placeholder="SKU (Optional)" 
+                                        placeholder={generateVariantSku(combo)} 
                                         className="h-7 text-xs" 
                                       />
                                       {skuDuplicates.includes(combo.sku) && (
@@ -1477,25 +1483,9 @@ export default function ProductPanel({
                                       )}
                                     </div>
                                     <div>
-                                      <Input 
-                                        type="number" 
-                                        min="0" 
-                                        step="0.01"
-                                        value={combo.price !== undefined ? combo.price : ''} 
-                                        onChange={(e) => handleVariantPriceChange(index, e.target.value ? parseFloat(e.target.value) : undefined)}
-                                        placeholder={`${form.watch("price")}`}
-                                        className="h-7 text-xs" 
-                                      />
-                                    </div>
-                                    <div>
-                                      <Input 
-                                        type="number" 
-                                        min="0" 
-                                        step="1"
-                                        value={combo.inventory} 
-                                        onChange={(e) => handleVariantInventoryChange(index, parseInt(e.target.value) || 0)}
-                                        className="h-7 text-xs" 
-                                      />
+                                      <div className="h-7 px-2 py-1 bg-muted/40 rounded text-xs flex items-center text-muted-foreground">
+                                        ${(combo.price !== undefined ? combo.price : form.watch("price") || 0).toFixed(2)}
+                                      </div>
                                     </div>
                                     <Button 
                                       type="button" 

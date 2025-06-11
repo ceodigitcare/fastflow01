@@ -1,0 +1,80 @@
+🛠️ Feature Update Request: Enhanced Product Variant Management
+Current Behavior:
+
+Users can generate product variants (e.g., Size × Color combinations).
+
+Variants currently support input for SKU, price, and inventory.
+
+Issue:
+
+Inventory should not be directly editable within the variant generation section.
+
+There’s no persistent view of existing variants once created.
+
+Variant SKUs and purchase prices are not handled in a controlled, default-driven way.
+
+✅ Expected Changes:
+1. Variant Inventory Input Removal
+Remove the ability to enter or edit inventory quantity directly within the variant section of the product edit/create form.
+
+Inventory should only be added via Purchase Bills, not directly in the variant UI.
+
+2. Default SKU Handling for Variants
+Each generated variant should receive a default SKU (e.g., based on the main product SKU + variant code).
+
+Example: Product SKU: TSHIRT001 → Variant: TSHIRT001-RED-M
+
+Allow users to manually override this SKU only if the new SKU is unique and not empty.
+
+3. Purchase Price for Variants
+Add a non-editable field showing the default purchase price for each variant.
+
+Initially inherited from the main product or set manually if needed.
+
+Only changeable via purchase bill (not in the variant section).
+
+4. Persistent Variant Display
+After variant generation:
+
+Display all existing variants clearly in the UI (table or list view).
+
+Allow user to review and reuse instead of re-generating the same combinations again.
+
+New combinations can be added via the existing “Generate All” function.
+
+5. Allow Deletion of Specific Variants
+Let users delete any individual variant from the list (e.g., trash icon).
+
+Ensure deletion logic updates the backend and cleans up SKU/indexing as needed.
+
+6. Minimal Design Changes
+Retain the current visual design layout and structure.
+
+Add these capabilities within the existing variant tab/section without major UI overhaul.
+
+🧩 Example Flow:
+User creates product → Goes to Variant tab → Adds "Size" and "Color" → Clicks “Generate All”
+
+Variants are shown like:
+
+Variant	SKU	Purchase Price	[Delete]
+Red / Small	TSHIRT001-RED-S	$10.00	🗑️
+Red / Medium	TSHIRT001-RED-M	$10.00	🗑️
+...	...	...	...
+
+No inventory field here.
+
+SKU is pre-filled but editable if empty.
+
+Purchase price shown (non-editable).
+
+“Generate All” can be used again if new variant values are added.
+
+🎯 Outcome:
+Prevents manual inventory mismanagement.
+
+Promotes consistent SKU and pricing structure.
+
+Improves reusability and visibility of variant data.
+
+Keeps UI clean with minimal changes.
