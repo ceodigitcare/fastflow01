@@ -704,6 +704,11 @@ export default function ProductPanel({
 
   // Main form submission handler
   const handleSubmit = (values: ProductFormValues) => {
+    console.log('Form submission started with values:', values);
+    console.log('hasValidVariantGroups:', hasValidVariantGroups);
+    console.log('variantCombinations:', variantCombinations);
+    console.log('skuDuplicates:', skuDuplicates);
+    
     // Convert price to cents for storage
     const formattedValues: any = {
       ...values,
@@ -733,19 +738,20 @@ export default function ProductPanel({
         return;
       }
       
-      // Add variant data to the submission (using any type to avoid TypeScript errors)
-      formattedValues.variants = {
-        groups: variantGroups,
-        combinations: variantCombinations.map(combo => ({
-          ...combo,
-          // Convert price from dollars to cents if defined
-          price: combo.price !== undefined ? Math.round(combo.price * 100) : undefined
-        }))
-      };
+      // Add variant combinations as a flat array to match database schema
+      formattedValues.variants = variantCombinations.map(combo => ({
+        ...combo,
+        // Convert price from dollars to cents if defined
+        price: combo.price !== undefined ? Math.round(combo.price * 100) : undefined
+      }));
       
       // Note: Inventory for variants is managed through purchase bills only
+    } else if (values.hasVariants === false) {
+      // Clear variants if hasVariants is disabled
+      formattedValues.variants = [];
     }
     
+    console.log('Final formattedValues before submission:', formattedValues);
     onSubmit(formattedValues);
   };
 
