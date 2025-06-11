@@ -708,6 +708,8 @@ export default function ProductPanel({
   // Main form submission handler
   const handleSubmit = (values: ProductFormValues) => {
     console.log('Form submission started with values:', values);
+    console.log('Form errors:', form.formState.errors);
+    console.log('Form is valid:', form.formState.isValid);
     console.log('hasValidVariantGroups:', hasValidVariantGroups);
     console.log('variantCombinations:', variantCombinations);
     console.log('skuDuplicates:', skuDuplicates);
@@ -1809,6 +1811,7 @@ export default function ProductPanel({
               <Button 
                 type="submit"
                 disabled={isSubmitting}
+                onClick={() => console.log('Submit button clicked!')}
               >
                 {isSubmitting ? 'Saving...' : (product ? 'Save Changes' : 'Add Product')}
               </Button>
